@@ -13,7 +13,9 @@ SRCS=AddonsDirectory.cpp \
      CurlFile.cpp \
      DAAPDirectory.cpp \
      DAAPFile.cpp \
+     DAVCommon.cpp \
      DAVDirectory.cpp \
+     DAVFile.cpp \
      Directory.cpp \
      DirectoryCache.cpp \
      DirectoryFactory.cpp \

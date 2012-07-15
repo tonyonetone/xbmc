@@ -1,6 +1,6 @@
 #pragma once
 /*
- *      Copyright (C) 2005-2009 Team XBMC
+ *      Copyright (C) 2005-2012 Team XBMC
  *      http://www.xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -20,21 +20,14 @@
  *
  */
 
-#include "IDirectory.h"
 #include "utils/XBMCTinyXML.h"
-#include "FileItem.h"
 
 namespace XFILE
 {
-  class CDAVDirectory : public IDirectory
+  class CDAVCommon
   {
     public:
-      CDAVDirectory(void);
-      virtual ~CDAVDirectory(void);
-      virtual bool GetDirectory(const CStdString& strPath, CFileItemList &items);
-      virtual bool Exists(const char* strPath);
-      virtual DIR_CACHE_TYPE GetCacheType(const CStdString& strPath) const { return DIR_CACHE_ONCE; };
-    private:
-      void ParseResponse(const TiXmlElement *pElement, CFileItem &item);
+      static bool ValueWithoutNamespace(const TiXmlNode *pNode, const CStdString& value);
+      static CStdString GetStatusTag(const TiXmlElement *pElement);
   };
 }

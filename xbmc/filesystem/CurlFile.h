@@ -126,7 +126,7 @@ namespace XFILE
       void SetCorrectHeaders(CReadState* state);
       bool Service(const CStdString& strURL, const CStdString& strPostData, CStdString& strHTML);
 
-    private:
+    protected:
       CReadState*     m_state;
       unsigned int    m_bufferSize;
 
