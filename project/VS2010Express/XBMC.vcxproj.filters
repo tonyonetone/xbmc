@@ -2954,6 +2954,12 @@
     <ClCompile Include="..\..\xbmc\interfaces\python\PyContext.cpp">
       <Filter>interfaces\python</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\xbmc\filesystem\DAVFile.cpp">
+      <Filter>filesystem</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\xbmc\filesystem\DAVCommon.cpp">
+      <Filter>filesystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\xbmc\win32\pch.h">
@@ -5769,6 +5775,12 @@
     </ClInclude>
     <ClInclude Include="..\..\xbmc\interfaces\python\PyContext.h">
       <Filter>interfaces\python</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\xbmc\filesystem\DAVFile.h">
+      <Filter>filesystem</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\xbmc\filesystem\DAVCommon.h">
+      <Filter>filesystem</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
