@@ -22,6 +22,7 @@
 #include "DAVDirectory.h"
 
 #include "DAVCommon.h"
+#include "DAVFile.h"
 #include "URL.h"
 #include "CurlFile.h"
 #include "FileItem.h"
@@ -193,9 +194,51 @@ bool CDAVDirectory::GetDirectory(const CStdString& strPath, CFileItemList &items
   return true;
 }
 
+bool CDAVDirectory::Create(const char* strPath)
+{
+  CDAVFile dav;
+  CURL url(strPath);
+  CStdString strRequest = "MKCOL";
+
+  dav.SetCustomRequest(strRequest);
+ 
+  if (!dav.Execute(url))
+  {
+    CLog::Log(LOGERROR, "%s - Unable to create dav directory (%s) - %d", __FUNCTION__, url.Get(), dav.GetLastResponseCode());
+    return false;
+  }
+
+  dav.Close();
+
+  return true;
+}
+
 bool CDAVDirectory::Exists(const char* strPath)
 {
-  CCurlFile dav;
+  CDAVFile dav;
   CURL url(strPath);
   return dav.Exists(url);
+}
+
+bool CDAVDirectory::Remove(const char* strPath)
+{
+  CDAVFile dav;
+  CURL url(strPath);
+  CStdString strRequest = "DELETE";
+
+  dav.SetCustomRequest(strRequest);
+ 
+  if (!dav.Execute(url))
+  {
+    CLog::Log(LOGERROR, "%s - Unable to delete dav directory (%s) - %d", __FUNCTION__, url.Get(), dav.GetLastResponseCode());
+    return false;
+  }
+
+  if (dav.GetLastResponseCode() == 207) 
+  {
+  }
+
+  dav.Close();
+
+  return true;
 }

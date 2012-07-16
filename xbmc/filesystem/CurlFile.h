@@ -103,10 +103,13 @@ namespace XFILE
           int64_t         m_filePos;
           bool            m_bFirstLoop;
 
+          char*           m_readBuffer;
+
           /* returned http header */
           CHttpHeader m_httpheader;
           bool        m_headerdone;
 
+          size_t ReadCallback(char *buffer, size_t size, size_t nitems);
           size_t WriteCallback(char *buffer, size_t size, size_t nitems);
           size_t HeaderCallback(void *ptr, size_t size, size_t nmemb);
 
@@ -114,6 +117,7 @@ namespace XFILE
           unsigned int Read(void* lpBuf, int64_t uiBufSize);
           bool         ReadString(char *szLine, int iLineLength);
           bool         FillBuffer(unsigned int want);
+          void         SetReadBuffer(const void* lpBuf, int64_t uiBufSize);
 
           long         Connect(unsigned int size);
           void         Disconnect();

@@ -88,6 +88,17 @@ extern "C" size_t write_callback(char *buffer,
   return state->WriteCallback(buffer, size, nitems);
 }
 
+extern "C" size_t read_callback(char *buffer,
+               size_t size,
+               size_t nitems,
+               void *userp)
+{
+  if(userp == NULL) return 0;
+
+  CCurlFile::CReadState *state = (CCurlFile::CReadState *)userp;
+  return state->ReadCallback(buffer, size, nitems);
+}
+
 extern "C" size_t header_callback(void *ptr, size_t size, size_t nmemb, void *stream)
 {
   CCurlFile::CReadState *state = (CCurlFile::CReadState *)stream;
@@ -136,6 +147,18 @@ size_t CCurlFile::CReadState::HeaderCallback(void *ptr, size_t size, size_t nmem
   free(strData);
 
   return iSize;
+}
+
+size_t CCurlFile::CReadState::ReadCallback(char *buffer, size_t size, size_t nitems)
+{
+  if (m_filePos >= m_fileSize)
+    return 0;
+
+  int64_t retSize = XMIN(m_fileSize - m_filePos, nitems * size);
+  memcpy(buffer, m_readBuffer + m_filePos, retSize);
+  m_filePos += retSize;
+
+  return retSize;
 }
 
 size_t CCurlFile::CReadState::WriteCallback(char *buffer, size_t size, size_t nitems)
@@ -199,6 +222,7 @@ CCurlFile::CReadState::CReadState()
   m_cancelled = false;
   m_bFirstLoop = true;
   m_headerdone = false;
+  m_readBuffer = 0;
 }
 
 CCurlFile::CReadState::~CReadState()
@@ -295,6 +319,7 @@ void CCurlFile::CReadState::Disconnect()
   m_filePos = 0;
   m_fileSize = 0;
   m_bufferSize = 0;
+  m_readBuffer = 0;
 }
 
 
@@ -370,6 +395,9 @@ void CCurlFile::SetCommonOptions(CReadState* state)
 
   g_curlInterface.easy_setopt(h, CURLOPT_WRITEDATA, state);
   g_curlInterface.easy_setopt(h, CURLOPT_WRITEFUNCTION, write_callback);
+
+  g_curlInterface.easy_setopt(h, CURLOPT_READDATA, state);
+  g_curlInterface.easy_setopt(h, CURLOPT_READFUNCTION, read_callback);
 
   // set username and password for current handle
   if (m_username.length() > 0 && m_password.length() > 0)
@@ -1346,6 +1374,13 @@ bool CCurlFile::CReadState::FillBuffer(unsigned int want)
     }
   }
   return true;
+}
+
+void CCurlFile::CReadState::SetReadBuffer(const void* lpBuf, int64_t uiBufSize)
+{
+  m_readBuffer = (char*)lpBuf;
+  m_fileSize = uiBufSize;
+  m_filePos = 0;
 }
 
 void CCurlFile::ClearRequestHeaders()

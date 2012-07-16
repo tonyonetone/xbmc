@@ -27,17 +27,83 @@
 #include "utils/log.h"
 #include "DllLibCurl.h"
 #include "utils/XBMCTinyXML.h"
+#include "utils/RegExp.h"
 
 using namespace XFILE;
 using namespace XCURL;
 
 CDAVFile::CDAVFile(void)
   : CCurlFile()
+  , lastResponseCode(0)
 {
 }
 
 CDAVFile::~CDAVFile(void)
 {
+}
+
+bool CDAVFile::Execute(const CURL& url)
+{
+  CURL url2(url);
+  ParseAndCorrectUrl(url2);
+
+  CLog::Log(LOGDEBUG, "CDAVFile::Execute(%p) %s", (void*)this, m_url.c_str());
+
+  ASSERT(!(!m_state->m_easyHandle ^ !m_state->m_multiHandle));
+  if( m_state->m_easyHandle == NULL )
+    g_curlInterface.easy_aquire(url2.GetProtocol(), url2.GetHostName(), &m_state->m_easyHandle, &m_state->m_multiHandle );
+
+  // setup common curl options
+  SetCommonOptions(m_state);
+  SetRequestHeaders(m_state);
+
+  lastResponseCode = m_state->Connect(m_bufferSize);
+  if( lastResponseCode < 0 || lastResponseCode >= 400)
+    return false;
+
+  char* efurl;
+  if (CURLE_OK == g_curlInterface.easy_getinfo(m_state->m_easyHandle, CURLINFO_EFFECTIVE_URL,&efurl) && efurl)
+    m_url = efurl;
+
+  if (lastResponseCode == 207)
+  {
+    CStdString strResponse;
+    ReadData(strResponse);
+
+    CXBMCTinyXML davResponse;
+    davResponse.Parse(strResponse.c_str());
+
+    if (!davResponse.Parse(strResponse))
+    {
+      CLog::Log(LOGERROR, "%s - Unable to process dav response (%s)", __FUNCTION__, m_url.c_str());
+      Close();
+      return false;
+    }
+
+    TiXmlNode *pChild;
+    // Iterate over all responses
+    for (pChild = davResponse.RootElement()->FirstChild(); pChild != 0; pChild = pChild->NextSibling())
+    {
+      if (CDAVCommon::ValueWithoutNamespace(pChild, "response"))
+      {
+        CStdString sRetCode = CDAVCommon::GetStatusTag(pChild->ToElement());
+        CRegExp rxCode;
+        rxCode.RegComp("HTTP/1\\.1\\s(\\d+)\\s.*"); 
+        if (rxCode.RegFind(sRetCode) >= 0)
+        {
+          if (rxCode.GetSubCount())
+          {
+            lastResponseCode = atoi(rxCode.GetMatch(1).c_str());
+            if( lastResponseCode < 0 || lastResponseCode >= 400)
+              return false;
+          }
+        }
+
+      }
+    }
+  }
+
+  return true;
 }
 
 bool CDAVFile::Open(const CURL& url)
@@ -57,8 +123,8 @@ bool CDAVFile::Open(const CURL& url)
   SetCommonOptions(m_state);
   SetRequestHeaders(m_state);
 
-  long response = m_state->Connect(m_bufferSize);
-  if( response < 0 || response >= 400)
+  lastResponseCode = m_state->Connect(m_bufferSize);
+  if( lastResponseCode < 0 || lastResponseCode >= 400)
     return false;
 
   SetCorrectHeaders(m_state);
@@ -75,13 +141,9 @@ bool CDAVFile::Open(const CURL& url)
     m_state->m_fileSize = 0;
 
   m_seekable = false;
-  if(m_state->m_fileSize > 0)
+  if(m_state->m_fileSize > 0 && !(m_state->m_httpheader.GetValue("Accept-Ranges").Equals("none")))
   {
     m_seekable = true;
-
-    // if server says explicitly it can't seek, respect that
-    if(m_state->m_httpheader.GetValue("Accept-Ranges").Equals("none"))
-      m_seekable = false;
   }
 
   char* efurl;
@@ -93,67 +155,101 @@ bool CDAVFile::Open(const CURL& url)
 
 bool CDAVFile::OpenForWrite(const CURL& url, bool bOverWrite)
 {
-  return CCurlFile::OpenForWrite(url, bOverWrite);
+  // if file is already running, get info from it
+  if( m_opened )
+  {
+    if (bOverWrite)
+      return true;  
+    else
+      return false;
+  }
+
+  CURL url2(url);
+  ParseAndCorrectUrl(url2);
+
+  CLog::Log(LOGDEBUG, "CDAVFile::OpenForWrite(%p) %s", (void*)this, m_url.c_str());
+
+  ASSERT(m_state->m_easyHandle == NULL);
+  g_curlInterface.easy_aquire(url2.GetProtocol(), url2.GetHostName(), &m_state->m_easyHandle, NULL);
+
+  SetCommonOptions(m_state);
+  SetRequestHeaders(m_state);
+  g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_TIMEOUT, 5);
+  g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_NOBODY, 1);
+  g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_WRITEDATA, NULL); /* will cause write failure*/
+
+  CURLcode result = g_curlInterface.easy_perform(m_state->m_easyHandle);
+
+  if (result == CURLE_WRITE_ERROR || result == CURLE_OK)
+    if (!bOverWrite) 
+    {
+      g_curlInterface.easy_release(&m_state->m_easyHandle, NULL);
+      return false;
+    }
+
+  char* efurl;
+  if (CURLE_OK == g_curlInterface.easy_getinfo(m_state->m_easyHandle, CURLINFO_EFFECTIVE_URL,&efurl) && efurl)
+  m_url = efurl;
+
+  m_opened = true;
+  return true;
 }
 
 bool CDAVFile::Exists(const CURL& url)
 {
-  return CCurlFile::Exists(url);
-}
+  // if file is already running, get info from it
+  if( m_opened )
+  {
+    CLog::Log(LOGWARNING, "%s - Exist called on open file", __FUNCTION__);
+    return true;
+  }
 
-int CDAVFile::Stat(const CURL& url, struct __stat64* buffer)
-{
-  return CCurlFile::Stat(url, buffer);
-}
+  CURL url2(url);
+  ParseAndCorrectUrl(url2);
 
-unsigned int CDAVFile::Read(void* lpBuf, int64_t uiBufSize)
-{
-  return CCurlFile::Read(lpBuf, uiBufSize);
+  ASSERT(m_state->m_easyHandle == NULL);
+  g_curlInterface.easy_aquire(url2.GetProtocol(), url2.GetHostName(), &m_state->m_easyHandle, NULL);
+
+  SetCommonOptions(m_state);
+  SetRequestHeaders(m_state);
+  g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_TIMEOUT, 5);
+  g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_NOBODY, 1);
+  g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_WRITEDATA, NULL); /* will cause write failure*/
+
+  CURLcode result = g_curlInterface.easy_perform(m_state->m_easyHandle);
+  g_curlInterface.easy_release(&m_state->m_easyHandle, NULL);
+
+  if (result == CURLE_WRITE_ERROR || result == CURLE_OK)
+    return true;
+
+  errno = ENOENT;
+  return false;
 }
 
 int CDAVFile::Write(const void* lpBuf, int64_t uiBufSize)
 {
-  return CCurlFile::Write(lpBuf, uiBufSize);
-}
+  if (!m_opened)
+    return -1;
 
-bool CDAVFile::ReadString(char *szLine, int iLineLength)
-{
-  return CCurlFile::ReadString(szLine, iLineLength);
-}
+  ASSERT(m_state->m_easyHandle);
 
-int64_t CDAVFile::Seek(int64_t iFilePosition, int iWhence)
-{
-  return CCurlFile::Seek(iFilePosition, iWhence);
-}
+  SetCommonOptions(m_state);
+  SetRequestHeaders(m_state);
+  m_state->SetReadBuffer(lpBuf, uiBufSize);
+  g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_UPLOAD, 1);
+  g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_INFILESIZE_LARGE, uiBufSize);
 
-void CDAVFile::Close()
-{
-  return CCurlFile::Close();
-}
+  CURLcode result = g_curlInterface.easy_perform(m_state->m_easyHandle);
 
-int64_t CDAVFile::GetPosition()
-{
-  return CCurlFile::GetPosition();
-}
+  if (result != CURLE_OK) 
+  {
+    long code;
+    if(g_curlInterface.easy_getinfo(m_state->m_easyHandle, CURLINFO_RESPONSE_CODE, &code) == CURLE_OK )
+      CLog::Log(LOGERROR, "%s - unable to write dav resource (%s) - %d", __FUNCTION__, m_url, code);
+    return -1;
+  }
 
-int64_t CDAVFile::GetLength()
-{
-  return CCurlFile::GetLength();
-}
-
-void CDAVFile::Flush()
-{
-  return CCurlFile::Flush();
-}
-
-int  CDAVFile::GetChunkSize()
-{
-  return CCurlFile::GetChunkSize();
-}
-
-bool CDAVFile::SkipNext()
-{
-  return CCurlFile::SkipNext();
+  return uiBufSize;
 }
 
 bool CDAVFile::Delete(const CURL& url)
@@ -161,13 +257,12 @@ bool CDAVFile::Delete(const CURL& url)
   if (m_opened)
     return false;
 
-  bool ret = false;
   CDAVFile dav;
   CStdString strRequest = "DELETE";
 
   dav.SetCustomRequest(strRequest);
  
-  if (!dav.Open(url))
+  if (!dav.Execute(url))
   {
     CLog::Log(LOGERROR, "%s - Unable to delete dav resource (%s)", __FUNCTION__, url.Get());
     return false;
@@ -175,7 +270,7 @@ bool CDAVFile::Delete(const CURL& url)
 
   dav.Close();
 
-  return ret;
+  return true;
 }
 
 bool CDAVFile::Rename(const CURL& url, const CURL& urlnew)
@@ -183,7 +278,6 @@ bool CDAVFile::Rename(const CURL& url, const CURL& urlnew)
   if (m_opened)
     return false;
 
-  bool ret = false;
   CDAVFile dav;
 
   CURL url2(urlnew);
@@ -194,7 +288,7 @@ bool CDAVFile::Rename(const CURL& url, const CURL& urlnew)
   dav.SetCustomRequest(strRequest);
   dav.SetRequestHeader("Destination", url2.GetWithoutUserDetails());
 
-  if (!dav.Open(url))
+  if (!dav.Execute(url))
   {
     CLog::Log(LOGERROR, "%s - Unable to rename dav resource (%s)", __FUNCTION__, url.Get());
     return false;
@@ -202,20 +296,10 @@ bool CDAVFile::Rename(const CURL& url, const CURL& urlnew)
 
   dav.Close();
 
-  return ret;
+  return true;
 }
 
 bool CDAVFile::SetHidden(const CURL& url, bool hidden)
 {
   return CCurlFile::SetHidden(url, hidden);
-}
-
-int CDAVFile::IoControl(EIoControl request, void* param)
-{
-  return CCurlFile::IoControl(request, param);
-}
-
-CStdString CDAVFile::GetContent()
-{
-  return CCurlFile::GetContent();
 }
