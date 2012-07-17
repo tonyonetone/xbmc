@@ -1349,8 +1349,9 @@
     "transport": "Response",
     "permission": "RemoveData",
     "params": [
-      { "name": "movieid", "$ref": "Library.Id", "required": true }
-    ],
+      { "name": "movieid", "$ref": "Library.Id", "required": true },
+      { "name": "deletefile", "type": "boolean", "default": false, "description": "Whether to delete the physical file" }
+   ],
     "returns": "string"
   },
   "VideoLibrary.RemoveTVShow": {
@@ -1369,7 +1370,8 @@
     "transport": "Response",
     "permission": "RemoveData",
     "params": [
-      { "name": "episodeid", "$ref": "Library.Id", "required": true }
+      { "name": "episodeid", "$ref": "Library.Id", "required": true },
+      { "name": "deletefile", "type": "boolean", "default": false, "description": "Whether to delete the physical file" }
     ],
     "returns": "string"
   },
@@ -1379,7 +1381,8 @@
     "transport": "Response",
     "permission": "RemoveData",
     "params": [
-      { "name": "musicvideoid", "$ref": "Library.Id", "required": true }
+      { "name": "musicvideoid", "$ref": "Library.Id", "required": true },
+      { "name": "deletefile", "type": "boolean", "default": false, "description": "Whether to delete the physical file" }
     ],
     "returns": "string"
   },
@@ -1390,7 +1393,7 @@
     "permission": "UpdateData",
     "params": [
       { "name": "directory", "type": "string", "default": "" }
-    ],
+   ],
     "returns": "string"
   },
   "VideoLibrary.Export": {
