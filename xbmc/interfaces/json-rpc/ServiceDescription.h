@@ -2583,7 +2583,8 @@ namespace JSONRPC
       "\"transport\": \"Response\","
       "\"permission\": \"RemoveData\","
       "\"params\": ["
-        "{ \"name\": \"movieid\", \"$ref\": \"Library.Id\", \"required\": true }"
+        "{ \"name\": \"movieid\", \"$ref\": \"Library.Id\", \"required\": true },"
+        "{ \"name\": \"deletefile\", \"type\": \"boolean\", \"default\": false, \"description\": \"Whether to delete the physical file\" }"
       "],"
       "\"returns\": \"string\""
     "}",
@@ -2603,7 +2604,8 @@ namespace JSONRPC
       "\"transport\": \"Response\","
       "\"permission\": \"RemoveData\","
       "\"params\": ["
-        "{ \"name\": \"episodeid\", \"$ref\": \"Library.Id\", \"required\": true }"
+        "{ \"name\": \"episodeid\", \"$ref\": \"Library.Id\", \"required\": true },"
+        "{ \"name\": \"deletefile\", \"type\": \"boolean\", \"default\": false, \"description\": \"Whether to delete the physical file\" }"
       "],"
       "\"returns\": \"string\""
     "}",
@@ -2613,7 +2615,8 @@ namespace JSONRPC
       "\"transport\": \"Response\","
       "\"permission\": \"RemoveData\","
       "\"params\": ["
-        "{ \"name\": \"musicvideoid\", \"$ref\": \"Library.Id\", \"required\": true }"
+        "{ \"name\": \"musicvideoid\", \"$ref\": \"Library.Id\", \"required\": true },"
+        "{ \"name\": \"deletefile\", \"type\": \"boolean\", \"default\": false, \"description\": \"Whether to delete the physical file\" }"
       "],"
       "\"returns\": \"string\""
     "}",
