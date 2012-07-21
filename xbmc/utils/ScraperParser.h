@@ -46,6 +46,7 @@ public:
   ~CScraperParser();
   CScraperParser& operator= (const CScraperParser& parser);
   bool Load(const CStdString& strXMLFile);
+  bool IsNoop() { return m_isNoop; };
 
   void Clear();
   const CStdString GetFilename() { return m_strFile; }
@@ -77,6 +78,7 @@ private:
   TiXmlElement* m_pRootElement;
 
   const char* m_SearchStringEncoding;
+  bool m_isNoop;
 
   CStdString m_strFile;
   ADDON::CScraper* m_scraper;
