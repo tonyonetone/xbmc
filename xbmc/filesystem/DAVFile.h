@@ -45,5 +45,6 @@ namespace XFILE
 
   private:
     int lastResponseCode;
+    int64_t m_writeOffset;
   };
 }

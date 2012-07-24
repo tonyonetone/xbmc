@@ -24,6 +24,7 @@
 #include "DAVFile.h"
 
 #include "DAVCommon.h"
+#include "URL.h"
 #include "utils/log.h"
 #include "DllLibCurl.h"
 #include "utils/XBMCTinyXML.h"
@@ -173,25 +174,42 @@ bool CDAVFile::OpenForWrite(const CURL& url, bool bOverWrite)
   g_curlInterface.easy_aquire(url2.GetProtocol(), url2.GetHostName(), &m_state->m_easyHandle, NULL);
 
   SetCommonOptions(m_state);
-  SetRequestHeaders(m_state);
   g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_TIMEOUT, 5);
   g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_NOBODY, 1);
   g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_WRITEDATA, NULL); /* will cause write failure*/
+  SetRequestHeaders(m_state);
 
   CURLcode result = g_curlInterface.easy_perform(m_state->m_easyHandle);
 
   if (result == CURLE_WRITE_ERROR || result == CURLE_OK)
+  {
     if (!bOverWrite) 
     {
       g_curlInterface.easy_release(&m_state->m_easyHandle, NULL);
       return false;
     }
+  }
+  else
+  {
+    long code;
+    if(g_curlInterface.easy_getinfo(m_state->m_easyHandle, CURLINFO_RESPONSE_CODE, &code) == CURLE_OK )
+    {
+      if (code >= 400 && code != 404) 
+      {
+        CLog::Log(LOGERROR, "%s - unable to open dav resource for writing (%s) - %ld", __FUNCTION__, m_url.c_str(), code);
+        return false;
+      }
+    }
+    else
+      return false;
+  }
 
   char* efurl;
   if (CURLE_OK == g_curlInterface.easy_getinfo(m_state->m_easyHandle, CURLINFO_EFFECTIVE_URL,&efurl) && efurl)
-  m_url = efurl;
+    m_url = efurl;
 
   m_opened = true;
+  m_writeOffset = 0;
   return true;
 }
 
@@ -234,10 +252,13 @@ int CDAVFile::Write(const void* lpBuf, int64_t uiBufSize)
   ASSERT(m_state->m_easyHandle);
 
   SetCommonOptions(m_state);
-  SetRequestHeaders(m_state);
   m_state->SetReadBuffer(lpBuf, uiBufSize);
   g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_UPLOAD, 1);
   g_curlInterface.easy_setopt(m_state->m_easyHandle, CURLOPT_INFILESIZE_LARGE, uiBufSize);
+  CStdString range;
+  range.Format("bytes %lld-%lld/*", m_writeOffset, m_writeOffset + uiBufSize - 1);
+  SetRequestHeader("Content-Range", range.c_str());
+  SetRequestHeaders(m_state);
 
   CURLcode result = g_curlInterface.easy_perform(m_state->m_easyHandle);
 
@@ -245,10 +266,11 @@ int CDAVFile::Write(const void* lpBuf, int64_t uiBufSize)
   {
     long code;
     if(g_curlInterface.easy_getinfo(m_state->m_easyHandle, CURLINFO_RESPONSE_CODE, &code) == CURLE_OK )
-      CLog::Log(LOGERROR, "%s - unable to write dav resource (%s) - %d", __FUNCTION__, m_url, code);
+      CLog::Log(LOGERROR, "%s - unable to write dav resource (%s) - %ld", __FUNCTION__, m_url.c_str(), code);
     return -1;
   }
 
+  m_writeOffset += uiBufSize;
   return uiBufSize;
 }
 
@@ -264,7 +286,7 @@ bool CDAVFile::Delete(const CURL& url)
  
   if (!dav.Execute(url))
   {
-    CLog::Log(LOGERROR, "%s - Unable to delete dav resource (%s)", __FUNCTION__, url.Get());
+    CLog::Log(LOGERROR, "%s - Unable to delete dav resource (%s)", __FUNCTION__, url.Get().c_str());
     return false;
   }
 
@@ -290,7 +312,7 @@ bool CDAVFile::Rename(const CURL& url, const CURL& urlnew)
 
   if (!dav.Execute(url))
   {
-    CLog::Log(LOGERROR, "%s - Unable to rename dav resource (%s)", __FUNCTION__, url.Get());
+    CLog::Log(LOGERROR, "%s - Unable to rename dav resource (%s)", __FUNCTION__, url.Get().c_str());
     return false;
   }
 
