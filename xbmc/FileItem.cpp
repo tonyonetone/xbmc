@@ -2840,7 +2840,7 @@ CStdString CFileItem::GetUserVideoThumb() const
   }
 
   // 3. check folder image in_m_dvdThumbs (folder.jpg)
-  if (m_bIsFolder && !IsFileFolder())
+  if ((m_bIsFolder || g_advancedSettings.m_bForceDirectoryInfo) && !IsFileFolder())
   {
     CStdStringArray thumbs;
     StringUtils::SplitString(g_advancedSettings.m_dvdThumbs, "|", thumbs);
@@ -3022,7 +3022,7 @@ CStdString CFileItem::GetLocalFanart() const
   StringUtils::SplitString(g_advancedSettings.m_fanartImages, "|", fanarts);
 
   strFile = URIUtils::ReplaceExtension(strFile, "-fanart");
-  fanarts.insert(m_bIsFolder ? fanarts.end() : fanarts.begin(), URIUtils::GetFileName(strFile));
+  fanarts.insert((m_bIsFolder || g_advancedSettings.m_bForceDirectoryInfo) ? fanarts.end() : fanarts.begin(), URIUtils::GetFileName(strFile));
 
   if (!strFile2.IsEmpty())
     fanarts.insert(m_bIsFolder ? fanarts.end() : fanarts.begin(), URIUtils::GetFileName(strFile2));

@@ -216,6 +216,7 @@ void CAdvancedSettings::Initialize()
   m_bVideoLibraryImportWatchedState = false;
   m_bVideoLibraryImportResumePoint = false;
   m_bVideoScannerIgnoreErrors = false;
+  m_bForceDirectoryInfo = false;
   m_iVideoLibraryDateAdded = 1; // prefer mtime over ctime and current time
 
   m_iTuxBoxStreamtsPort = 31339;
@@ -655,6 +656,7 @@ void CAdvancedSettings::ParseSettingsFile(const CStdString &file)
   if (pElement)
   {
     XMLUtils::GetBoolean(pElement, "ignoreerrors", m_bVideoScannerIgnoreErrors);
+    XMLUtils::GetBoolean(pElement, "forcedirectoryinfo", m_bForceDirectoryInfo);
   }
 
   // Backward-compatibility of ExternalPlayer config

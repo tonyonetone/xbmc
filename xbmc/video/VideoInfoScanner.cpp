@@ -1422,7 +1422,7 @@ namespace VIDEO
       CStdString strPath;
       URIUtils::GetDirectory(item->GetPath(), strPath);
 
-      if (bGrabAny && !item->IsStack())
+      if ((bGrabAny ||  g_advancedSettings.m_bForceDirectoryInfo) && !item->IsStack())
       { // looking up by folder name - movie.nfo takes priority - but not for stacked items (handled below)
         nfoFile = URIUtils::AddFileToFolder(strPath, "movie.nfo");
         if (CFile::Exists(nfoFile))
