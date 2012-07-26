@@ -7933,7 +7933,7 @@ void CVideoDatabase::ExportToXML(const CStdString &path, bool singleFiles /* = f
       }
 
       bool forceDirectoryInfo = false;
-      if (m_pDS->fv("countFile").get_asInt() == 1)  // Number of files in the current file's path
+      if (g_advancedSettings.m_bForceDirectoryInfo && m_pDS->fv("countFile").get_asInt() == 1)  // Number of files in the current file's path
         forceDirectoryInfo = true;
 
       CFileItem item(movie.m_strFileNameAndPath,false);
