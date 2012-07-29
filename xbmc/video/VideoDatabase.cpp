@@ -7902,6 +7902,13 @@ void CVideoDatabase::ExportToXML(const CStdString &path, bool singleFiles /* = f
     while (!m_pDS->eof())
     {
       CVideoInfoTag movie = GetDetailsForMovie(m_pDS, true);
+
+      bool forceDirectoryInfo = false;
+      SScanSettings scrapSettings;
+      if (singleFiles && GetScraperForPath(movie.m_strPath, scrapSettings))
+        if (scrapSettings.parent_name && m_pDS->fv("countFile").get_asInt() == 1)
+          forceDirectoryInfo = true;
+
       // strip paths to make them relative
       if (movie.m_strTrailer.Mid(0,movie.m_strPath.size()).Equals(movie.m_strPath))
         movie.m_strTrailer = movie.m_strTrailer.Mid(movie.m_strPath.size());
