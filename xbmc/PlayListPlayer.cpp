@@ -39,8 +39,8 @@ using namespace PLAYLIST;
 
 CPlayListPlayer::CPlayListPlayer(void)
 {
-  m_PlaylistMusic = new CPlayList;
-  m_PlaylistVideo = new CPlayList;
+  m_PlaylistMusic = new CPlayList(PLAYLIST_MUSIC);
+  m_PlaylistVideo = new CPlayList(PLAYLIST_VIDEO);
   m_PlaylistEmpty = new CPlayList;
   m_iCurrentSong = -1;
   m_bPlayedFirstFile = false;
@@ -54,7 +54,6 @@ CPlayListPlayer::CPlayListPlayer(void)
 
 CPlayListPlayer::~CPlayListPlayer(void)
 {
-  Clear();
   delete m_PlaylistMusic;
   delete m_PlaylistVideo;
   delete m_PlaylistEmpty;
