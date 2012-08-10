@@ -205,7 +205,7 @@
   },
   "Notifications.Item.Type": {
     "type": "string",
-    "enum": [ "unknown", "movie", "episode", "musicvideo", "song" ]
+    "enum": [ "unknown", "movie", "episode", "musicvideo", "song", "picture" ]
   },
   "Notifications.Item": {
     "type": [
@@ -251,6 +251,11 @@
           "album": { "type": "string" },
           "artist": { "type": "string" },
           "track": { "type": "integer" }
+      },
+      { "type": "object", "description": "A picture has a file path.",
+        "properties": {
+          "type": { "$ref": "Notifications.Item.Type", "required": true },
+          "file": { "type": "string", "required": true }
         }
       }
     ]
