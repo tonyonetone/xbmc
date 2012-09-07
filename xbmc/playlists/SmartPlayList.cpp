@@ -206,7 +206,7 @@ bool CSmartPlaylistRule::Load(TiXmlElement *element, const CStdString &encoding 
   return true;
 }
 
-bool CSmartPlaylistRule::Load(const CVariant &obj)
+bool CSmartPlaylistRule::Load(const CVariant &obj)  
 {
   if (!obj.isObject() ||
       !obj.isMember("field") || !obj["field"].isString() ||
