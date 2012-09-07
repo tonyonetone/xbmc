@@ -4825,7 +4825,8 @@ bool CVideoDatabase::GetSetsByWhere(const CStdString& strBaseDir, const Filter &
     if (NULL == m_pDS.get()) return false;
 
     CVideoDbUrl videoUrl;
-    if (!videoUrl.FromString(strBaseDir))
+    Filter extFilter = filter;
+    if (!videoUrl.FromString(strBaseDir) || !GetFilter(videoUrl, extFilter))
       return false;
 
     Filter setFilter = filter;
@@ -4833,7 +4834,6 @@ bool CVideoDatabase::GetSetsByWhere(const CStdString& strBaseDir, const Filter &
     if (!setFilter.order.empty())
       setFilter.order += ",";
     setFilter.order += "sets.idSet";
-
     if (!GetMoviesByWhere(strBaseDir, setFilter, items))
       return false;
 
@@ -6144,7 +6144,7 @@ bool CVideoDatabase::GetEpisodesByWhere(const CStdString& strBaseDir, const Filt
       strSQLExtra += DatabaseUtils::BuildLimitClause(sorting.limitEnd, sorting.limitStart);
     }
 
-    strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? extFilter.fields.c_str() : "*") + strSQLExtra;
+    strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? filter.fields.c_str() : "*") + strSQLExtra;
 
     int iRowsFound = RunQuery(strSQL);
     if (iRowsFound <= 0)
