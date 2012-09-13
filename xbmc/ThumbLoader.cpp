@@ -210,7 +210,7 @@ bool CVideoThumbLoader::LoadItem(CFileItem* pItem)
   }
 
   // video db items normally have info in the database
-  if (pItem->HasVideoInfoTag() && pItem->GetArt().empty())
+  if (pItem->HasVideoInfoTag() && pItem->GetArt().size() <= 1)
   {
     FillLibraryArt(*pItem);
 

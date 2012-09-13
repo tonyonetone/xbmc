@@ -360,7 +360,8 @@ void CVideoDatabase::CreateViews()
                                       "  tvshow.c%02d AS strShowPath, "
                                       "  bookmark.timeInSeconds AS resumeTimeInSeconds, "
                                       "  bookmark.totalTimeInSeconds AS totalTimeInSeconds, "
-                                      "  seasons.idSeason AS idSeason "
+                                      "  seasons.idSeason AS idSeason, "
+                                      "  art.url AS urlThumb "
                                       "FROM episode"
                                       "  JOIN files ON"
                                       "    files.idFile=episode.idFile"
@@ -371,7 +372,10 @@ void CVideoDatabase::CreateViews()
                                       "  JOIN path ON"
                                       "    files.idPath=path.idPath"
                                       "  LEFT JOIN bookmark ON"
-                                      "    bookmark.idFile=episode.idFile AND bookmark.type=1", VIDEODB_ID_TV_TITLE, VIDEODB_ID_TV_STUDIOS, VIDEODB_ID_TV_PREMIERED, VIDEODB_ID_TV_MPAA, VIDEODB_ID_TV_BASEPATH, VIDEODB_ID_EPISODE_SEASON);
+                                      "    bookmark.idFile=episode.idFile AND bookmark.type=1"
+                                      "  LEFT JOIN art ON"
+                                      "    art.media_id = episode.idEpisode AND art.media_type=\"episode\" AND art.type=\"thumb\""
+                                      , VIDEODB_ID_TV_TITLE, VIDEODB_ID_TV_STUDIOS, VIDEODB_ID_TV_PREMIERED, VIDEODB_ID_TV_MPAA, VIDEODB_ID_TV_BASEPATH, VIDEODB_ID_EPISODE_SEASON);
   m_pDS->exec(episodeview.c_str());
 
   CLog::Log(LOGINFO, "create tvshowview");
@@ -383,7 +387,8 @@ void CVideoDatabase::CreateViews()
                                      "  MAX(files.lastPlayed) AS lastPlayed,"
                                      "  NULLIF(COUNT(episode.c12), 0) AS totalCount,"
                                      "  COUNT(files.playCount) AS watchedcount,"
-                                     "  NULLIF(COUNT(DISTINCT(episode.c12)), 0) AS totalSeasons "
+                                     "  NULLIF(COUNT(DISTINCT(episode.c12)), 0) AS totalSeasons, "
+                                     "  art.url AS urlThumb "
                                      "FROM tvshow"
                                      "  LEFT JOIN tvshowlinkpath ON"
                                      "    tvshowlinkpath.idShow=tvshow.idShow"
@@ -393,6 +398,8 @@ void CVideoDatabase::CreateViews()
                                      "    episode.idShow=tvshow.idShow"
                                      "  LEFT JOIN files ON"
                                      "    files.idFile=episode.idFile "
+                                     "  LEFT JOIN art ON"
+                                     "    art.media_id = tvshow.idShow AND art.media_type=\"tvshow\" AND art.type=\"thumb\""
                                      "GROUP BY tvshow.idShow;");
   m_pDS->exec(tvshowview.c_str());
 
@@ -406,14 +413,18 @@ void CVideoDatabase::CreateViews()
               "  files.lastPlayed as lastPlayed,"
               "  files.dateAdded as dateAdded, "
               "  bookmark.timeInSeconds AS resumeTimeInSeconds, "
-              "  bookmark.totalTimeInSeconds AS totalTimeInSeconds "
+              "  bookmark.totalTimeInSeconds AS totalTimeInSeconds, "
+              "  art.url AS urlThumb "
               "FROM musicvideo"
               "  JOIN files ON"
               "    files.idFile=musicvideo.idFile"
               "  JOIN path ON"
               "    path.idPath=files.idPath"
               "  LEFT JOIN bookmark ON"
-              "    bookmark.idFile=musicvideo.idFile AND bookmark.type=1");
+              "    bookmark.idFile=musicvideo.idFile AND bookmark.type=1"
+              "  LEFT JOIN art ON"
+              "    art.media_id = musicvideo.idMVideo AND art.media_type=\"musicvideo\" AND art.type=\"thumb\""
+              );
 
   CLog::Log(LOGINFO, "create movieview");
   m_pDS->exec("DROP VIEW IF EXISTS movieview");
@@ -426,7 +437,8 @@ void CVideoDatabase::CreateViews()
               "  files.lastPlayed AS lastPlayed, "
               "  files.dateAdded AS dateAdded, "
               "  bookmark.timeInSeconds AS resumeTimeInSeconds, "
-              "  bookmark.totalTimeInSeconds AS totalTimeInSeconds "
+              "  bookmark.totalTimeInSeconds AS totalTimeInSeconds, "
+              "  art.url AS urlThumb "
               "FROM movie"
               "  LEFT JOIN sets ON"
               "    sets.idSet = movie.idSet"
@@ -435,7 +447,10 @@ void CVideoDatabase::CreateViews()
               "  JOIN path ON"
               "    path.idPath=files.idPath"
               "  LEFT JOIN bookmark ON"
-              "    bookmark.idFile=movie.idFile AND bookmark.type=1");
+              "    bookmark.idFile=movie.idFile AND bookmark.type=1"
+              "  LEFT JOIN art ON"
+              "    art.media_id = movie.idMovie AND art.media_type=\"movie\" AND art.type=\"thumb\""
+              );
 }
 
 //********************************************************************************************************************************
@@ -3207,6 +3222,7 @@ CVideoInfoTag CVideoDatabase::GetDetailsForMovie(const dbiplus::sql_record* cons
   details.m_resumePoint.timeInSeconds = record->at(VIDEODB_DETAILS_MOVIE_RESUME_TIME).get_asInt();
   details.m_resumePoint.totalTimeInSeconds = record->at(VIDEODB_DETAILS_MOVIE_TOTAL_TIME).get_asInt();
   details.m_resumePoint.type = CBookmark::RESUME;
+  details.m_strPictureURL.ParseString(record->at(VIDEODB_DETAILS_MOVIE_THUMBNAIL).get_asString());
 
   movieTime += XbmcThreads::SystemClockMillis() - time; time = XbmcThreads::SystemClockMillis();
 
@@ -3267,6 +3283,7 @@ CVideoInfoTag CVideoDatabase::GetDetailsForTvShow(const dbiplus::sql_record* con
   details.m_playCount = record->at(VIDEODB_DETAILS_TVSHOW_NUM_WATCHED).get_asInt();
   details.m_strShowPath = details.m_strPath;
   details.m_strShowTitle = details.m_strTitle;
+  details.m_strPictureURL.ParseString(record->at(VIDEODB_DETAILS_TVSHOW_THUMBNAIL).get_asString());
 
   movieTime += XbmcThreads::SystemClockMillis() - time; time = XbmcThreads::SystemClockMillis();
 
@@ -3325,6 +3342,7 @@ CVideoInfoTag CVideoDatabase::GetDetailsForEpisode(const dbiplus::sql_record* co
   details.m_resumePoint.timeInSeconds = record->at(VIDEODB_DETAILS_EPISODE_RESUME_TIME).get_asInt();
   details.m_resumePoint.totalTimeInSeconds = record->at(VIDEODB_DETAILS_EPISODE_TOTAL_TIME).get_asInt();
   details.m_resumePoint.type = CBookmark::RESUME;
+  details.m_strPictureURL.ParseString(record->at(VIDEODB_DETAILS_EPISODE_THUMBNAIL).get_asString());
 
   movieTime += XbmcThreads::SystemClockMillis() - time; time = XbmcThreads::SystemClockMillis();
 
@@ -3370,6 +3388,7 @@ CVideoInfoTag CVideoDatabase::GetDetailsForMusicVideo(const dbiplus::sql_record*
   details.m_resumePoint.timeInSeconds = record->at(VIDEODB_DETAILS_MUSICVIDEO_RESUME_TIME).get_asInt();
   details.m_resumePoint.totalTimeInSeconds = record->at(VIDEODB_DETAILS_MUSICVIDEO_TOTAL_TIME).get_asInt();
   details.m_resumePoint.type = CBookmark::RESUME;
+  details.m_strPictureURL.ParseString(record->at(VIDEODB_DETAILS_MUSICVIDEO_THUMBNAIL).get_asString());
 
   movieTime += XbmcThreads::SystemClockMillis() - time; time = XbmcThreads::SystemClockMillis();
 
@@ -4102,6 +4121,10 @@ bool CVideoDatabase::UpdateOldVersion(int iVersion)
     }
     m_pDS->exec("DROP TABLE IF EXISTS setlinkmovie");
   }
+  if (iVersion < 69)
+  { // Only views recreation necessary
+  }
+
   // always recreate the view after any table change
   CreateViews();
   return true;
