@@ -146,6 +146,8 @@ CFileItem::CFileItem(const CVideoInfoTag& movie)
   }
   *GetVideoInfoTag() = movie;
   if (movie.m_iSeason == 0) SetProperty("isspecial", "true");
+  SetArt("thumb", CScraperUrl::GetThumbURL(movie.m_strPictureURL.GetFirstThumb()));
+
   FillInDefaultIcon();
 }
 
