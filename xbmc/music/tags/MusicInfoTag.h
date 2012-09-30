@@ -168,7 +168,7 @@ public:
   virtual void ToSortable(SortItem& sortable);
 
   void Clear();
-protected:
+
   /*! \brief Trim whitespace off the given string
    \param value string to trim
    \return trimmed value, with spaces removed from left and right, as well as carriage returns from the right.
@@ -208,5 +208,7 @@ protected:
   float m_fAlbumPeak;
   int m_iHasGainInfo;   // valid info
   EmbeddedArtInfo m_coverArt; ///< art information
+
+  CStdString m_strThumbUrl;
 };
 }

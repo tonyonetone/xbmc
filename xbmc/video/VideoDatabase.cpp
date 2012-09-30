@@ -3222,7 +3222,7 @@ CVideoInfoTag CVideoDatabase::GetDetailsForMovie(const dbiplus::sql_record* cons
   details.m_resumePoint.timeInSeconds = record->at(VIDEODB_DETAILS_MOVIE_RESUME_TIME).get_asInt();
   details.m_resumePoint.totalTimeInSeconds = record->at(VIDEODB_DETAILS_MOVIE_TOTAL_TIME).get_asInt();
   details.m_resumePoint.type = CBookmark::RESUME;
-  details.m_strPictureURL.ParseString(record->at(VIDEODB_DETAILS_MOVIE_THUMBNAIL).get_asString());
+  details.m_strThumbUrl = record->at(VIDEODB_DETAILS_MOVIE_THUMBNAIL).get_asString();
 
   movieTime += XbmcThreads::SystemClockMillis() - time; time = XbmcThreads::SystemClockMillis();
 
@@ -3283,7 +3283,7 @@ CVideoInfoTag CVideoDatabase::GetDetailsForTvShow(const dbiplus::sql_record* con
   details.m_playCount = record->at(VIDEODB_DETAILS_TVSHOW_NUM_WATCHED).get_asInt();
   details.m_strShowPath = details.m_strPath;
   details.m_strShowTitle = details.m_strTitle;
-  details.m_strPictureURL.ParseString(record->at(VIDEODB_DETAILS_TVSHOW_THUMBNAIL).get_asString());
+  details.m_strThumbUrl = record->at(VIDEODB_DETAILS_TVSHOW_THUMBNAIL).get_asString();
 
   movieTime += XbmcThreads::SystemClockMillis() - time; time = XbmcThreads::SystemClockMillis();
 
@@ -3342,7 +3342,7 @@ CVideoInfoTag CVideoDatabase::GetDetailsForEpisode(const dbiplus::sql_record* co
   details.m_resumePoint.timeInSeconds = record->at(VIDEODB_DETAILS_EPISODE_RESUME_TIME).get_asInt();
   details.m_resumePoint.totalTimeInSeconds = record->at(VIDEODB_DETAILS_EPISODE_TOTAL_TIME).get_asInt();
   details.m_resumePoint.type = CBookmark::RESUME;
-  details.m_strPictureURL.ParseString(record->at(VIDEODB_DETAILS_EPISODE_THUMBNAIL).get_asString());
+  details.m_strThumbUrl = record->at(VIDEODB_DETAILS_EPISODE_THUMBNAIL).get_asString();
 
   movieTime += XbmcThreads::SystemClockMillis() - time; time = XbmcThreads::SystemClockMillis();
 
@@ -3388,7 +3388,7 @@ CVideoInfoTag CVideoDatabase::GetDetailsForMusicVideo(const dbiplus::sql_record*
   details.m_resumePoint.timeInSeconds = record->at(VIDEODB_DETAILS_MUSICVIDEO_RESUME_TIME).get_asInt();
   details.m_resumePoint.totalTimeInSeconds = record->at(VIDEODB_DETAILS_MUSICVIDEO_TOTAL_TIME).get_asInt();
   details.m_resumePoint.type = CBookmark::RESUME;
-  details.m_strPictureURL.ParseString(record->at(VIDEODB_DETAILS_MUSICVIDEO_THUMBNAIL).get_asString());
+  details.m_strThumbUrl = record->at(VIDEODB_DETAILS_MUSICVIDEO_THUMBNAIL).get_asString();
 
   movieTime += XbmcThreads::SystemClockMillis() - time; time = XbmcThreads::SystemClockMillis();
 

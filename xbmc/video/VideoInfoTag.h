@@ -135,6 +135,7 @@ public:
   CBookmark m_resumePoint;
   CDateTime m_dateAdded;
   CStdString m_type;
+  CStdString m_strThumbUrl;
 
 private:
   /* \brief Parse our native XML format for video info.

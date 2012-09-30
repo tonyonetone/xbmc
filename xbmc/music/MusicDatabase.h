@@ -279,7 +279,7 @@ protected:
   std::map<CStdString, CAlbum> m_albumCache;
 
   virtual bool CreateTables();
-  virtual int GetMinVersion() const { return 28; };
+  virtual int GetMinVersion() const { return 29; };
   const char *GetBaseDBName() const { return "MyMusic"; };
 
   int AddSong(const CSong& song, bool bCheck = true, int idAlbum = -1);
@@ -351,7 +351,8 @@ private:
     song_iKarNumber,
     song_iKarDelay,
     song_strKarEncoding,
-    song_bCompilation
+    song_bCompilation,
+    song_strUrlThumb
   } SongFields;
 
   // Fields should be ordered as they
@@ -373,7 +374,8 @@ private:
     album_strThumbURL,
     album_iRating,
     album_bCompilation,
-    album_iTimesPlayed
+    album_iTimesPlayed,
+    album_strUrlThumb
   } AlbumFields;
 
   enum _ArtistFields
@@ -391,7 +393,8 @@ private:
     artist_strDisbanded,
     artist_strYearsActive,
     artist_strImage,
-    artist_strFanart
+    artist_strFanart,
+    artist_strUrlThumb
   } ArtistFields;
 
   void AnnounceRemove(std::string content, int id);
