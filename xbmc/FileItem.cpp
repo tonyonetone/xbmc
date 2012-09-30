@@ -102,6 +102,7 @@ CFileItem::CFileItem(const CStdString &path, const CAlbum& album)
   URIUtils::AddSlashAtEnd(m_strPath);
   GetMusicInfoTag()->SetAlbum(album);
   m_bIsAlbum = true;
+  SetArt(album.art);
   CMusicDatabase::SetPropertiesFromAlbum(*this,album);
 }
 
@@ -119,6 +120,7 @@ CFileItem::CFileItem(const CMusicInfoTag& music)
   m_strPath = music.GetURL();
   m_bIsFolder = URIUtils::HasSlashAtEnd(m_strPath);
   *GetMusicInfoTag() = music;
+  SetArt("thumb", music.m_strThumbUrl);
   FillInDefaultIcon();
 }
 
@@ -280,6 +282,7 @@ CFileItem::CFileItem(const CArtist& artist)
   m_bIsFolder = true;
   URIUtils::AddSlashAtEnd(m_strPath);
   GetMusicInfoTag()->SetArtist(artist.strArtist);
+  SetArt(artist.art);
 }
 
 CFileItem::CFileItem(const CGenre& genre)
