@@ -44,6 +44,7 @@
 #include "utils/URIUtils.h"
 #include "utils/log.h"
 #include "utils/StringUtils.h"
+#include "utils/Base64.h"
 #include "settings/AdvancedSettings.h"
 
 using namespace std;
@@ -415,6 +416,10 @@ bool CTagLoaderTagLib::ParseXiphComment(Ogg::XiphComment *xiph, EmbeddedArt *art
   if (!xiph)
     return false;
 
+  FLAC::Picture *pictures[2] = {};
+  std::string coverart;
+  std::string coverartmime;
+
   const Ogg::FieldListMap& fieldListMap = xiph->fieldListMap();
   for (Ogg::FieldListMap::ConstIterator it = fieldListMap.begin(); it != fieldListMap.end(); ++it)
   {
@@ -449,9 +454,60 @@ bool CTagLoaderTagLib::ParseXiphComment(Ogg::XiphComment *xiph, EmbeddedArt *art
       if (iRating > 0 && iRating <= 100)
         tag.SetRating((iRating / 20) + '0');
     }
+    else if (it->first == "METADATA_BLOCK_PICTURE")
+    {
+      const char* b64 = it->second.front().toCString();
+      std::string decoded_block = Base64::Decode(b64, strlen(b64));
+      ByteVector bv(decoded_block.data(), decoded_block.size());
+      TagLib::FLAC::Picture* pictureFrame = new TagLib::FLAC::Picture(bv);
+
+      if      (pictureFrame->type() == FLAC::Picture::FrontCover) pictures[0] = pictureFrame;
+      else if (pictureFrame->type() == FLAC::Picture::Other)      pictures[1] = pictureFrame;
+      else delete pictureFrame;
+    }
+      else if (it->first == "COVERART")
+      {
+        const char* b64 = it->second.front().toCString();
+        coverart = Base64::Decode(b64, strlen(b64));
+      }
+      else if (it->first == "COVERARTMIME")
+      {
+        coverartmime = it->second.front().toCString();
+      }
+
     else
       CLog::Log(LOGDEBUG, "unrecognized XipComment name: %s", it->first.toCString());
   }
+
+  // Process the extracted picture frames; 0 = CoverArt, 1 = Other
+  bool haveCover = false;
+  for (int i = 0; i < 2; ++i)
+    if (pictures[i])
+    {
+      if (!haveCover)
+      {
+        string      mime =             pictures[i]->mimeType().toCString();
+        TagLib::uint size =            pictures[i]->data().size();
+        tag.SetCoverArtInfo(size, mime);
+        if (art)
+          art->set((const uint8_t*)pictures[i]->data().data(), size, mime);
+
+        haveCover = true;
+      }
+
+      delete pictures[i];
+    }
+
+    // Fallback to non-standard, deprecated COVERART
+    if (!haveCover && coverart.size() > 0)
+    {
+      string      mime =             coverartmime;
+      TagLib::uint size =            coverart.size();
+
+      tag.SetCoverArtInfo(size, mime);
+      if (art)
+        art->set((const uint8_t*)coverart.data(), size, mime);
+    }
 
   return true;
 }
