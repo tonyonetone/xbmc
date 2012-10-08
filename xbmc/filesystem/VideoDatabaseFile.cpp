@@ -45,7 +45,6 @@ CStdString CVideoDatabaseFile::TranslateUrl(const CURL& url)
 
   CStdString strPath;
   URIUtils::GetDirectory(url.Get(), strPath);
-  CStdString strFileName=URIUtils::GetFileName(url.Get());
   if (strPath.IsEmpty())
 	  return "";
 
