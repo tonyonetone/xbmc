@@ -3076,6 +3076,9 @@
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xbmc\ApplicationPlayer.cpp" />
+    <ClCompile Include="..\..\xbmc\filesystem\VideoDatabaseFile.cpp">
+      <Filter>filesystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\xbmc\win32\pch.h">
@@ -6031,6 +6034,9 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\ApplicationPlayer.h" />
+    <ClInclude Include="..\..\xbmc\filesystem\VideoDatabaseFile.h">
+      <Filter>filesystem</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\xbmc\win32\XBMC_PC.rc">
