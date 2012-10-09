@@ -3045,6 +3045,9 @@
       <Filter>addons</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xbmc\GitRevision.cpp" />
+    <ClCompile Include="..\..\xbmc\filesystem\VideoDatabaseFile.cpp">
+      <Filter>filesystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\xbmc\win32\pch.h">
@@ -5972,6 +5975,9 @@
       <Filter>addons</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\win32\PlatformInclude.h" />
+    <ClInclude Include="..\..\xbmc\filesystem\VideoDatabaseFile.h">
+      <Filter>filesystem</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\xbmc\win32\XBMC_PC.rc">
