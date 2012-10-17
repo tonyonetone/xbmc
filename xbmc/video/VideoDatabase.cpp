@@ -4743,21 +4743,20 @@ bool CVideoDatabase::GetSetsByWhere(const CStdString& strBaseDir, const Filter &
     if (NULL == m_pDS.get()) return false;
 
     CVideoDbUrl videoUrl;
-    Filter extFilter = filter;
-    if (!videoUrl.FromString(strBaseDir) || !GetFilter(videoUrl, extFilter))
+    if (!videoUrl.FromString(strBaseDir))
       return false;
 
     CStdString strSQL = "SELECT movieview.*, sets.strSet FROM movieview"
                         " JOIN sets ON movieview.idSet = sets.idSet ";
-    if (!extFilter.join.empty())
-      strSQL += extFilter.join;
-    if (!extFilter.where.empty())
-      strSQL += " WHERE (" + extFilter.where + ")";
+    if (!filter.join.empty())
+      strSQL += filter.join;
+    if (!filter.where.empty())
+      strSQL += " WHERE (" + filter.where + ")";
     strSQL += " ORDER BY sets.idSet";
-    if (!extFilter.order.empty())
-      strSQL += "," + extFilter.order;
-    if (!extFilter.limit.empty())
-      strSQL += " LIMIT " + extFilter.limit;
+    if (!filter.order.empty())
+      strSQL += "," + filter.order;
+    if (!filter.limit.empty())
+      strSQL += " LIMIT " + filter.limit;
 
     int iRowsFound = RunQuery(strSQL);
     if (iRowsFound <= 0)
@@ -6212,7 +6211,7 @@ bool CVideoDatabase::GetEpisodesByWhere(const CStdString& strBaseDir, const Filt
       strSQLExtra += DatabaseUtils::BuildLimitClause(sorting.limitEnd, sorting.limitStart);
     }
 
-    strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? filter.fields.c_str() : "*") + strSQLExtra;
+    strSQL = PrepareSQL(strSQL, !extFilter.fields.empty() ? extFilter.fields.c_str() : "*") + strSQLExtra;
 
     int iRowsFound = RunQuery(strSQL);
     if (iRowsFound <= 0)
@@ -8132,7 +8131,7 @@ void CVideoDatabase::ExportSingleVideoToXML(const CStdString &outPath, const CSt
   saveItem.SetArt(artwork);
 
   CStdString outDir = URIUtils::GetParentPath(outPath);
-  if (CUtil::SupportsFileOperations(outDir))
+  if (CUtil::SupportsWriteFileOperations(outDir))
   {
     CStdString nfoFile(URIUtils::AddFileToFolder(outDir, URIUtils::GetFileName(URIUtils::ReplaceExtension(outPath, ".nfo"))));
     if (overwrite || !CFile::Exists(nfoFile, false))
@@ -8148,13 +8147,12 @@ void CVideoDatabase::ExportSingleVideoToXML(const CStdString &outPath, const CSt
 
     if (images)
     {
-      CStdString savedThumb(URIUtils::AddFileToFolder(outDir, URIUtils::GetFileName(URIUtils::ReplaceExtension(outPath, ".tbn"))));
-      if (saveItem.HasThumbnail() && (overwrite || !CFile::Exists(savedThumb, false)))
-        CTextureCache::Get().Export(saveItem.GetThumbnailImage(), savedThumb);
-
-      CStdString savedFanart(URIUtils::AddFileToFolder(outDir, URIUtils::GetFileName(URIUtils::ReplaceExtension(savedThumb, ".-fanart.jpg"))));
-      if (saveItem.HasProperty("fanart_image") && (overwrite || !CFile::Exists(savedFanart, false)))
-        CTextureCache::Get().Export(saveItem.GetProperty("fanart_image").asString(), savedFanart);
+      for (map<string, string>::const_iterator i = artwork.begin(); i != artwork.end(); ++i)
+      {
+        CStdString savedThumb = item.GetLocalArt(i->first, false);
+        savedThumb = URIUtils::AddFileToFolder(outDir, URIUtils::GetFileName(savedThumb));
+        CTextureCache::Get().Export(i->second, savedThumb, overwrite);
+      }
     }
   }
 }
