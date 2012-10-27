@@ -2839,6 +2839,20 @@ bool CApplication::OnAction(const CAction &action)
         return true;
       }
     }
+
+    if (action.GetID() == ACTION_SWITCH_PLAYER)
+    {
+      VECPLAYERCORES cores;
+      CFileItem item(*m_itemCurrentFile.get());
+      CPlayerCoreFactory::GetPlayers(item, cores);
+      PLAYERCOREID core = CPlayerCoreFactory::SelectPlayerDialog(cores);
+      if(core != EPC_NONE)
+      {
+        g_application.m_eForcedNextPlayer = core;
+        item.m_lStartOffset = GetTime() * 75;
+        PlayFile(item, true);
+      }
+    }
   }
 
   if (g_peripherals.OnAction(action))
