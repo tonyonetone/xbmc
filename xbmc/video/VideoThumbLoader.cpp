@@ -392,7 +392,17 @@ void CVideoThumbLoader::OnJobComplete(unsigned int jobID, bool success, CJob* jo
     CVideoInfoTag* info = loader->m_item.GetVideoInfoTag();
 
     if (loader->m_thumb && info->m_iDbId > 0 && !info->m_type.empty())
-      m_database->SetArtForItem(info->m_iDbId, info->m_type, "thumb", loader->m_item.GetArt("thumb"));
+    {
+      // This runs in a different thread than the CVideoThumLoader object.
+      // As mysql is not thread-safe (at least on Windows), have to create a database object, here.
+      CVideoDatabase db;
+      if (db.Open())
+      {
+        db.SetArtForItem(info->m_iDbId, info->m_type, "thumb", loader->m_item.GetArt("thumb"));
+        db.Close();
+      }
+
+    }
 
     if (m_pStreamDetailsObs)
       m_pStreamDetailsObs->OnStreamDetails(info->m_streamDetails, info->m_strFileNameAndPath, info->m_iFileId);
