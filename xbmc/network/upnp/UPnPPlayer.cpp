@@ -197,6 +197,16 @@ bool CUPnPPlayer::OpenFile(const CFileItem& file, const CPlayerOptions& options)
   NPT_Cardinal res_index;
   NPT_CHECK_LABEL_SEVERE(m_control->FindBestResource(m_delegate->m_device, *obj, res_index), failed);
 
+
+  /* dlna specifies that a return code of 705 should be returned
+   * if TRANSPORT_STATE is not STOPPED or NO_MEDIA_PRESENT */
+  NPT_CHECK_LABEL_SEVERE(m_control->Stop(m_delegate->m_device
+                                         , m_delegate->m_instance
+                                         , m_delegate), failed);
+  if(!m_delegate->m_resevent.WaitMSec(10000)) goto failed;
+  NPT_CHECK_LABEL_SEVERE(m_delegate->m_resstatus, failed);
+
+
   NPT_CHECK_LABEL_SEVERE(m_control->SetAVTransportURI(m_delegate->m_device
                                                     , m_delegate->m_instance
                                                     , obj->m_Resources[res_index].m_Uri
