@@ -17,7 +17,7 @@
 #include "URL.h"
 #include "utils/URIUtils.h"
 #include "utils/Variant.h"
-#include "PlayList.h"
+#include "playlists/PlayList.h"
 #include "GUIUserMessages.h"
 
 using namespace ANNOUNCEMENT;
