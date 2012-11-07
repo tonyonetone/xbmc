@@ -147,6 +147,7 @@ public:
   CDateTime m_dateAdded;
   CStdString m_type;
   int m_duration; ///< duration in seconds
+  std::map<std::string, std::string> m_art;
 
 private:
   /* \brief Parse our native XML format for video info.
