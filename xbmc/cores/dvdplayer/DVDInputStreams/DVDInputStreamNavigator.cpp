@@ -27,6 +27,7 @@
 #include "utils/log.h"
 #include "guilib/Geometry.h"
 #include "URIUtils.h"
+#include "URL.h"
 #if defined(TARGET_DARWIN)
 #include "CocoaInterface.h"
 #endif
@@ -85,6 +86,14 @@ bool CDVDInputStreamNavigator::Open(const char* strFile, const std::string& cont
   if(URIUtils::GetFileName(path) == "VIDEO_TS")
     path = URIUtils::GetParentPath(path);
   URIUtils::RemoveSlashAtEnd(path);
+  CURL url(path);
+
+  // if this is the root of a udf path, we want the image file
+  // so that libdvdnav can parse the udf itself
+  if(url.GetProtocol() == "udf"
+  && url.GetFileName() == "")
+    path = url.GetHostName();
+
 
 #if defined(TARGET_DARWIN_OSX)
   // if physical DVDs, libdvdnav wants "/dev/rdiskN" device name for OSX,
