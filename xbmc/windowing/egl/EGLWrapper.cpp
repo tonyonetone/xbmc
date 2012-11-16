@@ -25,6 +25,7 @@
 #include "utils/log.h"
 #include "EGLNativeTypeAndroid.h"
 #include "EGLNativeTypeAmlogic.h"
+#include "EGLNativeTypeExynos.h"
 #include "EGLNativeTypeRaspberryPI.h"
 #include "EGLWrapper.h"
 
@@ -81,7 +82,8 @@ bool CEGLWrapper::Initialize(const std::string &implementation)
   // that we know will work
   if ((nativeGuess = CreateEGLNativeType<CEGLNativeTypeAndroid>(implementation)) ||
       (nativeGuess = CreateEGLNativeType<CEGLNativeTypeAmlogic>(implementation)) ||
-      (nativeGuess = CreateEGLNativeType<CEGLNativeTypeRaspberryPI>(implementation)))
+      (nativeGuess = CreateEGLNativeType<CEGLNativeTypeRaspberryPI>(implementation)) ||
+      (nativeGuess = CreateEGLNativeType<CEGLNativeTypeExynos>(implementation)))
   {
     m_nativeTypes = nativeGuess;
 
