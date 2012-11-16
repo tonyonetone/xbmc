@@ -724,6 +724,9 @@ case $use_platform in
      CXXFLAGS="$CXXFLAGS"
      ffmpeg_target_os=linux
      ;;
+  samsung-exynos)
+     USE_MFCDECODER=1; AC_DEFINE(HAVE_MFCDECODER, [1], [Define if MFC samsung exynos decoder is present])
+     ;;
 esac
 
 # check for GIT_REV
@@ -2553,6 +2556,7 @@ AC_SUBST(USE_ANDROID)
 AC_SUBST(GTEST_CONFIGURED)
 AC_SUBST(USE_DOXYGEN)
 AC_SUBST(USE_PVR_ADDONS)
+AC_SUBST(USE_MFCDECODER)
 
 # pushd and popd are not available in other shells besides bash, so implement
 # our own pushd/popd functions
