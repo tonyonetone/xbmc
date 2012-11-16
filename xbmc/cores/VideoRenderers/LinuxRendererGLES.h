@@ -32,6 +32,9 @@
 #include "guilib/GraphicContext.h"
 #include "BaseRenderer.h"
 #include "xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodec.h"
+#if defined(HAVE_MFCDECODER)
+#include "linux/LinuxV4l2.h"
+#endif
 
 class CRenderCapture;
 
@@ -88,7 +91,8 @@ enum RenderMethod
   RENDER_OMXEGL = 0x040,
   RENDER_CVREF  = 0x080,
   RENDER_BYPASS = 0x100,
-  RENDER_EGLIMG = 0x200
+  RENDER_EGLIMG = 0x200,
+  RENDER_MFC    = 0x400
 };
 
 enum RenderQuality
@@ -163,6 +167,9 @@ public:
 #ifdef HAVE_LIBSTAGEFRIGHT
   virtual void         AddProcessor(CStageFrightVideo* stf, EGLImageKHR eglimg);
 #endif
+#if defined(HAVE_MFCDECODER)
+  virtual void         AddProcessor(DVDVideoPicture *picture);
+#endif
 
 protected:
   virtual void Render(DWORD flags, int index);
@@ -194,6 +201,10 @@ protected:
   void UploadEGLIMGTexture(int index);
   void DeleteEGLIMGTexture(int index);
   bool CreateEGLIMGTexture(int index);
+  
+  void UploadMFCTexture(int index);
+  void DeleteMFCTexture(int index);
+  bool CreateMFCTexture(int index);
 
   void CalculateTextureSourceRects(int source, int num_planes);
 
@@ -203,6 +214,7 @@ protected:
   void RenderSoftware(int index, int field);      // single pass s/w yuv2rgb renderer
   void RenderOpenMax(int index, int field);       // OpenMAX rgb texture
   void RenderEglImage(int index, int field);       // Android OES texture
+  void RenderMFC(int index, int field);          // RGBA rgb texture
   void RenderCoreVideoRef(int index, int field);  // CoreVideo reference
 
   CFrameBufferObject m_fbo;
@@ -263,6 +275,9 @@ protected:
     CStageFrightVideo* stf;
     EGLImageKHR eglimg;
 #endif
+#if defined(HAVE_MFCDECODER)
+    V4L2Buffer *mfcBuffer;
+#endif 
   };
 
   typedef YUVBUFFER          YUVBUFFERS[NUM_BUFFERS];
@@ -270,6 +285,17 @@ protected:
   // YV12 decoder textures
   // field index 0 is full image, 1 is odd scanlines, 2 is even scanlines
   YUVBUFFERS m_buffers;
+
+#if defined(HAVE_MFCDECODER)
+  int m_iVideoHandle;
+  int m_iConverterHandle;
+  V4L2Buffer *m_v4l2ConvertBuffer;
+  bool m_bMFCStartConverter;
+  bool m_bMFCStartRender;
+  int  m_iMFCBufferIndex;
+#define NUM_OUTPUT_BUFFERS 2
+#define NUM_CONVERT_BUFFERS 2
+#endif
 
   void LoadPlane( YUVPLANE& plane, int type, unsigned flipindex
                 , unsigned width,  unsigned height

@@ -853,7 +853,10 @@ int CXBMCRenderManager::AddVideoPicture(DVDVideoPicture& pic)
   else if(pic.format == RENDER_FMT_EGLIMG)
     m_pRenderer->AddProcessor(pic.stf, pic.eglimg);
 #endif
-
+#if defined(HAVE_MFCDECODER)
+  else if(pic.format == RENDER_FMT_MFC)
+    m_pRenderer->AddProcessor(&pic);
+#endif
   m_pRenderer->ReleaseImage(index, false);
 
   return index;
