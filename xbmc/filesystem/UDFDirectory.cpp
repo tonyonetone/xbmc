@@ -35,6 +35,17 @@ CUDFDirectory::~CUDFDirectory(void)
 {
 }
 
+bool CUDFDirectory::ContainsFiles(const CStdString &strPath)
+{
+  udf25 udf;
+  udf_dir_t *dirp = udf.OpenDir(strPath, "/");
+
+  if (dirp == NULL)
+    return false;
+  udf.CloseDir(dirp);
+  return true;
+}
+
 bool CUDFDirectory::GetDirectory(const CStdString& strPath,
                                  CFileItemList &items)
 {

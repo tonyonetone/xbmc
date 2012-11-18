@@ -47,6 +47,8 @@
 #include "ZipManager.h"
 #include "settings/AdvancedSettings.h"
 #include "FileItem.h"
+#include "URL.h"
+#include "UDFDirectory.h"
 
 using namespace XFILE;
 using namespace PLAYLIST;
@@ -223,6 +225,15 @@ IFileDirectory* CFileDirectoryFactory::Create(const CStdString& strPath, CFileIt
     }
     IFileDirectory* pDir=new CSmartPlaylistDirectory;
     return pDir; // treat as directory
+  }
+  if (strExtension.Equals(".iso")
+  ||  strExtension.Equals(".img"))
+  {
+    IFileDirectory* pDir=new CUDFDirectory();
+    if (pDir->ContainsFiles(strPath))
+      return pDir;
+    delete pDir;
+    return NULL;
   }
   if (g_advancedSettings.m_playlistAsFolders && CPlayListFactory::IsPlaylist(strPath))
   { // Playlist file
