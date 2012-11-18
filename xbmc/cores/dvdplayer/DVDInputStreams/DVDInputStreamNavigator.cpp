@@ -86,8 +86,6 @@ bool CDVDInputStreamNavigator::Open(const char* strFile, const std::string& cont
   if(URIUtils::GetFileName(path) == "VIDEO_TS")
     path = URIUtils::GetParentPath(path);
   URIUtils::RemoveSlashAtEnd(path);
-<<<<<<< HEAD
-=======
   CURL url(path);
 
   // if this is the root of a udf path, we want the image file
@@ -96,7 +94,6 @@ bool CDVDInputStreamNavigator::Open(const char* strFile, const std::string& cont
   && url.GetFileName() == "")
     path = url.GetHostName();
 
->>>>>>> elupus/upnp-player
 
 #if defined(TARGET_DARWIN_OSX)
   // if physical DVDs, libdvdnav wants "/dev/rdiskN" device name for OSX,
