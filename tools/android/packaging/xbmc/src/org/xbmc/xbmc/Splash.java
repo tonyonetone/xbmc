@@ -249,6 +249,15 @@ public class Splash extends Activity {
 
 	protected void startXBMC() {
 		// Run XBMC
+System.loadLibrary("avutil");
+System.loadLibrary("swscale");
+System.loadLibrary("swresample");
+System.loadLibrary("avcodec");
+System.loadLibrary("avformat");
+System.loadLibrary("postproc");
+System.loadLibrary("avfilter");
+System.loadLibrary("xbmc");
+
 		Intent intent = new Intent();
 		intent.setClass(this, android.app.NativeActivity.class);
 		startActivity(intent);
