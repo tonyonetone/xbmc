@@ -149,7 +149,7 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, unsigne
 #else
   hwSupport += "CrystalHD:no ";
 #endif
-#if defined(HAVE_LIBOPENMAX) && defined(_LINUX)
+#if defined(HAVE_LIBOPENMAX)
   hwSupport += "OpenMax:yes ";
 #elif defined(_LINUX)
   hwSupport += "OpenMax:no ";

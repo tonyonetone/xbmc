@@ -31,7 +31,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 // debug spew defines
-#if 0
+#if 1
 #define OMX_DEBUG_VERBOSE
 #define OMX_DEBUG_EVENTHANDLER
 #define OMX_DEBUG_FILLBUFFERDONE

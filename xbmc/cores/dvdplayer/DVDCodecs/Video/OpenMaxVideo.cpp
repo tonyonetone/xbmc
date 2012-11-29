@@ -71,10 +71,10 @@ do \
 #define OMX_INIT_STRUCTURE(a) \
   memset(&(a), 0, sizeof(a)); \
   (a).nSize = sizeof(a); \
-  (a).nVersion.s.nVersionMajor = OMX_VERSION_MAJOR; \
-  (a).nVersion.s.nVersionMinor = OMX_VERSION_MINOR; \
-  (a).nVersion.s.nRevision = OMX_VERSION_REVISION; \
-  (a).nVersion.s.nStep = OMX_VERSION_STEP
+  (a).nVersion.s.nVersionMajor = 1; \
+  (a).nVersion.s.nVersionMinor = 1; \
+  (a).nVersion.s.nRevision = 0; \
+  (a).nVersion.s.nStep = 0
 
 
 COpenMaxVideo::COpenMaxVideo()
@@ -637,7 +637,7 @@ OMX_ERRORTYPE COpenMaxVideo::AllocOMXOutputBuffers(void)
     tMsg.dwMessage = TMSG_CALLBACK;
     tMsg.lpVoid = (void*)&callbackData;
 
-    g_application.getApplicationMessenger().SendMessage(tMsg, true);
+    CApplicationMessenger::Get().SendMessage(tMsg, true);
 
     omx_err = OMX_ErrorNone;
   }

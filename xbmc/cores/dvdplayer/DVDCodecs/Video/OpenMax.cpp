@@ -62,7 +62,7 @@ public:
 
 class DllLibOpenMax : public DllDynamic, DllLibOpenMaxInterface
 {
-  DECLARE_DLL_WRAPPER(DllLibOpenMax, "/usr/lib/libnvomx.so")
+  DECLARE_DLL_WRAPPER(DllLibOpenMax, "libnvomx.so")
 
   DEFINE_METHOD0(OMX_ERRORTYPE, OMX_Init)
   DEFINE_METHOD0(OMX_ERRORTYPE, OMX_Deinit)
