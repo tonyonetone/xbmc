@@ -113,6 +113,7 @@ bool COpenMaxVideo::Open(CDVDStreamInfo &hints)
   m_decoded_width  = hints.width;
   m_decoded_height = hints.height;
 
+  CLog::Log(DEBUG, "COpenMaxVideo::Open codec: %d; profile: %d\n", hints.codec, hints.profile);
   switch (hints.codec)
   {
     case CODEC_ID_H264:
@@ -168,6 +169,32 @@ bool COpenMaxVideo::Open(CDVDStreamInfo &hints)
       return false;
     break;
   }
+
+  // Get component from role
+  OMX_STRING role_name = hints.codec == CODEC_ID_H264 ?
+      const_cast<OMX_STRING>("video_decoder.avc") :
+      const_cast<OMX_STRING>("video_decoder.vpx");
+  // Get the first component for this role and set the role on it.
+  OMX_U32 num_components = 1;
+  std::string component(OMX_MAX_STRINGNAME_SIZE, '\0');
+  char* component_as_array = string_as_array(&component);
+  omx_err = m_dll->OMX_GetComponentsOfRole(
+      role_name, &num_components,
+      reinterpret_cast<OMX_U8**>(&component_as_array));
+  if (omx_err) 
+  {
+      CLog::Log(LOGERROR, "%s::%s - Unsupported role: %s", CLASSNAME, __func__, role_name);
+      return false;
+  }
+  if (num_components == 1) 
+  {
+      CLog::Log(LOGERROR, "%s::%s - No components for: %s", CLASSNAME, __func__, role_name);
+      return false;
+  }
+  decoder_name = reinterpret_cast<OMX_STRING>(string_as_array(&component));
+  #if defined(OMX_DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::%s - decoder_name: %s\n", CLASSNAME, __func__,decoder_name);
+  #endif
 
   // initialize OpenMAX.
   if (!Initialize(decoder_name))

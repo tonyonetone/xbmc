@@ -172,6 +172,7 @@ bool COMXVideo::Open(CDVDStreamInfo &hints, OMXClock *clock, bool deinterlace, b
   m_converter     = new CBitstreamConverter();
   m_video_convert = m_converter->Open(hints.codec, (uint8_t *)hints.extradata, hints.extrasize, false);
 
+  CLog::Log(DEBUG, "COMXVideo::Open codec: %d; profile: %d\n", hints.codec, hints.profile);
   switch (hints.codec)
   {
     case CODEC_ID_H264:
