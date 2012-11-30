@@ -61,7 +61,7 @@
 #else
 #include <sys/time.h>
 #endif
-#include "compiler.h"
+#include <linux/compiler.h>
 #include <linux/ioctl.h>
 #include <linux/types.h>
 
@@ -604,7 +604,6 @@ struct v4l2_plane {
 		unsigned long	userptr;
 	} m;
 	__u32			data_offset;
-	void			*cookie;
 	__u32			reserved[11];
 };
 
