@@ -354,7 +354,7 @@ private:
     song_iKarDelay,
     song_strKarEncoding,
     song_bCompilation,
-    song_strAlbumArtists
+    song_strAlbumArtists,
     song_strUrlThumb
   } SongFields;
 

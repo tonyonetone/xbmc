@@ -64,7 +64,7 @@ bool CDVDVideoCodecOpenMax::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
         if (hints.extrasize < 7 || hints.extradata == NULL)
         {
           CLog::Log(LOGNOTICE,
-            "%s::%s - avcC data too small or missing", CLASSNAME, __func__);
+            "%s::%s - avcC data too small or missing", CLASSNAME, __FUNCTION__);
           return false;
         }
         // valid avcC data (bitstream) always starts with the value 1 (version)
@@ -91,7 +91,7 @@ bool CDVDVideoCodecOpenMax::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
     {
       CLog::Log(LOGERROR,
         "%s::%s - failed to open, codec(%d), profile(%d), level(%d)", 
-        CLASSNAME, __func__, hints.codec, hints.profile, hints.level);
+        CLASSNAME, __FUNCTION__, hints.codec, hints.profile, hints.level);
       return false;
     }
 

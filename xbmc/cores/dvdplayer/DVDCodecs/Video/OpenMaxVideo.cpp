@@ -40,7 +40,6 @@
 #include <OMX_Index.h>
 #include <OMX_Image.h>
 
-
 #define CLASSNAME "COpenMaxVideo"
 
 // TODO: These are Nvidia Tegra2 dependent, need to dynamiclly find the
@@ -64,7 +63,7 @@ do \
     ext = (type) eglGetProcAddress(#ext); \
     if (!ext) \
     { \
-        CLog::Log(LOGERROR, "%s::%s - ERROR getting proc addr of " #ext "\n", CLASSNAME, __func__); \
+        CLog::Log(LOGERROR, "%s::%s - ERROR getting proc addr of " #ext "\n", CLASSNAME, __FUNCTION__); \
     } \
 } while (0);
 
@@ -75,7 +74,6 @@ do \
   (a).nVersion.s.nVersionMinor = 1; \
   (a).nVersion.s.nRevision = 0; \
   (a).nVersion.s.nStep = 0
-
 
 COpenMaxVideo::COpenMaxVideo()
 {
@@ -91,7 +89,7 @@ COpenMaxVideo::COpenMaxVideo()
 COpenMaxVideo::~COpenMaxVideo()
 {
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
   if (m_is_open)
     Close();
@@ -104,7 +102,7 @@ COpenMaxVideo::~COpenMaxVideo()
 bool COpenMaxVideo::Open(CDVDStreamInfo &hints)
 {
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
 
   OMX_ERRORTYPE omx_err = OMX_ErrorNone;
@@ -113,7 +111,7 @@ bool COpenMaxVideo::Open(CDVDStreamInfo &hints)
   m_decoded_width  = hints.width;
   m_decoded_height = hints.height;
 
-  CLog::Log(DEBUG, "COpenMaxVideo::Open codec: %d; profile: %d\n", hints.codec, hints.profile);
+  CLog::Log(LOGDEBUG, "COpenMaxVideo::Open codec: %d; profile: %d\n", hints.codec, hints.profile);
   switch (hints.codec)
   {
     case CODEC_ID_H264:
@@ -170,39 +168,12 @@ bool COpenMaxVideo::Open(CDVDStreamInfo &hints)
     break;
   }
 
-  // Get component from role
-  OMX_STRING role_name = hints.codec == CODEC_ID_H264 ?
-      const_cast<OMX_STRING>("video_decoder.avc") :
-      const_cast<OMX_STRING>("video_decoder.vpx");
-  // Get the first component for this role and set the role on it.
-  OMX_U32 num_components = 1;
-  std::string component(OMX_MAX_STRINGNAME_SIZE, '\0');
-  char* component_as_array = string_as_array(&component);
-  omx_err = m_dll->OMX_GetComponentsOfRole(
-      role_name, &num_components,
-      reinterpret_cast<OMX_U8**>(&component_as_array));
-  if (omx_err) 
-  {
-      CLog::Log(LOGERROR, "%s::%s - Unsupported role: %s", CLASSNAME, __func__, role_name);
-      return false;
-  }
-  if (num_components == 1) 
-  {
-      CLog::Log(LOGERROR, "%s::%s - No components for: %s", CLASSNAME, __func__, role_name);
-      return false;
-  }
-  decoder_name = reinterpret_cast<OMX_STRING>(string_as_array(&component));
-  #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s - decoder_name: %s\n", CLASSNAME, __func__,decoder_name);
-  #endif
-
   // initialize OpenMAX.
-  if (!Initialize(decoder_name))
+  if (!Initialize(hints.codec))
   {
     return false;
   }
 
-  // TODO: Find component from role name.
   // Get the port information. This will obtain information about the
   // number of ports and index of the first port.
   OMX_PORT_PARAM_TYPE port_param;
@@ -213,17 +184,92 @@ bool COpenMaxVideo::Open(CDVDStreamInfo &hints)
     Deinitialize();
     return false;
   }
+  if (!(port_param.nPorts == 2)) 
+  {
+    CLog::Log(LOGERROR, "%s::%s - Failed to get Port Param: %d", CLASSNAME, __FUNCTION__,(unsigned int)port_param.nPorts);
+    Deinitialize();
+    return false;
+  }
   m_omx_input_port = port_param.nStartPortNumber;
   m_omx_output_port = m_omx_input_port + 1;
+
+
+  // Populate input-buffer-related members based on input port data.
+  OMX_PARAM_PORTDEFINITIONTYPE port_format;
+  OMX_INIT_STRUCTURE(port_format);
+  port_format.nPortIndex = m_omx_input_port;
+  omx_err = OMX_GetParameter(m_omx_decoder,
+                            OMX_IndexParamPortDefinition,
+                            &port_format);
+  if (omx_err) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - GetParameter(OMX_IndexParamPortDefinition) failed", CLASSNAME, __FUNCTION__);
+     Deinitialize();
+     return false;
+  }
+  if (!(OMX_DirInput == port_format.eDir)) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - Expect Input Port", CLASSNAME, __FUNCTION__);
+     Deinitialize();
+     return false;
+  }
+
+  m_input_buffer_count = port_format.nBufferCountActual;
+  m_input_buffer_size = port_format.nBufferSize;
+
+  // Verify output port conforms to our expectations.
+  OMX_INIT_STRUCTURE(port_format);
+  port_format.nPortIndex = m_omx_output_port;
+  omx_err = OMX_GetParameter(m_omx_decoder,
+                            OMX_IndexParamPortDefinition,
+                            &port_format);
+  if (omx_err) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - GetParameter(OMX_IndexParamPortDefinition) failed", CLASSNAME, __FUNCTION__);
+     Deinitialize();
+     return false;
+  }
+  if (!(OMX_DirOutput == port_format.eDir)) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - Expect Output Port", CLASSNAME, __FUNCTION__);
+     Deinitialize();
+     return false;
+  }
+  m_output_buffer_count = port_format.nBufferCountMin;
+  
+  // Set output port parameters.
+  port_format.nBufferCountActual = m_output_buffer_count;
+  // Force an OMX_EventPortSettingsChanged event to be sent once we know the
+  // stream's real dimensions (which can only happen once some Decode() work has
+  // been done).
+  port_format.format.video.nFrameWidth = m_decoded_width;
+  port_format.format.video.nFrameHeight = m_decoded_height;
+  omx_err = OMX_SetParameter(m_omx_decoder,
+                            OMX_IndexParamPortDefinition,
+                            &port_format);
+  if (omx_err) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - SetParameter(OMX_IndexParamPortDefinition) failed", CLASSNAME, __FUNCTION__);
+     Deinitialize();
+     return false;
+  }
+
   #if defined(OMX_DEBUG_VERBOSE)
   CLog::Log(LOGDEBUG,
     "%s::%s - decoder_component(0x%p), input_port(0x%x), output_port(0x%x)\n",
-    CLASSNAME, __func__, m_omx_decoder, m_omx_input_port, m_omx_output_port);
+    CLASSNAME, __FUNCTION__, m_omx_decoder, m_omx_input_port, m_omx_output_port);
   #endif
 
-  // TODO: Set role for the component because components could have multiple roles.
-  //QueryCodec();
-
+  // transition decoder component to IDLE state
+  omx_err = SetStateForComponent(OMX_StateIdle);
+  if (omx_err) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - setting OMX_StateIdle failed with omx_err(0x%x)\n",
+      CLASSNAME, __FUNCTION__, omx_err);
+     Deinitialize();
+     return false;
+  }
+  
   // Component will be in OMX_StateLoaded now so we can alloc omx input/output buffers.
   // we can only alloc them in OMX_StateLoaded state or if the component port is disabled
   // Alloc buffers for the omx input port.
@@ -236,7 +282,7 @@ bool COpenMaxVideo::Open(CDVDStreamInfo &hints)
   // Alloc buffers for the omx output port.
   m_egl_display = g_Windowing.GetEGLDisplay();
   m_egl_context = g_Windowing.GetEGLContext();
-  omx_err = AllocOMXOutputBuffers();
+  omx_err = AllocateFakeOutputBuffers();
   if (omx_err)
   {
     FreeOMXInputBuffers(false);
@@ -248,16 +294,13 @@ bool COpenMaxVideo::Open(CDVDStreamInfo &hints)
   m_drop_state = false;
   m_videoplayback_done = false;
 
-  // crank it up.
-  StartDecoder();
-
   return true;
 }
 
 void COpenMaxVideo::Close()
 {
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
   if (m_omx_decoder)
   {
@@ -287,13 +330,13 @@ void COpenMaxVideo::SetDropState(bool bDrop)
       omx_err = OMX_FillThisBuffer(m_omx_decoder, omx_buffer);
       if (omx_err)
         CLog::Log(LOGERROR, "%s::%s - OMX_FillThisBuffer, omx_err(0x%x)\n",
-          CLASSNAME, __func__, omx_err);
+          CLASSNAME, __FUNCTION__, omx_err);
     }
     pthread_mutex_unlock(&m_omx_output_mutex);
 
     #if defined(OMX_DEBUG_VERBOSE)
     CLog::Log(LOGDEBUG, "%s::%s - m_drop_state(%d)\n",
-      CLASSNAME, __func__, m_drop_state);
+      CLASSNAME, __FUNCTION__, m_drop_state);
     #endif
   }
 }
@@ -347,7 +390,7 @@ int COpenMaxVideo::Decode(BYTE* pData, int iSize, double dts, double pts)
       #if defined(OMX_DEBUG_EMPTYBUFFERDONE)
       CLog::Log(LOGDEBUG,
         "%s::%s - feeding decoder, omx_buffer->pBuffer(0x%p), demuxer_bytes(%d)\n",
-        CLASSNAME, __func__, omx_buffer->pBuffer, demuxer_bytes);
+        CLASSNAME, __FUNCTION__, omx_buffer->pBuffer, demuxer_bytes);
       #endif
       // Give this omx_buffer to OpenMax to be decoded.
       omx_err = OMX_EmptyThisBuffer(m_omx_decoder, omx_buffer);
@@ -355,7 +398,7 @@ int COpenMaxVideo::Decode(BYTE* pData, int iSize, double dts, double pts)
       {
         CLog::Log(LOGDEBUG,
           "%s::%s - OMX_EmptyThisBuffer() failed with result(0x%x)\n",
-          CLASSNAME, __func__, omx_err);
+          CLASSNAME, __FUNCTION__, omx_err);
         return VC_ERROR;
       }
       // only push if we are successful with feeding OMX_EmptyThisBuffer
@@ -373,7 +416,7 @@ int COpenMaxVideo::Decode(BYTE* pData, int iSize, double dts, double pts)
     if (m_omx_input_avaliable.empty())
       CLog::Log(LOGDEBUG,
         "%s::%s - buffering demux, m_demux_queue_size(%d), demuxer_bytes(%d)\n",
-        CLASSNAME, __func__, m_demux_queue.size(), demuxer_bytes);
+        CLASSNAME, __FUNCTION__, m_demux_queue.size(), demuxer_bytes);
     #endif
   }
 
@@ -386,7 +429,7 @@ int COpenMaxVideo::Decode(BYTE* pData, int iSize, double dts, double pts)
 void COpenMaxVideo::Reset(void)
 {
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
 /*
   // only reset OpenMax decoder if it's running
@@ -423,7 +466,7 @@ bool COpenMaxVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
       OMX_ERRORTYPE omx_err = OMX_FillThisBuffer(m_omx_decoder, buffer->omx_buffer);
       if (omx_err)
         CLog::Log(LOGERROR, "%s::%s - OMX_FillThisBuffer, omx_err(0x%x)\n",
-          CLASSNAME, __func__, omx_err);
+          CLASSNAME, "GetPicture", omx_err);
     }
   }
 
@@ -455,7 +498,7 @@ bool COpenMaxVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   else
   {
     CLog::Log(LOGDEBUG, "%s::%s - called but m_omx_output_ready is empty\n",
-      CLASSNAME, __func__);
+      CLASSNAME, __FUNCTION__);
   }
   #endif
 
@@ -476,7 +519,7 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEmptyBufferDone(
 /*
   #if defined(OMX_DEBUG_EMPTYBUFFERDONE)
   CLog::Log(LOGDEBUG, "%s::%s - buffer_size(%lu), timestamp(%f)\n",
-    CLASSNAME, __func__, pBuffer->nFilledLen, (double)pBuffer->nTimeStamp / 1000.0);
+    CLASSNAME, __FUNCTION__, pBuffer->nFilledLen, (double)pBuffer->nTimeStamp / 1000.0);
   #endif
 */
   // queue free input buffer to avaliable list.
@@ -499,7 +542,7 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderFillBufferDone(
 
   #if defined(OMX_DEBUG_FILLBUFFERDONE)
   CLog::Log(LOGDEBUG, "%s::%s - buffer_size(%lu), timestamp(%f)\n",
-    CLASSNAME, __func__, pBuffer->nFilledLen, (double)pBuffer->nTimeStamp / 1000.0);
+    CLASSNAME, __FUNCTION__, pBuffer->nFilledLen, (double)pBuffer->nTimeStamp / 1000.0);
   #endif
 
   if (!ctx->m_portChanging)
@@ -541,7 +584,7 @@ OMX_ERRORTYPE COpenMaxVideo::PrimeFillBuffers(void)
   OpenMaxVideoBuffer *buffer;
 
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
   // tell OpenMax to start filling output buffers
   for (size_t i = 0; i < m_omx_output_buffers.size(); i++)
@@ -556,7 +599,7 @@ OMX_ERRORTYPE COpenMaxVideo::PrimeFillBuffers(void)
     omx_err = OMX_FillThisBuffer(m_omx_decoder, buffer->omx_buffer);
     if (omx_err)
       CLog::Log(LOGERROR, "%s::%s - OMX_FillThisBuffer failed with omx_err(0x%x)\n",
-        CLASSNAME, __func__, omx_err);
+        CLASSNAME, "PrimeFillBuffers", omx_err);
   }
 
   return omx_err;
@@ -575,7 +618,7 @@ OMX_ERRORTYPE COpenMaxVideo::AllocOMXInputBuffers(void)
   #if defined(OMX_DEBUG_VERBOSE)
   CLog::Log(LOGDEBUG,
     "%s::%s - iport(%d), nBufferCountMin(%lu), nBufferSize(%lu)\n",
-    CLASSNAME, __func__, m_omx_input_port, port_format.nBufferCountMin, port_format.nBufferSize);
+    CLASSNAME, __FUNCTION__, m_omx_input_port, port_format.nBufferCountMin, port_format.nBufferSize);
   #endif
   for (size_t i = 0; i < port_format.nBufferCountMin; i++)
   {
@@ -588,7 +631,7 @@ OMX_ERRORTYPE COpenMaxVideo::AllocOMXInputBuffers(void)
     if (omx_err)
     {
       CLog::Log(LOGERROR, "%s::%s - OMX_UseBuffer failed with omx_err(0x%x)\n",
-        CLASSNAME, __func__, omx_err);
+        CLASSNAME, __FUNCTION__, omx_err);
       return(omx_err);
     }
     m_omx_input_buffers.push_back(buffer);
@@ -607,7 +650,7 @@ OMX_ERRORTYPE COpenMaxVideo::FreeOMXInputBuffers(bool wait)
   omx_err = OMX_SendCommand(m_omx_decoder, OMX_CommandFlush, m_omx_input_port, 0);
   if (omx_err)
     CLog::Log(LOGERROR, "%s::%s - OMX_CommandFlush failed with omx_err(0x%x)\n",
-      CLASSNAME, __func__, omx_err);
+      CLASSNAME, __FUNCTION__, omx_err);
   else if (wait)
     sem_wait(m_omx_flush_input);
   */
@@ -644,6 +687,29 @@ void COpenMaxVideo::CallbackFreeOMXEGLTextures(void *userdata)
 {
   COpenMaxVideo *omx = static_cast<COpenMaxVideo*>(userdata);
   omx->FreeOMXOutputEGLTextures(true);
+}
+
+OMX_ERRORTYPE COpenMaxVideo::AllocateFakeOutputBuffers() {
+  OMX_ERRORTYPE omx_err;
+
+  // Fill the component with fake output buffers.
+  for (unsigned int i = 0; i < m_output_buffer_count; ++i) {
+    OpenMaxVideoBuffer* egl_buffer;
+    egl_buffer = new OpenMaxVideoBuffer;
+    omx_err = OMX_AllocateBuffer(m_omx_decoder, &(egl_buffer->omx_buffer), m_omx_output_port,
+                                NULL, 0);
+    if (omx_err)
+    {
+      CLog::Log(LOGERROR, "%s::%s - OMX_AllocateBuffer failed with omx_err(0x%x)\n",
+        CLASSNAME, __FUNCTION__, omx_err);
+      return omx_err;
+    }
+    egl_buffer->omx_buffer->pAppPrivate = egl_buffer->omx_buffer;
+    egl_buffer->omx_buffer->nTimeStamp = -1;
+    egl_buffer->omx_buffer->nOutputPortIndex = m_omx_output_port;
+    m_omx_output_buffers.push_back(egl_buffer);
+  }
+  return omx_err;
 }
 
 OMX_ERRORTYPE COpenMaxVideo::AllocOMXOutputBuffers(void)
@@ -691,23 +757,9 @@ OMX_ERRORTYPE COpenMaxVideo::AllocOMXOutputEGLTextures(void)
   EGLint attrib = EGL_NONE;
   OpenMaxVideoBuffer *egl_buffer;
 
-  // Obtain the information about the output port.
-  OMX_PARAM_PORTDEFINITIONTYPE port_format;
-  OMX_INIT_STRUCTURE(port_format);
-  port_format.nPortIndex = m_omx_output_port;
-  omx_err = OMX_GetParameter(m_omx_decoder, OMX_IndexParamPortDefinition, &port_format);
-
-  #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG,
-    "%s::%s (1) - oport(%d), nFrameWidth(%lu), nFrameHeight(%lu), nStride(%lx), nBufferCountMin(%lu), nBufferSize(%lu)\n",
-    CLASSNAME, __func__, m_omx_output_port,
-    port_format.format.video.nFrameWidth, port_format.format.video.nFrameHeight,port_format.format.video.nStride,
-    port_format.nBufferCountMin, port_format.nBufferSize);
-  #endif
-
   glActiveTexture(GL_TEXTURE0);
 
-  for (size_t i = 0; i < port_format.nBufferCountMin; i++)
+  for (size_t i = 0; i < m_output_buffer_count; i++)
   {
     egl_buffer = new OpenMaxVideoBuffer;
     memset(egl_buffer, 0, sizeof(*egl_buffer));
@@ -740,7 +792,7 @@ OMX_ERRORTYPE COpenMaxVideo::AllocOMXOutputEGLTextures(void)
       &attrib);
     if (!egl_buffer->egl_image)
     {
-      CLog::Log(LOGERROR, "%s::%s - ERROR creating EglImage\n", CLASSNAME, __func__);
+      CLog::Log(LOGERROR, "%s::%s - ERROR creating EglImage\n", CLASSNAME, __FUNCTION__);
       return(OMX_ErrorUndefined);
     }
     egl_buffer->index = i;
@@ -751,13 +803,13 @@ OMX_ERRORTYPE COpenMaxVideo::AllocOMXOutputEGLTextures(void)
     if (omx_err)
     {
       CLog::Log(LOGERROR, "%s::%s - OMX_UseEGLImage failed with omx_err(0x%x)\n",
-        CLASSNAME, __func__, omx_err);
+        CLASSNAME, __FUNCTION__, omx_err);
       return(omx_err);
     }
     m_omx_output_buffers.push_back(egl_buffer);
 
     CLog::Log(LOGDEBUG, "%s::%s - Texture %p Width %d Height %d\n",
-      CLASSNAME, __func__, egl_buffer->egl_image, egl_buffer->width, egl_buffer->height);
+      CLASSNAME, __FUNCTION__, egl_buffer->egl_image, egl_buffer->width, egl_buffer->height);
   }
   m_omx_output_eos = false;
   while (!m_omx_output_busy.empty())
@@ -808,13 +860,13 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
   OMX_ERRORTYPE omx_err;
   COpenMaxVideo *ctx = static_cast<COpenMaxVideo*>(pAppData);
 
-/*
+
   #if defined(OMX_DEBUG_VERBOSE)
   CLog::Log(LOGDEBUG,
     "COpenMax::%s - hComponent(0x%p), eEvent(0x%x), nData1(0x%lx), nData2(0x%lx), pEventData(0x%p)\n",
-    __func__, hComponent, eEvent, nData1, nData2, pEventData);
+    __FUNCTION__, hComponent, eEvent, nData1, nData2, pEventData);
   #endif
-*/
+
 
   switch (eEvent)
   {
@@ -826,27 +878,34 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
           switch (ctx->m_omx_decoder_state)
           {
             case OMX_StateInvalid:
-              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateInvalid\n", CLASSNAME, __func__);
+              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateInvalid\n", CLASSNAME, __FUNCTION__);
             break;
             case OMX_StateLoaded:
-              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateLoaded\n", CLASSNAME, __func__);
+              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateLoaded\n", CLASSNAME, __FUNCTION__);
+			  
             break;
             case OMX_StateIdle:
-              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateIdle\n", CLASSNAME, __func__);
+              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateIdle\n", CLASSNAME, __FUNCTION__);
+		      // crank it up.
+              StartDecoder();
+
             break;
             case OMX_StateExecuting:
-              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateExecuting\n", CLASSNAME, __func__);
+              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateExecuting\n", CLASSNAME, __FUNCTION__);
+			  //prime the omx output buffers.
+			  PrimeFillBuffers();
+
             break;
             case OMX_StatePause:
-              CLog::Log(LOGDEBUG, "%s::%s - OMX_StatePause\n", CLASSNAME, __func__);
+              CLog::Log(LOGDEBUG, "%s::%s - OMX_StatePause\n", CLASSNAME, __FUNCTION__);
             break;
             case OMX_StateWaitForResources:
-              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateWaitForResources\n", CLASSNAME, __func__);
+              CLog::Log(LOGDEBUG, "%s::%s - OMX_StateWaitForResources\n", CLASSNAME, __FUNCTION__);
             break;
             default:
               CLog::Log(LOGDEBUG,
                 "%s::%s - Unknown OMX_Statexxxxx, state(%d)\n",
-                CLASSNAME, __func__, ctx->m_omx_decoder_state);
+                CLASSNAME, __FUNCTION__, ctx->m_omx_decoder_state);
             break;
           }
           sem_post(ctx->m_omx_decoder_state_change);
@@ -857,17 +916,17 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
           {
             sem_post(ctx->m_omx_flush_input);
             sem_post(ctx->m_omx_flush_output);
-            CLog::Log(LOGDEBUG, "COpenMax::%s - OMX_CommandFlush input/output\n",__func__);
+            CLog::Log(LOGDEBUG, "COpenMax::%s - OMX_CommandFlush input/output\n",__FUNCTION__);
           }
           else if (ctx->m_omx_input_port == (int)nData2)
           {
             sem_post(ctx->m_omx_flush_input);
-            CLog::Log(LOGDEBUG, "COpenMax::%s - OMX_CommandFlush input\n",__func__);
+            CLog::Log(LOGDEBUG, "COpenMax::%s - OMX_CommandFlush input\n",__FUNCTION__);
           }
           else if (ctx->m_omx_output_port == (int)nData2)
           {
             sem_post(ctx->m_omx_flush_output);
-            CLog::Log(LOGDEBUG, "COpenMax::%s - OMX_CommandFlush ouput\n",__func__);
+            CLog::Log(LOGDEBUG, "COpenMax::%s - OMX_CommandFlush ouput\n",__FUNCTION__);
           }
           else
           */
@@ -875,7 +934,7 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
             #if defined(OMX_DEBUG_EVENTHANDLER)
             CLog::Log(LOGDEBUG,
               "%s::%s - OMX_CommandFlush, nData2(0x%lx)\n",
-              CLASSNAME, __func__, nData2);
+              CLASSNAME, __FUNCTION__, nData2);
             #endif
           }
         break;
@@ -883,7 +942,7 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
           #if defined(OMX_DEBUG_EVENTHANDLER)
           CLog::Log(LOGDEBUG,
             "%s::%s - OMX_CommandPortDisable, nData1(0x%lx), nData2(0x%lx)\n",
-            CLASSNAME, __func__, nData1, nData2);
+            CLASSNAME, __FUNCTION__, nData1, nData2);
           #endif
           if (ctx->m_omx_output_port == (int)nData2)
           {
@@ -896,7 +955,7 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
           #if defined(OMX_DEBUG_EVENTHANDLER)
           CLog::Log(LOGDEBUG,
             "%s::%s - OMX_CommandPortEnable, nData1(0x%lx), nData2(0x%lx)\n",
-            CLASSNAME, __func__, nData1, nData2);
+            CLASSNAME, __FUNCTION__, nData1, nData2);
           #endif
           if (ctx->m_omx_output_port == (int)nData2)
           {
@@ -910,7 +969,7 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
         case OMX_CommandMarkBuffer:
           CLog::Log(LOGDEBUG,
             "%s::%s - OMX_CommandMarkBuffer, nData1(0x%lx), nData2(0x%lx)\n",
-            CLASSNAME, __func__, nData1, nData2);
+            CLASSNAME, __FUNCTION__, nData1, nData2);
         break;
         #endif
       }
@@ -920,14 +979,14 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
         #if defined(OMX_DEBUG_EVENTHANDLER)
         if(ctx->m_omx_input_port  == (int)nData1)
             CLog::Log(LOGDEBUG, "%s::%s - OMX_EventBufferFlag(input)\n",
-            CLASSNAME, __func__);
+            CLASSNAME, __FUNCTION__);
         #endif
         if(ctx->m_omx_output_port == (int)nData1)
         {
             ctx->m_videoplayback_done = true;
             #if defined(OMX_DEBUG_EVENTHANDLER)
             CLog::Log(LOGDEBUG, "%s::%s - OMX_EventBufferFlag(output)\n",
-            CLASSNAME, __func__);
+            CLASSNAME, __FUNCTION__);
             #endif
         }
       }
@@ -935,7 +994,7 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
     case OMX_EventPortSettingsChanged:
       #if defined(OMX_DEBUG_EVENTHANDLER)
       CLog::Log(LOGDEBUG,
-        "%s::%s - OMX_EventPortSettingsChanged(output)\n", CLASSNAME, __func__);
+        "%s::%s - OMX_EventPortSettingsChanged(output)\n", CLASSNAME, __FUNCTION__);
       #endif
       // not sure nData2 is the input/output ports in this call, docs don't say
       if (ctx->m_omx_output_port == (int)nData2)
@@ -950,10 +1009,10 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
     break;
     #if defined(OMX_DEBUG_EVENTHANDLER)
     case OMX_EventMark:
-      CLog::Log(LOGDEBUG, "%s::%s - OMX_EventMark\n", CLASSNAME, __func__);
+      CLog::Log(LOGDEBUG, "%s::%s - OMX_EventMark\n", CLASSNAME, __FUNCTION__);
     break;
     case OMX_EventResourcesAcquired:
-      CLog::Log(LOGDEBUG, "%s::%s - OMX_EventResourcesAcquired\n", CLASSNAME, __func__);
+      CLog::Log(LOGDEBUG, "%s::%s - OMX_EventResourcesAcquired\n", CLASSNAME, __FUNCTION__);
     break;
     #endif
     case OMX_EventError:
@@ -961,13 +1020,13 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
       {
         case OMX_ErrorInsufficientResources:
           CLog::Log(LOGERROR, "%s::%s - OMX_EventError, insufficient resources\n",
-            CLASSNAME, __func__);
+            CLASSNAME, __FUNCTION__);
           // we are so frack'ed
           //exit(0);
         break;
         case OMX_ErrorFormatNotDetected:
           CLog::Log(LOGERROR, "%s::%s - OMX_EventError, cannot parse input stream\n",
-            CLASSNAME, __func__);
+            CLASSNAME, __FUNCTION__);
         break;
         case OMX_ErrorPortUnpopulated:
           // silently ignore these. We can get them when setting OMX_CommandPortDisable
@@ -975,12 +1034,12 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
         break;
         case OMX_ErrorStreamCorrupt:
           CLog::Log(LOGERROR, "%s::%s - OMX_EventError, Bitstream corrupt\n",
-            CLASSNAME, __func__);
+            CLASSNAME, __FUNCTION__);
           ctx->m_videoplayback_done = true;
         break;
         default:
           CLog::Log(LOGERROR, "%s::%s - OMX_EventError detected, nData1(0x%lx), nData2(0x%lx)\n",
-            CLASSNAME, __func__, nData1, nData2);
+            CLASSNAME, __FUNCTION__, nData1, nData2);
         break;
       }
       // do this so we don't hang on errors
@@ -993,7 +1052,7 @@ OMX_ERRORTYPE COpenMaxVideo::DecoderEventHandler(
     default:
       CLog::Log(LOGWARNING,
         "%s::%s - Unknown eEvent(0x%x), nData1(0x%lx), nData2(0x%lx)\n",
-        CLASSNAME, __func__, eEvent, nData1, nData2);
+        CLASSNAME, __FUNCTION__, eEvent, nData1, nData2);
     break;
   }
 
@@ -1006,29 +1065,17 @@ OMX_ERRORTYPE COpenMaxVideo::StartDecoder(void)
   OMX_ERRORTYPE omx_err;
 
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
-
-  // transition decoder component to IDLE state
-  omx_err = SetStateForComponent(OMX_StateIdle);
-  if (omx_err)
-  {
-    CLog::Log(LOGERROR, "%s::%s - setting OMX_StateIdle failed with omx_err(0x%x)\n",
-      CLASSNAME, __func__, omx_err);
-    return omx_err;
-  }
 
   // transition decoder component to executing state
   omx_err = SetStateForComponent(OMX_StateExecuting);
   if (omx_err)
   {
     CLog::Log(LOGERROR, "%s::%s - setting OMX_StateExecuting failed with omx_err(0x%x)\n",
-      CLASSNAME, __func__, omx_err);
+      CLASSNAME, __FUNCTION__, omx_err);
     return omx_err;
   }
-
-  //prime the omx output buffers.
-  PrimeFillBuffers();
 
   return omx_err;
 }
@@ -1039,14 +1086,14 @@ OMX_ERRORTYPE COpenMaxVideo::StopDecoder(void)
   OMX_ERRORTYPE omx_err;
 
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
   // transition decoder component from executing to idle
   omx_err = SetStateForComponent(OMX_StateIdle);
   if (omx_err)
   {
     CLog::Log(LOGERROR, "%s::%s - setting OMX_StateIdle failed with omx_err(0x%x)\n",
-      CLASSNAME, __func__, omx_err);
+      CLASSNAME, __FUNCTION__, omx_err);
     return omx_err;
   }
 
@@ -1061,7 +1108,7 @@ OMX_ERRORTYPE COpenMaxVideo::StopDecoder(void)
   if (omx_err)
     CLog::Log(LOGERROR,
       "%s::%s - setting OMX_StateLoaded failed with omx_err(0x%x)\n",
-      CLASSNAME, __func__, omx_err);
+      CLASSNAME, __FUNCTION__, omx_err);
 
   return omx_err;
 }

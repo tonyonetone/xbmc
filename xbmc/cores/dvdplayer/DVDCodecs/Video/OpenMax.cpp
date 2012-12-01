@@ -43,6 +43,12 @@
 
 #define CLASSNAME "COpenMax"
 
+inline char* string_as_array(std::string* str) {
+  if (str == NULL)
+    return NULL;
+  // DO NOT USE const_cast<char*>(str->data())! See the unittest for why.
+  return str->empty() ? NULL : &*str->begin();
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 class DllLibOpenMaxInterface
@@ -86,17 +92,17 @@ class DllLibOpenMax : public DllDynamic, DllLibOpenMaxInterface
 #define OMX_INIT_STRUCTURE(a) \
   memset(&(a), 0, sizeof(a)); \
   (a).nSize = sizeof(a); \
-  (a).nVersion.s.nVersionMajor = OMX_VERSION_MAJOR; \
-  (a).nVersion.s.nVersionMinor = OMX_VERSION_MINOR; \
-  (a).nVersion.s.nRevision = OMX_VERSION_REVISION; \
-  (a).nVersion.s.nStep = OMX_VERSION_STEP
+  (a).nVersion.s.nVersionMajor = 1; \
+  (a).nVersion.s.nVersionMinor = 1; \
+  (a).nVersion.s.nRevision = 0; \
+  (a).nVersion.s.nStep = 0
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////
 COpenMax::COpenMax()
 {
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
   m_dll = new DllLibOpenMax;
   m_dll->Load();
@@ -114,7 +120,7 @@ COpenMax::COpenMax()
 COpenMax::~COpenMax()
 {
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __func__);
+  CLog::Log(LOGDEBUG, "%s::%s\n", CLASSNAME, __FUNCTION__);
   #endif
   /*
   sem_destroy(m_omx_flush_input);
@@ -174,10 +180,13 @@ OMX_ERRORTYPE COpenMax::WaitForState(OMX_STATETYPE state)
   omx_error = OMX_GetState(m_omx_decoder, &test_state);
 
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s - waiting for state(%d)\n", CLASSNAME, __func__, state);
+  CLog::Log(LOGDEBUG, "%s::%s - waiting for state(%d)\n", CLASSNAME, __FUNCTION__, state);
   #endif
   while ((omx_error == OMX_ErrorNone) && (test_state != state)) 
   {
+    #if defined(OMX_DEBUG_VERBOSE)
+    CLog::Log(LOGDEBUG, "%s::%s -   waiting curstate: %d\n", CLASSNAME, __FUNCTION__, test_state);
+    #endif
     clock_gettime(CLOCK_REALTIME, &timeout);
     timeout.tv_sec += 1;
     sem_timedwait(m_omx_decoder_state_change, &timeout);
@@ -199,28 +208,56 @@ OMX_ERRORTYPE COpenMax::SetStateForComponent(OMX_STATETYPE state)
   OMX_ERRORTYPE omx_err;
 
   #if defined(OMX_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s - state(%d)\n", CLASSNAME, __func__, state);
+  CLog::Log(LOGDEBUG, "%s::%s - state(%d)\n", CLASSNAME, __FUNCTION__, state);
   #endif
   omx_err = OMX_SendCommand(m_omx_decoder, OMX_CommandStateSet, state, 0);
   if (omx_err)
     CLog::Log(LOGERROR, "%s::%s - OMX_CommandStateSet failed with omx_err(0x%x)\n",
-      CLASSNAME, __func__, omx_err);
-  else
-    omx_err = WaitForState(state);
+      CLASSNAME, __FUNCTION__, omx_err);
 
   return omx_err;
 }
 
-bool COpenMax::Initialize( const CStdString &decoder_name)
+bool COpenMax::Initialize( int codec )
 {
   OMX_ERRORTYPE omx_err = m_dll->OMX_Init();
   if (omx_err)
   {
     CLog::Log(LOGERROR,
       "%s::%s - OpenMax failed to init, status(%d), ", // codec(%d), profile(%d), level(%d)
-      CLASSNAME, __func__, omx_err );//, hints.codec, hints.profile, hints.level);
+      CLASSNAME, __FUNCTION__, omx_err );//, hints.codec, hints.profile, hints.level);
     return false;
   }
+
+    // Get component from role
+  OMX_STRING role_name = codec == CODEC_ID_H264 ?
+      const_cast<OMX_STRING>("video_decoder.avc") :
+      const_cast<OMX_STRING>("video_decoder.vpx");
+  // Get the first component for this role and set the role on it.
+  OMX_U32 num_components = 1;
+  std::string component(OMX_MAX_STRINGNAME_SIZE, '\0');
+  char* component_as_array = string_as_array(&component);
+  omx_err = m_dll->OMX_GetComponentsOfRole(
+      role_name, &num_components,
+      reinterpret_cast<OMX_U8**>(&component_as_array));
+  if (omx_err) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - Unsupported role: %s", CLASSNAME, __FUNCTION__, role_name);
+     m_dll->OMX_Deinit();
+     return false;
+  }
+  if (num_components == 0) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - No components for: %s", CLASSNAME, __FUNCTION__, role_name);
+     m_dll->OMX_Deinit();
+     return false;
+  }
+  
+  std::string decoder_name;
+  decoder_name = reinterpret_cast<OMX_STRING>(string_as_array(&component));
+  #if defined(OMX_DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::%s - decoder_name: %s\n", CLASSNAME, __FUNCTION__,decoder_name.c_str());
+  #endif
 
   // Get video decoder handle setting up callbacks, component is in loaded state on return.
   static OMX_CALLBACKTYPE decoder_callbacks = {
@@ -229,18 +266,34 @@ bool COpenMax::Initialize( const CStdString &decoder_name)
   if (omx_err)
   {
     CLog::Log(LOGERROR,
-      "%s::%s - could not get decoder handle\n", CLASSNAME, __func__);
+      "%s::%s - could not get decoder handle\n", CLASSNAME, __FUNCTION__);
     m_dll->OMX_Deinit();
     return false;
   }
+
+  // Set role for the component because components can have multiple roles.
+  OMX_PARAM_COMPONENTROLETYPE role_type;
+  OMX_INIT_STRUCTURE(role_type);
+  strlcpy(reinterpret_cast<char*>(role_type.cRole),
+                role_name,
+                OMX_MAX_STRINGNAME_SIZE);
+
+  omx_err = OMX_SetParameter(m_omx_decoder,
+                            OMX_IndexParamStandardComponentRole,
+                            &role_type);
+  if (omx_err) 
+  {
+     CLog::Log(LOGERROR, "%s::%s - Failed to Set Role", CLASSNAME, __FUNCTION__);
+     m_dll->OMX_Deinit();
+     return false;
+  }
+
 
   return true;
 }
 
 void COpenMax::Deinitialize()
 {
-  CLog::Log(LOGERROR,
-    "%s::%s - failed to get component port parameter\n", CLASSNAME, __func__);
   m_dll->OMX_FreeHandle(m_omx_decoder);
   m_omx_decoder = NULL;
   m_dll->OMX_Deinit();

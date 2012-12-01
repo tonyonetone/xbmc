@@ -56,6 +56,7 @@ protected:
   OMX_ERRORTYPE PrimeFillBuffers(void);
   OMX_ERRORTYPE AllocOMXInputBuffers(void);
   OMX_ERRORTYPE FreeOMXInputBuffers(bool wait);
+  OMX_ERRORTYPE AllocateFakeOutputBuffers(void);
   OMX_ERRORTYPE AllocOMXOutputBuffers(void);
   OMX_ERRORTYPE FreeOMXOutputBuffers(bool wait);
   static void CallbackAllocOMXEGLTextures(void*);
@@ -96,6 +97,8 @@ protected:
   int               m_omx_input_port;
   //sem_t             *m_omx_flush_input;
   CEvent            m_input_consumed_event;
+  int				m_input_buffer_count;
+  int				m_input_buffer_size;
 
   // OpenMax output buffers (video frames)
   pthread_mutex_t   m_omx_output_mutex;
@@ -105,6 +108,7 @@ protected:
   bool              m_omx_output_eos;
   int               m_omx_output_port;
   //sem_t             *m_omx_flush_output;
+  int				m_output_buffer_count;
 
   bool              m_portChanging;
 
