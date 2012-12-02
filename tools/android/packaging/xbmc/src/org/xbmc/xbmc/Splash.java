@@ -232,6 +232,7 @@ public class Splash extends Activity {
 
 	protected void startXBMC() {
 		// Run XBMC
+    System.loadLibrary("xbmc");
 		Intent intent = new Intent();
 		intent.setClass(this, android.app.NativeActivity.class);
 		startActivity(intent);
