@@ -242,9 +242,16 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, unsigne
 #if defined(HAVE_LIBOPENMAX)
   if (g_guiSettings.GetBool("videoplayer.useomx") && !hint.software )
   {
-      if (hint.codec == CODEC_ID_H264 || hint.codec == CODEC_ID_MPEG2VIDEO || hint.codec == CODEC_ID_VC1)
+    switch(hint.codec)
     {
-      if ( (pCodec = OpenCodec(new CDVDVideoCodecOpenMax(), hint, options)) ) return pCodec;
+      case CODEC_ID_H264:
+      case CODEC_ID_MPEG2VIDEO:
+      case CODEC_ID_VC1:
+      case CODEC_ID_VP8:
+        if ( (pCodec = OpenCodec(new CDVDVideoCodecOpenMax(), hint, options)) ) return pCodec;
+        break;
+      default:
+        break;
     }
   }
 #endif
@@ -252,9 +259,18 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, unsigne
 #if defined(HAVE_LIBSTAGEFRIGHT)
   if (g_guiSettings.GetBool("videoplayer.usestagefright") && !hint.software )
   {
-      if (hint.codec == CODEC_ID_H264)
+    switch(hint.codec)
     {
-      if ( (pCodec = OpenCodec(new CDVDVideoCodecStageFright(), hint, options)) ) return pCodec;
+      case CODEC_ID_H264:
+      case CODEC_ID_MPEG2VIDEO:
+      case CODEC_ID_MPEG4:
+      case CODEC_ID_WMV3:
+      case CODEC_ID_VC1:
+      case CODEC_ID_VP8:
+        if ( (pCodec = OpenCodec(new CDVDVideoCodecStageFright(), hint, options)) ) return pCodec;
+        break;
+      default:
+        break;
     }
   }
 #endif

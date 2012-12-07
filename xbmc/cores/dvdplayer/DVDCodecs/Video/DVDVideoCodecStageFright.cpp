@@ -78,6 +78,9 @@ bool CDVDVideoCodecStageFright::Open(CDVDStreamInfo &hints, CDVDCodecOptions &op
       case CODEC_ID_VP8:
         m_pFormatName = "stf-vp8";
         break;
+      case CODEC_ID_VC1:
+        m_pFormatName = "stf-vc1";
+        break;
       default:
         return false;
         break;
@@ -89,6 +92,8 @@ bool CDVDVideoCodecStageFright::Open(CDVDStreamInfo &hints, CDVDCodecOptions &op
       CLog::Log(LOGERROR,
           "%s::%s - failed to open, codec(%d), profile(%d), level(%d)", 
           CLASSNAME, __func__, hints.codec, hints.profile, hints.level);
+      delete m_stf_decoder;
+      m_stf_decoder = NULL;
       return false;
     }
 

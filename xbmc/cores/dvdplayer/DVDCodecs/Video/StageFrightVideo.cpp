@@ -64,9 +64,10 @@
 #include "DVDClock.h"
 
 #define OMX_QCOM_COLOR_FormatYVU420SemiPlanar 0x7FA30C00
-//#define STAGEFRIGHT_DEBUG_VERBOSE 1
+#define STAGEFRIGHT_DEBUG_VERBOSE 1
 #define CLASSNAME "CStageFrightVideo"
 
+const char *MEDIA_MIMETYPE_VIDEO_WMV  = "video/x-ms-wmv";
 
 using namespace android;
 
@@ -312,6 +313,9 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
     break;
   case CODEC_ID_VP8:
     mimetype = MEDIA_MIMETYPE_VIDEO_VPX;
+    break;
+  case CODEC_ID_VC1:
+    mimetype = MEDIA_MIMETYPE_VIDEO_WMV;
     break;
   default:
     return false;
