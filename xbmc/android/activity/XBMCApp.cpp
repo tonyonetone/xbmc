@@ -60,7 +60,7 @@ ANativeActivity *CXBMCApp::m_activity = NULL;
 ANativeWindow* CXBMCApp::m_window = NULL;
 
 CXBMCApp::CXBMCApp(ANativeActivity *nativeActivity)
-  : m_wakeLock(NULL)
+  : m_wakeLock(NULL), m_keyguardLock(NULL)
 {
   m_activity = nativeActivity;
   
@@ -464,6 +464,14 @@ void CXBMCApp::stop()
     
     env->DeleteGlobalRef(m_wakeLock);
     m_wakeLock = NULL;
+  }
+  if (m_keyguardLock != NULL && m_activity != NULL)
+  {
+    JNIEnv *env = NULL;
+    m_activity->vm->AttachCurrentThread(&env, NULL);
+    
+    env->DeleteGlobalRef(m_keyguardLock);
+    m_keyguardLock = NULL;
   }
 }
 
