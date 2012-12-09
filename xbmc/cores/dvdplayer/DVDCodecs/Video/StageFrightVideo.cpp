@@ -66,6 +66,8 @@
 #define OMX_QCOM_COLOR_FormatYVU420SemiPlanar 0x7FA30C00
 #define STAGEFRIGHT_DEBUG_VERBOSE 1
 #define CLASSNAME "CStageFrightVideo"
+#define MAXBUFIN 25
+#define MAXBUFOUT 4
 
 const char *MEDIA_MIMETYPE_VIDEO_WMV  = "video/x-ms-wmv";
 
@@ -94,6 +96,7 @@ public:
   StagefrightContext()
     : source(NULL), out_queue(NULL)
     , width(-1), height(-1)
+    , out_buf_count(0)
     , end_frame(NULL)
     , source_done(false), thread_started(0), thread_exited(0), stop_decode(0)
     , dummy_medbuf(NULL)
@@ -122,6 +125,7 @@ public:
   pthread_t decode_thread_id;
 
   int32_t width, height;
+  int16_t out_buf_count;
 
   Frame *end_frame;
   bool source_done;
@@ -170,7 +174,7 @@ public:
     status_t ret;
 
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-    CLog::Log(LOGDEBUG, "%s: reading source\n", CLASSNAME);
+    CLog::Log(LOGDEBUG, "%s: reading source(%d)\n", CLASSNAME,s->in_queue->size());
 #endif
 
     if (s->thread_exited)
@@ -192,6 +196,9 @@ public:
     if (frame->medbuf)
       frame->medbuf->release();
     free(frame);
+#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+    CLog::Log(LOGDEBUG, ">>> exiting reading source(%d)\n", s->in_queue->size());
+#endif
     return ret;
   }
 
@@ -263,22 +270,25 @@ void* decode_thread(void *arg)
     }
     else
     {
-      //      CLog::Log(LOGDEBUG, "decode_thread >>> 6\n");
-      decode_done = 1;
-      frame->medbuf = NULL;
+      CLog::Log(LOGERROR, "%s - decoding error (%d)\n", CLASSNAME,frame->status);
+      if (frame->medbuf)
+        frame->medbuf->release();
+      free(frame);
+      continue;
     }
 push_frame:
     pthread_mutex_lock(&s->out_mutex);
     s->out_queue->push_back(frame);
+    s->out_buf_count++;
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-    CLog::Log(LOGDEBUG, "%s: >>> pushed OUT frame (%d)\n", CLASSNAME, s->out_queue->size());
+    CLog::Log(LOGDEBUG, "%s: >>> pushed OUT frame (%d)\n", CLASSNAME, s->out_buf_count);
 #endif
     pthread_mutex_unlock(&s->out_mutex);
   }
   while (!decode_done && !s->stop_decode);
 
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s: exiting decode thread(%d)\n", CLASSNAME,s->out_queue->size());
+  CLog::Log(LOGDEBUG, "%s: exiting decode thread(%d)\n", CLASSNAME,s->out_buf_count);
 #endif
 
   s->thread_exited = 1;
@@ -337,8 +347,6 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   meta->setCString(kKeyMIMEType, mimetype);
   meta->setInt32(kKeyWidth, hints.width);
   meta->setInt32(kKeyHeight, hints.height);
-  meta->setInt32(kKeyDisplayWidth, m_context->width);
-  meta->setInt32(kKeyDisplayHeight, m_context->height);
   meta->setInt32(kKeyIsSyncFrame,0);
   meta->setData(kKeyAVCC, kTypeAVCC, hints.extradata, hints.extrasize);
 
@@ -449,17 +457,19 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
           break;
       }
       pthread_mutex_lock(&m_context->in_mutex);
-      if (m_context->in_queue->size() >= 10) {
+      if (m_context->in_queue->size() >= MAXBUFIN && m_context->out_buf_count < MAXBUFOUT) {
           pthread_mutex_unlock(&m_context->in_mutex);
-          usleep(5000);
+          usleep(1000);
           continue;
       }
       m_context->in_queue->push_back(frame);
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::Decode: pushed IN frame (%d)\n", CLASSNAME,m_context->in_queue->size());
-#endif
       pthread_cond_signal(&m_context->condition);
       pthread_mutex_unlock(&m_context->in_mutex);
+#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+      CLog::Log(LOGDEBUG, "%s::Decode: pushed IN frame (%d)\n", CLASSNAME,m_context->in_queue->size());
+#endif
+      if (m_context->out_buf_count < MAXBUFOUT)
+        usleep(1000);
       break;
     }
   }
@@ -476,7 +486,7 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
 bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 {
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::GetPicture\n", CLASSNAME);
+  CLog::Log(LOGDEBUG, "%s::GetPicture(%d)\n", CLASSNAME,m_context->out_buf_count);
 #endif
 
   bool ret = true;
@@ -501,7 +511,12 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 
   if (status != OK)
   {
-    CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Error getting picture from frame");
+    CLog::Log(LOGERROR, "%s::%s - Error getting picture from frame(%d)\n", CLASSNAME, __func__,status);
+    if (frame->medbuf) {
+      frame->medbuf->release();
+      m_context->out_buf_count--;
+    }
+    free(frame);
     return false;
   }
 
@@ -513,7 +528,7 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->iFlags  = DVP_FLAG_ALLOCATED;
   pDvdVideoPicture->iWidth  = frame->width;
   pDvdVideoPicture->iHeight = frame->height;
-  pDvdVideoPicture->iDisplayWidth  = frame->width;
+  pDvdVideoPicture->iDisplayWidth = frame->width;
   pDvdVideoPicture->iDisplayHeight = frame->height;
 
   
@@ -550,9 +565,15 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 
 bool CStageFrightVideo::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
 {
+#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::ClearPicture(%d)\n", CLASSNAME,m_context->out_buf_count);
+#endif
   MediaBuffer* buf = static_cast<MediaBuffer*>(pDvdVideoPicture->stdcontext);
-  if (buf)
+  if (buf) {
     buf->release();
+    m_context->out_buf_count--;
+    pDvdVideoPicture->stdcontext = NULL;
+  }
 
   return true;
 }
@@ -577,8 +598,10 @@ void CStageFrightVideo::Close()
       {
         frame = *m_context->out_queue->begin();
         m_context->out_queue->erase(m_context->out_queue->begin());
-        if (frame->medbuf)
+        if (frame->medbuf) {
+          m_context->out_buf_count--;
           frame->medbuf->release();
+        }
         free(frame);
       }
       pthread_mutex_unlock(&m_context->out_mutex);
@@ -621,14 +644,16 @@ void CStageFrightVideo::Close()
   }
 
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "Cleaning OUT(%d)\n", m_context->out_queue->size());
+  CLog::Log(LOGDEBUG, "Cleaning OUT(%d)\n", m_context->out_buf_count);
 #endif
   while (!m_context->out_queue->empty())
   {
     frame = *m_context->out_queue->begin();
     m_context->out_queue->erase(m_context->out_queue->begin());
-    if (frame->medbuf)
+    if (frame->medbuf) {
       frame->medbuf->release();
+      m_context->out_buf_count--;
+    }
     free(frame);
   }
 
@@ -677,8 +702,10 @@ void CStageFrightVideo::SetDropState(bool bDrop)
     {
       frame = *m_context->out_queue->begin();
       m_context->out_queue->erase(m_context->out_queue->begin());
-      if (frame->medbuf)
+      if (frame->medbuf) {
         frame->medbuf->release();
+        m_context->out_buf_count--;
+      }
       free(frame);
     }
     pthread_mutex_unlock(&m_context->out_mutex);
