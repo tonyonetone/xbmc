@@ -23,11 +23,6 @@
 
 #include "cores/dvdplayer/DVDStreamInfo.h"
 #include "DVDVideoCodec.h"
-#include "threads/Event.h"
-
-#include <new>
-#include <map>
-#include <queue>
 
 class StagefrightContext;
 
