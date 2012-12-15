@@ -76,12 +76,12 @@ using namespace android;
 
 static int64_t pts_dtoi(double pts)
 {
-  return (int64_t)(pts * 1000);
+  return (int64_t)(pts);
 }
 
 static double pts_itod(int64_t pts)
 {
-  return (double)pts / 1000.;
+  return (double)pts;
 }
 
 struct Frame
@@ -229,6 +229,7 @@ void* decode_thread(void *arg)
     CLog::Log(LOGDEBUG, "%s: >>> Handling frame\n", CLASSNAME);
 #endif
     frame = (Frame*)malloc(sizeof(Frame));
+    MediaBuffer* buffer = NULL;
     frame->medbuf = NULL;
     if (!frame)
     {
@@ -238,11 +239,11 @@ void* decode_thread(void *arg)
       s->end_frame  = NULL;
       goto push_frame;
     }
-    frame->status = (*s->decoder)->read(&(frame->medbuf));
+    frame->status = (*s->decoder)->read(&buffer);
     if (frame->status == INFO_FORMAT_CHANGED)
     {
-      if (frame->medbuf)
-        frame->medbuf->release();
+      if (buffer)
+        buffer->release();
       free(frame);
       continue;
     }
@@ -252,7 +253,6 @@ void* decode_thread(void *arg)
       outFormat->findInt32(kKeyWidth , &w);
       outFormat->findInt32(kKeyHeight, &h);
       frame->pts = 0;
-      frame->medbuf->meta_data()->findInt64(kKeyTime, &(frame->pts));
 
       // The OMX.SEC decoder doesn't signal the modified width/height
       if (s->decoder_component && !strncmp(s->decoder_component, "OMX.SEC", 7) &&
@@ -266,17 +266,22 @@ void* decode_thread(void *arg)
       }
       frame->width = w;
       frame->height = h;
-      if (s->drop_state)
+      if (buffer)
       {
-        frame->medbuf->release();
-        frame->medbuf = NULL;
+        buffer->meta_data()->findInt64(kKeyTime, &(frame->pts));
+        if (!s->drop_state)
+        {
+          frame->medbuf = new MediaBuffer(buffer->range_length());
+          memcpy(frame->medbuf->data(), buffer->data() + buffer->range_offset(), buffer->range_length());
+        }
+        buffer->release();
       }
     }
     else
     {
       CLog::Log(LOGERROR, "%s - decoding error (%d)\n", CLASSNAME,frame->status);
-      if (frame->medbuf)
-        frame->medbuf->release();
+      if (buffer)
+        buffer->release();
       free(frame);
       continue;
     }
