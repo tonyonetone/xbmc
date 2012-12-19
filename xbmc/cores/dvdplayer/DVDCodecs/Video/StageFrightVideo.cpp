@@ -60,6 +60,9 @@
 #include <media/stagefright/OMXCodec.h>
 #include <utils/List.h>
 #include <utils/RefBase.h>
+#include <gui/SurfaceTexture.h>
+#include <gui/SurfaceTextureClient.h>
+#include <EGL/egl.h>
 
 #include <new>
 #include <map>
@@ -68,7 +71,7 @@
 #define OMX_QCOM_COLOR_FormatYVU420SemiPlanar 0x7FA30C00
 #define STAGEFRIGHT_DEBUG_VERBOSE 1
 #define CLASSNAME "CStageFrightVideo"
-#define MAXBUFIN 10
+#define MINBUFIN 50
 
 const char *MEDIA_MIMETYPE_VIDEO_WMV  = "video/x-ms-wmv";
 
@@ -98,9 +101,7 @@ public:
   StagefrightContext()
     : source(NULL)
     , width(-1), height(-1)
-    , end_frame(NULL)
-    , source_done(false), thread_started(0), thread_exited(0), stop_decode(0)
-    , dummy_medbuf(NULL)
+    , cur_frame(NULL), prev_frame(NULL)
     , client(NULL), decoder(NULL), decoder_component(NULL)
     , drop_state(false)
   {}
@@ -121,24 +122,21 @@ public:
 
   sp<MediaSource> *source;
   List<Frame*> in_queue;
-  std::map<int64_t, Frame*> out_queue;
-  pthread_mutex_t in_mutex, out_mutex;
+  pthread_mutex_t in_mutex;
   pthread_cond_t condition;
-  pthread_t decode_thread_id;
 
-  int32_t width, height;
-
-  Frame *end_frame;
+  Frame *cur_frame;
+  Frame *prev_frame;
   bool source_done;
-  volatile sig_atomic_t thread_started, thread_exited, stop_decode;
-
-  MediaBuffer* dummy_medbuf;
 
   OMXClient *client;
   sp<MediaSource> *decoder;
   const char *decoder_component;
   
   bool drop_state;
+#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+  unsigned int cycle_time;
+#endif
 };
 
 class CustomSource : public MediaSource
@@ -173,19 +171,18 @@ public:
   {
     Frame *frame;
     status_t ret;
+    *buffer = NULL;
 
+    pthread_mutex_lock(&s->in_mutex);
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
     CLog::Log(LOGDEBUG, "%s: reading source(%d)\n", CLASSNAME,s->in_queue.size());
 #endif
-
-    *buffer = NULL;
-    if (s->thread_exited)
+    
+    if (s->in_queue.empty())
+    {
+      pthread_mutex_unlock(&s->in_mutex);
       return ERROR_END_OF_STREAM;
-
-    pthread_mutex_lock(&s->in_mutex);
-
-    while (s->in_queue.empty())
-      pthread_cond_wait(&s->condition, &s->in_mutex);
+    }
 
     frame = *s->in_queue.begin();
     ret = frame->status;
@@ -212,97 +209,7 @@ private:
   StagefrightContext *s;
 };
 
-void* decode_thread(void *arg)
-{
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s: entering decode thread\n", CLASSNAME);
-#endif
-
-  StagefrightContext *s = (StagefrightContext*)arg;
-  Frame* frame;
-  int32_t w, h;
-  int decode_done = 0;
-
-  do
-  {
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-    CLog::Log(LOGDEBUG, "%s: >>> Handling frame\n", CLASSNAME);
-#endif
-    frame = (Frame*)malloc(sizeof(Frame));
-    MediaBuffer* buffer = NULL;
-    frame->medbuf = NULL;
-    if (!frame)
-    {
-      frame         = s->end_frame;
-      frame->status = VC_ERROR;
-      decode_done   = 1;
-      s->end_frame  = NULL;
-      goto push_frame;
-    }
-    frame->status = (*s->decoder)->read(&buffer);
-    if (frame->status == INFO_FORMAT_CHANGED)
-    {
-      if (buffer)
-        buffer->release();
-      free(frame);
-      continue;
-    }
-    else if (frame->status == OK)
-    {
-      sp<MetaData> outFormat = (*s->decoder)->getFormat();
-      outFormat->findInt32(kKeyWidth , &w);
-      outFormat->findInt32(kKeyHeight, &h);
-      frame->pts = 0;
-
-      // The OMX.SEC decoder doesn't signal the modified width/height
-      if (s->decoder_component && !strncmp(s->decoder_component, "OMX.SEC", 7) &&
-          (w & 15 || h & 15))
-      {
-        if (((w + 15)&~15) * ((h + 15)&~15) * 3/2 == frame->medbuf->range_length())
-        {
-          w = (w + 15)&~15;
-          h = (h + 15)&~15;
-        }
-      }
-      frame->width = w;
-      frame->height = h;
-      if (buffer)
-      {
-        buffer->meta_data()->findInt64(kKeyTime, &(frame->pts));
-        if (!s->drop_state)
-        {
-          frame->medbuf = new MediaBuffer(buffer->range_length());
-          memcpy(frame->medbuf->data(), buffer->data() + buffer->range_offset(), buffer->range_length());
-        }
-        buffer->release();
-      }
-    }
-    else
-    {
-      CLog::Log(LOGERROR, "%s - decoding error (%d)\n", CLASSNAME,frame->status);
-      if (buffer)
-        buffer->release();
-      free(frame);
-      continue;
-    }
-push_frame:
-    pthread_mutex_lock(&s->out_mutex);
-    s->out_queue[frame->pts] = frame;
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-    CLog::Log(LOGDEBUG, "%s: >>> pushed OUT frame (%d)\n", CLASSNAME, s->out_queue.size());
-#endif
-    pthread_mutex_unlock(&s->out_mutex);
-  }
-  while (!decode_done && !s->stop_decode);
-
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s: exiting decode thread(%d)\n", CLASSNAME,s->out_queue.size());
-#endif
-
-  s->thread_exited = 1;
-
-  return 0;
-}
+/***********************************************************/
 
 bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
 {
@@ -355,7 +262,6 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   meta->setCString(kKeyMIMEType, mimetype);
   meta->setInt32(kKeyWidth, m_context->width);
   meta->setInt32(kKeyHeight, m_context->height);
-  meta->setInt32(kKeyIsSyncFrame,0);
   meta->setData(kKeyAVCC, kTypeAVCC, hints.extradata, hints.extrasize);
 
   android::ProcessState::self()->startThreadPool();
@@ -363,10 +269,8 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   m_context->source    = new sp<MediaSource>();
   *m_context->source   = new CustomSource(m_context, meta);
   m_context->client    = new OMXClient;
-  m_context->end_frame = (Frame*)malloc(sizeof(Frame));
-  m_context->end_frame->medbuf = NULL;
 
-  if (m_context->source == NULL || !m_context->client || !m_context->end_frame)
+  if (m_context->source == NULL || !m_context->client)
   {
     goto fail;
   }
@@ -375,12 +279,13 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   {
     CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Cannot connect OMX client");
     goto fail;
-  }
-  
+  }  
+
   m_context->decoder  = new sp<MediaSource>();
   *m_context->decoder = OMXCodec::Create(m_context->client->interface(), meta,
                                          false, *m_context->source, NULL,
-                                         OMXCodec::kClientNeedsFramebuffer | OMXCodec::kHardwareCodecsOnly);
+                                         OMXCodec::kClientNeedsFramebuffer | OMXCodec::kHardwareCodecsOnly,
+                                         m_context->mNatWindow);
   if (!((*m_context->decoder != NULL) && ((*m_context->decoder)->start() ==  OK)))
   {
     CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Cannot start decoder");
@@ -403,16 +308,11 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
 #endif
 
   pthread_mutex_init(&m_context->in_mutex, NULL);
-  pthread_mutex_init(&m_context->out_mutex, NULL);
   pthread_cond_init(&m_context->condition, NULL);
   
-  pthread_create(&(m_context->decode_thread_id), NULL, &decode_thread, m_context);
-  m_context->thread_started = 1;
-
   return true;
 
 fail:
-  free(m_context->end_frame);
   delete m_context->client;
   return false;
 }
@@ -420,23 +320,24 @@ fail:
 int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
 {
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+  unsigned int time = XbmcThreads::SystemClockMillis();
   CLog::Log(LOGDEBUG, "%s::Decode - d:%p; s:%d; dts:%f; pts:%f\n", CLASSNAME, pData, iSize, dts, pts);
+  if (m_context->cycle_time != 0)
+    CLog::Log(LOGDEBUG, ">>> cycle dur:%d\n", XbmcThreads::SystemClockMillis() - m_context->cycle_time);
+  m_context->cycle_time = time;
 #endif
 
   Frame *frame;
   int demuxer_bytes = iSize;
   uint8_t *demuxer_content = pData;
+  int ret = VC_BUFFER;
 
-  if (m_context->thread_exited)
-    m_context->source_done = true;
-
-  if (!m_context->source_done && demuxer_content)
+  if (demuxer_content)
   {
     frame = (Frame*)malloc(sizeof(Frame));
     if (!frame)
-    {
       return VC_ERROR;
-    }
+
     frame->status  = OK;
     frame->pts = (dts != DVD_NOPTS_VALUE) ? pts_dtoi(dts) : ((pts != DVD_NOPTS_VALUE) ? pts_dtoi(pts) : 0);
     frame->medbuf = m_context->getBuffer(demuxer_bytes);
@@ -449,42 +350,85 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
     frame->medbuf->meta_data()->clear();
     frame->medbuf->meta_data()->setInt64(kKeyTime, frame->pts);
 
-    if(!m_context->dummy_medbuf)
-    {
-      m_context->dummy_medbuf = m_context->getBuffer(frame->medbuf->size());
-      m_context->dummy_medbuf->meta_data()->setInt64(kKeyTime, frame->pts);
-      if (m_context->dummy_medbuf)
-        fast_memcpy(m_context->dummy_medbuf->data(), frame->medbuf->data(), frame->medbuf->size());
-    }
-
-    while (true) {
-      if (m_context->thread_exited) {
-          m_context->source_done = true;
-          break;
-      }
-      pthread_mutex_lock(&m_context->in_mutex);
-      if (m_context->in_queue.size() >= MAXBUFIN && m_context->out_queue.empty()) {
-          pthread_mutex_unlock(&m_context->in_mutex);
-          usleep(5000);
-          continue;
-      }
-      m_context->in_queue.push_back(frame);
-      pthread_cond_signal(&m_context->condition);
-      pthread_mutex_unlock(&m_context->in_mutex);
+    pthread_mutex_lock(&m_context->in_mutex);
+    m_context->in_queue.push_back(frame);
+    pthread_cond_signal(&m_context->condition);
+    pthread_mutex_unlock(&m_context->in_mutex);
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-      CLog::Log(LOGDEBUG, "%s::Decode: pushed IN frame (%d)\n", CLASSNAME,m_context->in_queue.size());
+    CLog::Log(LOGDEBUG, "%s::Decode: pushed IN frame (%d); tm:%d\n", CLASSNAME,m_context->in_queue.size(), XbmcThreads::SystemClockMillis() - time);
 #endif
-      if (m_context->out_queue.empty())
-        usleep(5000);
-      break;
-    }
   }
+  
+  if (m_context->in_queue.size() < MINBUFIN)
+    return ret;
 
-  int ret = VC_BUFFER;
-  pthread_mutex_lock(&m_context->out_mutex);
-  if (m_context->out_queue.size() > 0)
+	#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+  time = XbmcThreads::SystemClockMillis();
+	CLog::Log(LOGDEBUG, "%s: >>> Handling frame\n", CLASSNAME);
+	#endif
+  int32_t w, h;
+	frame = (Frame*)malloc(sizeof(Frame));
+	if (!frame) {
+    m_context->cur_frame = NULL;
+	  return VC_ERROR;
+  }
+  
+	frame->medbuf = NULL;
+	frame->status = (*m_context->decoder)->read(&frame->medbuf);
+	if (frame->status == INFO_FORMAT_CHANGED)
+	{
+	  if (frame->medbuf)
+      frame->medbuf->release();
+	  free(frame);
+    m_context->cur_frame = NULL;
+    return ret;
+	}
+	else if (frame->status == OK)
+	{
+	  sp<MetaData> outFormat = (*m_context->decoder)->getFormat();
+	  outFormat->findInt32(kKeyWidth , &w);
+	  outFormat->findInt32(kKeyHeight, &h);
+	  frame->pts = 0;
+
+	  // The OMX.SEC decoder doesn't signal the modified width/height
+	  if (m_context->decoder_component && !strncmp(m_context->decoder_component, "OMX.SEC", 7) &&
+		  (w & 15 || h & 15))
+	  {
+		if (((w + 15)&~15) * ((h + 15)&~15) * 3/2 == frame->medbuf->range_length())
+		{
+		  w = (w + 15)&~15;
+		  h = (h + 15)&~15;
+		}
+	  }
+	  frame->width = w;
+	  frame->height = h;
+	  if (frame->medbuf)
+	  {
+      frame->medbuf->meta_data()->findInt64(kKeyTime, &(frame->pts));
+      if (m_context->drop_state)
+      {
+        frame->medbuf->release();
+        frame->medbuf = NULL;
+      }
+	  }
+	}
+	else
+	{
+	  CLog::Log(LOGERROR, "%s - decoding error (%d)\n", CLASSNAME,frame->status);
+	  if (frame->medbuf)
+      frame->medbuf->release();
+	  free(frame);
+    m_context->cur_frame = NULL;
+    return VC_ERROR;
+	}
+  
+  m_context->cur_frame = frame;
+	#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+	CLog::Log(LOGDEBUG, "%s: >>> pushed OUT frame; tm:%d\n", CLASSNAME,XbmcThreads::SystemClockMillis() - time);
+	#endif
+
+  if (m_context->cur_frame)
     ret |= VC_PICTURE;
-  pthread_mutex_unlock(&m_context->out_mutex);
 
   return ret;
 }
@@ -492,26 +436,17 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
 bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 {
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::GetPicture(%d)\n", CLASSNAME,m_context->out_queue.size());
+  unsigned int time = XbmcThreads::SystemClockMillis();
+  CLog::Log(LOGDEBUG, "%s::GetPicture\n", CLASSNAME);
 #endif
 
   bool ret = true;
   status_t status;
 
-  pthread_mutex_lock(&m_context->out_mutex);
-  if (m_context->out_queue.empty())
-    ret = false;
-  pthread_mutex_unlock(&m_context->out_mutex);
-
-  if (!ret)
+  if (!m_context->cur_frame)
     return false;
     
-  Frame *frame;
-  frame = m_context->out_queue.begin()->second;
-  pthread_mutex_lock(&m_context->out_mutex);
-  m_context->out_queue.erase(m_context->out_queue.begin());
-  pthread_mutex_unlock(&m_context->out_mutex);
-
+  Frame *frame = m_context->cur_frame;
   status  = frame->status;
 
   if (status != OK)
@@ -521,6 +456,7 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
       frame->medbuf->release();
     }
     free(frame);
+    m_context->cur_frame = NULL;
     return false;
   }
 
@@ -536,7 +472,7 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->iDisplayHeight = frame->height;
   pDvdVideoPicture->pts = pts_itod(frame->pts);
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, ">>> pic pts:%f, data:%p\n", pDvdVideoPicture->pts, frame->medbuf);
+  CLog::Log(LOGDEBUG, ">>> pic pts:%f, data:%p, tm:%d\n", pDvdVideoPicture->pts, frame->medbuf, XbmcThreads::SystemClockMillis() - time);
 #endif
 
   unsigned int luma_pixels = frame->width * frame->height;
@@ -553,9 +489,9 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->data[2] = pDvdVideoPicture->data[1] + (frame->width/2 * frame->height/2);
   pDvdVideoPicture->data[3] = 0;
 
-  pDvdVideoPicture->stdcontext = (void *)frame;
-
   pDvdVideoPicture->iFlags |= data == NULL ? DVP_FLAG_DROPPED : 0;
+  m_context->prev_frame = m_context->cur_frame;
+  m_context->cur_frame = NULL;
 
   return true;
 }
@@ -563,14 +499,13 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 bool CStageFrightVideo::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
 {
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::ClearPicture(%d)\n", CLASSNAME,m_context->out_queue.size());
+  CLog::Log(LOGDEBUG, "%s::ClearPicture\n", CLASSNAME);
 #endif
-  if (pDvdVideoPicture->stdcontext) {
-    Frame* frame = static_cast<Frame*>(pDvdVideoPicture->stdcontext);
-    if (frame->medbuf)
-      frame->medbuf->release();
-    free(frame);
-    pDvdVideoPicture->stdcontext = NULL;
+  if (m_context->prev_frame) {
+    if (m_context->prev_frame->medbuf)
+      m_context->prev_frame->medbuf->release();
+    free(m_context->prev_frame);
+    m_context->prev_frame = NULL;
   }
 
   return true;
@@ -584,50 +519,6 @@ void CStageFrightVideo::Close()
 
   Frame *frame;
 
-  if (m_context->thread_started)
-  {
-    if (!m_context->thread_exited)
-    {
-      m_context->stop_decode = 1;
-
-      // Make sure decode_thread() doesn't get stuck
-      pthread_mutex_lock(&m_context->out_mutex);
-      while (!m_context->out_queue.empty())
-      {
-        frame = m_context->out_queue.begin()->second;
-        m_context->out_queue.erase(m_context->out_queue.begin());
-        if (frame->medbuf) {
-          frame->medbuf->release();
-        }
-        free(frame);
-      }
-      pthread_mutex_unlock(&m_context->out_mutex);
-
-      // Feed a dummy frame prior to signalling EOF.
-      // This is required to terminate the decoder(OMX.SEC)
-      // when only one frame is read during stream info detection.
-      if (m_context->dummy_medbuf && (frame = (Frame*)malloc(sizeof(Frame))))
-      {
-        frame->status = OK;
-        frame->medbuf = m_context->dummy_medbuf;
-        pthread_mutex_lock(&m_context->in_mutex);
-        m_context->in_queue.push_back(frame);
-        pthread_cond_signal(&m_context->condition);
-        pthread_mutex_unlock(&m_context->in_mutex);
-      }
-
-      pthread_mutex_lock(&m_context->in_mutex);
-      m_context->end_frame->status = ERROR_END_OF_STREAM;
-      m_context->in_queue.push_back(m_context->end_frame);
-      pthread_cond_signal(&m_context->condition);
-      pthread_mutex_unlock(&m_context->in_mutex);
-    }
-
-    pthread_join(m_context->decode_thread_id, NULL);
-
-    m_context->thread_started = 0;
-  }
-
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
   CLog::Log(LOGDEBUG, "Cleaning IN(%d)\n", m_context->in_queue.size());
 #endif
@@ -640,16 +531,17 @@ void CStageFrightVideo::Close()
     free(frame);
   }
 
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "Cleaning OUT(%d)\n", m_context->out_queue.size());
-#endif
-  while (!m_context->out_queue.empty())
+  if (m_context->cur_frame)
   {
-    frame = m_context->out_queue.begin()->second;
-    m_context->out_queue.erase(m_context->out_queue.begin());
-    if (frame->medbuf)
-      frame->medbuf->release();
-    free(frame);
+    if (m_context->cur_frame->medbuf)
+      m_context->cur_frame->medbuf->release();
+    free(m_context->cur_frame);
+  }
+  if (m_context->prev_frame)
+  {
+    if (m_context->prev_frame->medbuf)
+      m_context->prev_frame->medbuf->release();
+    free(m_context->prev_frame);
   }
 
   (*m_context->decoder)->stop();
@@ -663,7 +555,6 @@ void CStageFrightVideo::Close()
   delete m_context->source;
 
   pthread_mutex_destroy(&m_context->in_mutex);
-  pthread_mutex_destroy(&m_context->out_mutex);
   pthread_cond_destroy(&m_context->condition);
 
   delete m_context;
@@ -684,27 +575,6 @@ void CStageFrightVideo::SetDropState(bool bDrop)
 #endif
   
   m_context->drop_state = bDrop;
-
-  if (bDrop)
-  {
-    Frame *frame;
-    // blow all but the last ready video frame
-    pthread_mutex_lock(&m_context->out_mutex);
-    while (m_context->out_queue.size() > 1)
-    {
-      frame = m_context->out_queue.begin()->second;
-      m_context->out_queue.erase(m_context->out_queue.begin());
-      if (frame->medbuf)
-        frame->medbuf->release();
-      free(frame);
-    }
-    pthread_mutex_unlock(&m_context->out_mutex);
-
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-    CLog::Log(LOGDEBUG, "%s::%s - bDrop(%d)\n",
-              CLASSNAME, __func__, bDrop);
-#endif
-  }
 }
 
 
