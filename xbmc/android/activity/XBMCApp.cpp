@@ -18,6 +18,8 @@
  *
  */
 
+#include "system.h"
+
 #include <sstream>
 
 #include <unistd.h>
@@ -59,18 +61,9 @@ void* thread_run(void* obj)
 ANativeActivity *CXBMCApp::m_activity = NULL;
 ANativeWindow* CXBMCApp::m_window = NULL;
 
-CXBMCApp::CXBMCApp(ANativeActivity *nativeActivity)
+CXBMCApp::CXBMCApp()
   : m_wakeLock(NULL)
 {
-  m_activity = nativeActivity;
-  
-  if (m_activity == NULL)
-  {
-    android_printf("CXBMCApp: invalid ANativeActivity instance");
-    exit(1);
-    return;
-  }
-
   m_state.appState = Uninitialized;
 
   if (pthread_mutex_init(&m_state.mutex, NULL) != 0)
@@ -80,7 +73,18 @@ CXBMCApp::CXBMCApp(ANativeActivity *nativeActivity)
     exit(1);
     return;
   }
+}
 
+void CXBMCApp::SetActivity(ANativeActivity *nativeActivity)
+{
+  m_activity = nativeActivity;
+  
+  if (m_activity == NULL)
+  {
+    android_printf("CXBMCApp: invalid ANativeActivity instance");
+    exit(1);
+    return;
+  }
 }
 
 CXBMCApp::~CXBMCApp()
@@ -975,3 +979,63 @@ bool CXBMCApp::GetStorageUsage(const std::string &path, std::string &usage)
   usage = fmt.str();
   return true;
 }
+
+#ifdef HAVE_LIBSTAGEFRIGHT
+bool CXBMCApp::InitStagefright()
+{
+  if (m_VideoNativeWindow != NULL)
+    return true;
+    
+  if (m_activity == NULL)
+    return false;
+
+  JNIEnv *env = NULL;
+  AttachCurrentThread(&env);
+
+  glEnable(GL_TEXTURE_EXTERNAL_OES);
+  glGenTextures(1, &m_VideoTextureId);
+  glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_VideoTextureId);
+  glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  CLog::Log(LOGDEBUG, ">>> texid: %d\n", m_VideoTextureId);
+
+  m_SurfTexture = new android::SurfaceTexture(m_VideoTextureId);
+  if (!m_SurfTexture.get())
+  {
+    CLog::Log(LOGERROR, "%s\n", "Cannot instantiate surface texture");
+  }  
+  m_Surface = new android::SurfaceTextureClient(m_SurfTexture);
+  if (!m_Surface.get())
+  {
+    CLog::Log(LOGERROR, "%s\n", "Cannot instantiate surface texture client");
+  }
+  m_VideoNativeWindow = m_Surface;
+
+  glDisable(GL_TEXTURE_EXTERNAL_OES);
+ 
+  DetachCurrentThread();
+ 
+  return true;
+}
+
+void CXBMCApp::UninitStagefright()
+{
+  if (m_activity == NULL)
+    return;
+
+  JNIEnv *env = NULL;
+  AttachCurrentThread(&env);
+
+  m_VideoNativeWindow.clear();
+  m_Surface.clear();
+  m_SurfTexture.clear();
+  glDeleteTextures(1, &m_VideoTextureId);
+  
+  m_VideoNativeWindow = NULL;
+  m_Surface = NULL;
+  m_SurfTexture = NULL;
+
+  DetachCurrentThread();
+}
+#endif

@@ -39,7 +39,7 @@ public:
   bool GetPicture(DVDVideoPicture *pDvdVideoPicture);
   bool ClearPicture(DVDVideoPicture* pDvdVideoPicture);
   void SetDropState(bool bDrop);
-
+  
 private:
   StagefrightContext* m_context;
 };

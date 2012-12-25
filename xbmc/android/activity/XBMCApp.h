@@ -24,13 +24,17 @@
 #include <string>
 #include <vector>
 
+#ifdef HAVE_LIBSTAGEFRIGHT
+#include <gui/SurfaceTexture.h>
+#include <gui/SurfaceTextureClient.h>
+#endif
 #include <android/native_activity.h>
 
 #include "IActivityHandler.h"
 #include "IInputHandler.h"
 
 #include "xbmc.h"
-
+#include "utils/GlobalsHandling.h"
 
 // forward delares
 class CAESinkAUDIOTRACK;
@@ -53,7 +57,8 @@ struct androidPackage
 class CXBMCApp : public IActivityHandler
 {
 public:
-  CXBMCApp(ANativeActivity *nativeActivity);
+  CXBMCApp();
+  void SetActivity(ANativeActivity *nativeActivity);
   virtual ~CXBMCApp();
 
   bool isValid() { return m_activity != NULL; }
@@ -97,6 +102,15 @@ public:
   static bool GetStorageUsage(const std::string &path, std::string &usage);
 
   static int GetDPI();
+  
+#ifdef HAVE_LIBSTAGEFRIGHT
+  bool InitStagefright();
+  void UninitStagefright();
+
+  const android::sp<android::SurfaceTexture>& GetAndroidSurfaceTexture() const { return m_SurfTexture;}
+  const android::sp<ANativeWindow>& GetAndroidVideoWindow() const { return m_VideoNativeWindow;}
+#endif
+
 protected:
   // limit who can access AttachCurrentThread/DetachCurrentThread
   friend class CAESinkAUDIOTRACK;
@@ -149,9 +163,18 @@ private:
   void setAppState(AppState state);
     
   static ANativeWindow* m_window;
+#ifdef HAVE_LIBSTAGEFRIGHT
+  GLuint m_VideoTextureId;
+  android::sp<android::SurfaceTexture> m_SurfTexture;
+  android::sp<android::SurfaceTextureClient> m_Surface;
+  android::sp<ANativeWindow> m_VideoNativeWindow;
+#endif
   
   void XBMC_Pause(bool pause);
   void XBMC_Stop();
   bool XBMC_DestroyDisplay();
   bool XBMC_SetupDisplay();
 };
+
+XBMC_GLOBAL_REF(CXBMCApp,g_xbmcapp);
+#define g_xbmcapp XBMC_GLOBAL_USE(CXBMCApp)

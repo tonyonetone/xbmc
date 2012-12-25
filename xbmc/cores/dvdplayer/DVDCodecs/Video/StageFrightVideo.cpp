@@ -18,34 +18,13 @@
  *
  */
 /***************************************************************************/
-/*
- * Interface to the Android Stagefright library for
- * H/W accelerated H.264 decoding
- *
- * Copyright (C) 2011 Mohamed Naufal
- * Copyright (C) 2011 Martin Storsjö
- *
- * This file is part of FFmpeg.
- *
- * FFmpeg is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * FFmpeg is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with FFmpeg; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
- */
 
 #include "system.h"
 
 #include "StageFrightVideo.h"
 
+#include "android/activity/XBMCApp.h"
+#include "guilib/GraphicContext.h"
 #include "DVDClock.h"
 #include "threads/Event.h"
 #include "utils/log.h"
@@ -54,15 +33,16 @@
 #include <binder/ProcessState.h>
 #include <media/stagefright/MetaData.h>
 #include <media/stagefright/MediaBufferGroup.h>
-#include <media/stagefright/MediaDebug.h>
 #include <media/stagefright/MediaDefs.h>
 #include <media/stagefright/OMXClient.h>
 #include <media/stagefright/OMXCodec.h>
 #include <utils/List.h>
 #include <utils/RefBase.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <ui/GraphicBuffer.h>
 #include <gui/SurfaceTexture.h>
 #include <gui/SurfaceTextureClient.h>
-#include <EGL/egl.h>
 
 #include <new>
 #include <map>
@@ -120,18 +100,24 @@ public:
     return buf;
   }
 
-  sp<MediaSource> *source;
+  sp<MetaData> meta;
+  sp<MediaSource> source;
   List<Frame*> in_queue;
   pthread_mutex_t in_mutex;
   pthread_cond_t condition;
-
+  
   Frame *cur_frame;
   Frame *prev_frame;
   bool source_done;
+  int x, y;
+  int width, height;
 
   OMXClient *client;
-  sp<MediaSource> *decoder;
+  sp<MediaSource> decoder;
   const char *decoder_component;
+  int videoColorFormat;
+  int videoStride;
+  int videoSliceHeight;
   
   bool drop_state;
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
@@ -217,6 +203,8 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   CLog::Log(LOGDEBUG, "%s::Open\n", CLASSNAME);
 #endif
 
+  CSingleLock lock(g_graphicsContext);
+
   // stagefright crashes with null size. Trap this...
   if (!hints.width || !hints.height)
   {
@@ -247,30 +235,29 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
     break;
   }
 
-  sp<MetaData> meta, outFormat;
-  int32_t colorFormat = 0;
-
   m_context = new StagefrightContext;
   m_context->width     = hints.width;
   m_context->height    = hints.height;
  
-  meta = new MetaData;
-  if (meta == NULL)
+  sp<MetaData> outFormat;
+  int32_t cropLeft, cropTop, cropRight, cropBottom;
+
+  m_context->meta = new MetaData;
+  if (m_context->meta == NULL)
   {
     goto fail;
   }
-  meta->setCString(kKeyMIMEType, mimetype);
-  meta->setInt32(kKeyWidth, m_context->width);
-  meta->setInt32(kKeyHeight, m_context->height);
-  meta->setData(kKeyAVCC, kTypeAVCC, hints.extradata, hints.extrasize);
+  m_context->meta->setCString(kKeyMIMEType, mimetype);
+  m_context->meta->setInt32(kKeyWidth, m_context->width);
+  m_context->meta->setInt32(kKeyHeight, m_context->height);
+  m_context->meta->setData(kKeyAVCC, kTypeAVCC, hints.extradata, hints.extrasize);
 
   android::ProcessState::self()->startThreadPool();
 
-  m_context->source    = new sp<MediaSource>();
-  *m_context->source   = new CustomSource(m_context, meta);
+  m_context->source    = new CustomSource(m_context, m_context->meta);
   m_context->client    = new OMXClient;
 
-  if (m_context->source == NULL || !m_context->client)
+  if (m_context->source == NULL || m_context->client == NULL)
   {
     goto fail;
   }
@@ -280,36 +267,57 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
     CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Cannot connect OMX client");
     goto fail;
   }  
+  
+  m_context->decoder  = OMXCodec::Create(m_context->client->interface(), m_context->meta,
+                                         false, m_context->source, NULL,
+                                         OMXCodec::kHardwareCodecsOnly,
+                                         g_xbmcapp.GetAndroidVideoWindow());
 
-  m_context->decoder  = new sp<MediaSource>();
-  *m_context->decoder = OMXCodec::Create(m_context->client->interface(), meta,
-                                         false, *m_context->source, NULL,
-                                         OMXCodec::kClientNeedsFramebuffer | OMXCodec::kHardwareCodecsOnly,
-                                         m_context->mNatWindow);
-  if (!((*m_context->decoder != NULL) && ((*m_context->decoder)->start() ==  OK)))
+  if (!(m_context->decoder != NULL && m_context->decoder->start() ==  OK))
   {
-    CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Cannot start decoder");
     m_context->client->disconnect();
     goto fail;
   }
 
-  outFormat = (*m_context->decoder)->getFormat();
-  outFormat->findInt32(kKeyColorFormat, &colorFormat);
-  if (colorFormat != OMX_COLOR_FormatYUV420Planar)
+  outFormat = m_context->decoder->getFormat();
+  if (!outFormat->findInt32(kKeyWidth, &m_context->width) || !outFormat->findInt32(kKeyHeight, &m_context->height) 
+        || !outFormat->findInt32(kKeyColorFormat, &m_context->videoColorFormat))
   {
-    CLog::Log(LOGERROR, "%s::%s - %s: %d\n", CLASSNAME, __func__,"Unsupported color format",colorFormat);
+    m_context->client->disconnect();
+    goto fail;
+  }
+  if (m_context->videoColorFormat != OMX_COLOR_FormatYUV420Planar &&
+        m_context->videoColorFormat != OMX_COLOR_FormatYUV420SemiPlanar &&
+        m_context->videoColorFormat != OMX_QCOM_COLOR_FormatYVU420SemiPlanar)
+  {
+    CLog::Log(LOGERROR, "%s::%s - %s: %d\n", CLASSNAME, __func__,"Unsupported color format",m_context->videoColorFormat);
     m_context->client->disconnect();
     goto fail;
   }
 
-  outFormat->findCString(kKeyDecoderComponent, &m_context->decoder_component);
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::%s - Decoder: %s\n", CLASSNAME, __func__,m_context->decoder_component);
-#endif
-
+  if (!outFormat->findInt32(kKeyStride, &m_context->videoStride))
+    m_context->videoStride = m_context->width;
+  if (!outFormat->findInt32(kKeySliceHeight, &m_context->videoSliceHeight))
+    m_context->videoSliceHeight = m_context->height;
+  
+  if (!outFormat->findRect(kKeyCropRect, &cropLeft, &cropTop, &cropRight, &cropBottom)) 
+  {
+    m_context->x = 0;   
+    m_context->y = 0;   
+  }
+  else
+  {
+    m_context->x = cropLeft;   
+    m_context->y = cropTop;
+    m_context->width = cropRight - cropLeft + 1;
+    m_context->height = cropBottom - cropTop + 1;
+  }
+  
   pthread_mutex_init(&m_context->in_mutex, NULL);
   pthread_cond_init(&m_context->condition, NULL);
   
+  m_context->client->disconnect();
+
   return true;
 
 fail:
@@ -317,6 +325,7 @@ fail:
   return false;
 }
 
+/*** Decode ***/
 int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
 {
 #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
@@ -331,7 +340,9 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
   int demuxer_bytes = iSize;
   uint8_t *demuxer_content = pData;
   int ret = VC_BUFFER;
-
+  int32_t keyframe = 0;
+  int32_t unreadable = 0;
+    
   if (demuxer_content)
   {
     frame = (Frame*)malloc(sizeof(Frame));
@@ -362,6 +373,8 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
   if (m_context->in_queue.size() < MINBUFIN)
     return ret;
 
+  /* Output */
+
 	#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
   time = XbmcThreads::SystemClockMillis();
 	CLog::Log(LOGDEBUG, "%s: >>> Handling frame\n", CLASSNAME);
@@ -374,20 +387,37 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
   }
   
 	frame->medbuf = NULL;
-	frame->status = (*m_context->decoder)->read(&frame->medbuf);
+	frame->status = m_context->decoder->read(&frame->medbuf);
 	if (frame->status == INFO_FORMAT_CHANGED)
 	{
+	  sp<MetaData> outFormat = m_context->decoder->getFormat();
+
+    outFormat->findInt32(kKeyColorFormat, &m_context->videoColorFormat);
+    if (!outFormat->findInt32(kKeyStride, &m_context->videoStride))
+      m_context->videoStride = m_context->width;
+    if (!outFormat->findInt32(kKeySliceHeight, &m_context->videoSliceHeight))
+      m_context->videoSliceHeight = m_context->height;
+    
 	  if (frame->medbuf)
       frame->medbuf->release();
 	  free(frame);
     m_context->cur_frame = NULL;
     return ret;
 	}
-	else if (frame->status == OK)
+	if (frame->status == OK)
 	{
-	  sp<MetaData> outFormat = (*m_context->decoder)->getFormat();
+    if (!frame->medbuf)
+      return ret;
+            
+	  sp<MetaData> outFormat = m_context->decoder->getFormat();
 	  outFormat->findInt32(kKeyWidth , &w);
 	  outFormat->findInt32(kKeyHeight, &h);
+    
+    if (!outFormat->findInt32(kKeyIsSyncFrame, &keyframe))
+      keyframe = 0;
+    if (!outFormat->findInt32(kKeyIsUnreadable, &unreadable))
+      unreadable = 0;
+      
 	  frame->pts = 0;
 
 	  // The OMX.SEC decoder doesn't signal the modified width/height
@@ -402,15 +432,50 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
 	  }
 	  frame->width = w;
 	  frame->height = h;
-	  if (frame->medbuf)
-	  {
-      frame->medbuf->meta_data()->findInt64(kKeyTime, &(frame->pts));
-      if (m_context->drop_state)
+    frame->medbuf->meta_data()->findInt64(kKeyTime, &(frame->pts));
+    if (m_context->drop_state)
+    {
+      frame->medbuf->release();
+      frame->medbuf = NULL;
+    }
+    else if (!frame->medbuf->graphicBuffer().get())  // hw buffers
+    {
+      if (frame->medbuf->range_length() == 0)
       {
         frame->medbuf->release();
         frame->medbuf = NULL;
+        return ret;
       }
-	  }
+    }
+	}
+  else if (frame->status == INFO_FORMAT_CHANGED)
+	{
+    int32_t cropLeft, cropTop, cropRight, cropBottom;
+	  sp<MetaData> outFormat = m_context->decoder->getFormat();
+
+    if (!outFormat->findRect(kKeyCropRect, &cropLeft, &cropTop, &cropRight, &cropBottom)) 
+    {
+      m_context->x = 0;   
+      m_context->y = 0;   
+    }
+    else
+    {
+      m_context->x = cropLeft;   
+      m_context->y = cropTop;
+      m_context->width = cropRight - cropLeft + 1;
+      m_context->height = cropBottom - cropTop + 1;
+    }
+    outFormat->findInt32(kKeyColorFormat, &m_context->videoColorFormat);
+    if (!outFormat->findInt32(kKeyStride, &m_context->videoStride))
+      m_context->videoStride = m_context->width;
+    if (!outFormat->findInt32(kKeySliceHeight, &m_context->videoSliceHeight))
+      m_context->videoSliceHeight = m_context->height;
+    
+	  if (frame->medbuf)
+      frame->medbuf->release();
+	  free(frame);
+    m_context->cur_frame = NULL;
+    return ret;
 	}
 	else
 	{
@@ -424,13 +489,28 @@ int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
   
   m_context->cur_frame = frame;
 	#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-	CLog::Log(LOGDEBUG, "%s: >>> pushed OUT frame; tm:%d\n", CLASSNAME,XbmcThreads::SystemClockMillis() - time);
+	CLog::Log(LOGDEBUG, "%s: >>> pushed OUT frame; tm:%d, kf:%d, ur:%d\n", CLASSNAME,XbmcThreads::SystemClockMillis() - time, keyframe, unreadable);
 	#endif
 
   if (m_context->cur_frame)
     ret |= VC_PICTURE;
 
   return ret;
+}
+
+bool CStageFrightVideo::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
+{
+#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::ClearPicture\n", CLASSNAME);
+#endif
+  if (m_context->prev_frame) {
+    if (m_context->prev_frame->medbuf)
+      m_context->prev_frame->medbuf->release();
+    free(m_context->prev_frame);
+    m_context->prev_frame = NULL;
+  }
+
+  return true;
 }
 
 bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
@@ -440,7 +520,6 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   CLog::Log(LOGDEBUG, "%s::GetPicture\n", CLASSNAME);
 #endif
 
-  bool ret = true;
   status_t status;
 
   if (!m_context->cur_frame)
@@ -460,53 +539,79 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
     return false;
   }
 
-  pDvdVideoPicture->format = RENDER_FMT_YUV420P;
+  pDvdVideoPicture->format = RENDER_FMT_BYPASS;
   pDvdVideoPicture->pts = DVD_NOPTS_VALUE;
   pDvdVideoPicture->dts = DVD_NOPTS_VALUE;
-  pDvdVideoPicture->color_range  = 0;
-  pDvdVideoPicture->color_matrix = 4;
-  pDvdVideoPicture->iFlags  = DVP_FLAG_ALLOCATED;
   pDvdVideoPicture->iWidth  = frame->width;
   pDvdVideoPicture->iHeight = frame->height;
   pDvdVideoPicture->iDisplayWidth = frame->width;
   pDvdVideoPicture->iDisplayHeight = frame->height;
+  pDvdVideoPicture->iFlags  = DVP_FLAG_ALLOCATED;
   pDvdVideoPicture->pts = pts_itod(frame->pts);
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, ">>> pic pts:%f, data:%p, tm:%d\n", pDvdVideoPicture->pts, frame->medbuf, XbmcThreads::SystemClockMillis() - time);
-#endif
-
-  unsigned int luma_pixels = frame->width * frame->height;
-  unsigned int chroma_pixels = luma_pixels/4;
-  BYTE* data = NULL;
+  
   if (frame->medbuf)
-    data = (BYTE*)(frame->medbuf->data() + frame->medbuf->range_offset());
-  pDvdVideoPicture->iLineSize[0] = frame->width;
-  pDvdVideoPicture->iLineSize[1] = frame->width / 2;
-  pDvdVideoPicture->iLineSize[2] = frame->width / 2;
-  pDvdVideoPicture->iLineSize[3] = 0;
-  pDvdVideoPicture->data[0] = data;
-  pDvdVideoPicture->data[1] = pDvdVideoPicture->data[0] + (frame->width * frame->height);
-  pDvdVideoPicture->data[2] = pDvdVideoPicture->data[1] + (frame->width/2 * frame->height/2);
-  pDvdVideoPicture->data[3] = 0;
+  {
+    if (frame->medbuf->graphicBuffer() != 0)
+    {
+      pDvdVideoPicture->format = RENDER_FMT_TEXTURE;
 
-  pDvdVideoPicture->iFlags |= data == NULL ? DVP_FLAG_DROPPED : 0;
+      android::GraphicBuffer* graphicBuffer = static_cast<android::GraphicBuffer*>(frame->medbuf->graphicBuffer().get() );
+      ANativeWindow* nativeWindow = static_cast<ANativeWindow*>(g_xbmcapp.GetAndroidVideoWindow().get());
+      int err = nativeWindow->queueBuffer(nativeWindow, graphicBuffer);   
+      if (err == 0)
+        frame->medbuf->meta_data()->setInt32(kKeyRendered, 1);
+      frame->medbuf->release();
+      frame->medbuf = NULL;
+      
+    #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+      CLog::Log(LOGDEBUG, ">>> pic pts:%f, textured, tm:%d\n", pDvdVideoPicture->pts, XbmcThreads::SystemClockMillis() - time);
+    #endif
+    }
+    else
+    {
+      pDvdVideoPicture->format = RENDER_FMT_YUV420P;
+      pDvdVideoPicture->color_range  = 0;
+      pDvdVideoPicture->color_matrix = 4;
+    #if defined(STAGEFRIGHT_DEBUG_VERBOSE)
+      CLog::Log(LOGDEBUG, ">>> pic pts:%f, data:%p, tm:%d\n", pDvdVideoPicture->pts, frame->medbuf, XbmcThreads::SystemClockMillis() - time);
+    #endif
+
+      unsigned int luma_pixels = frame->width * frame->height;
+      unsigned int chroma_pixels = luma_pixels/4;
+      BYTE* data = NULL;
+      if (frame->medbuf)
+        data = (BYTE*)(frame->medbuf->data() + frame->medbuf->range_offset());
+      switch (m_context->videoColorFormat)
+      {
+        case OMX_COLOR_FormatYUV420Planar:
+          pDvdVideoPicture->iLineSize[0] = m_context->videoStride;
+          pDvdVideoPicture->iLineSize[1] = m_context->videoStride / 2;
+          pDvdVideoPicture->iLineSize[2] = m_context->videoStride / 2;
+          pDvdVideoPicture->iLineSize[3] = 0;
+          pDvdVideoPicture->data[0] = data;
+          pDvdVideoPicture->data[1] = pDvdVideoPicture->data[0] + (m_context->videoStride  * m_context->videoSliceHeight);
+          pDvdVideoPicture->data[2] = pDvdVideoPicture->data[1] + (m_context->videoStride/2 * m_context->videoSliceHeight/2);
+          pDvdVideoPicture->data[3] = 0;
+          break;
+        case OMX_COLOR_FormatYUV420SemiPlanar:
+        case OMX_QCOM_COLOR_FormatYVU420SemiPlanar:
+          pDvdVideoPicture->iLineSize[0] = m_context->videoStride;
+          pDvdVideoPicture->iLineSize[1] = m_context->videoStride;
+          pDvdVideoPicture->iLineSize[2] = 0;
+          pDvdVideoPicture->iLineSize[3] = 0;
+          pDvdVideoPicture->data[0] = data;
+          pDvdVideoPicture->data[1] = pDvdVideoPicture->data[0] + (m_context->videoStride  * m_context->videoSliceHeight);
+          pDvdVideoPicture->data[2] = 0;
+          pDvdVideoPicture->data[3] = 0;
+          break;
+      }
+    }
+  }
+  else
+    pDvdVideoPicture->iFlags |= DVP_FLAG_DROPPED;
+
   m_context->prev_frame = m_context->cur_frame;
   m_context->cur_frame = NULL;
-
-  return true;
-}
-
-bool CStageFrightVideo::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
-{
-#if defined(STAGEFRIGHT_DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s::ClearPicture\n", CLASSNAME);
-#endif
-  if (m_context->prev_frame) {
-    if (m_context->prev_frame->medbuf)
-      m_context->prev_frame->medbuf->release();
-    free(m_context->prev_frame);
-    m_context->prev_frame = NULL;
-  }
 
   return true;
 }
@@ -544,15 +649,19 @@ void CStageFrightVideo::Close()
     free(m_context->prev_frame);
   }
 
-  (*m_context->decoder)->stop();
+  m_context->decoder->stop();
   m_context->client->disconnect();
 
   if (m_context->decoder_component)
     free(&m_context->decoder_component);
 
+  //delete m_context->decoder;
   delete m_context->client;
-  delete m_context->decoder;
-  delete m_context->source;
+  //delete m_context->source;
+  //delete m_context->surface;
+  //delete m_context->texture;
+
+  //glDeleteTextures(1, &m_context->texture_id);
 
   pthread_mutex_destroy(&m_context->in_mutex);
   pthread_cond_destroy(&m_context->condition);

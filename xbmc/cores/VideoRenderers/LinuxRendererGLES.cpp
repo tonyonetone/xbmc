@@ -59,6 +59,26 @@
 #ifdef TARGET_DARWIN_IOS
 #include "osx/DarwinUtils.h"
 #endif
+#if defined(HAVE_LIBSTAGEFRIGHT)
+#include "android/activity/XBMCApp.h"
+
+// EGL extension functions
+static PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
+static PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR;
+static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
+#define GETEXTENSION(type, ext) \
+do \
+{ \
+    ext = (type) eglGetProcAddress(#ext); \
+    if (!ext) \
+    { \
+        CLog::Log(LOGERROR, "CLinuxRendererGLES::%s - ERROR getting proc addr of " #ext "\n", __func__); \
+    } \
+} while (0);
+
+#define EGL_NATIVE_BUFFER_ANDROID 0x3140
+#define EGL_IMAGE_PRESERVED_KHR   0x30D2
+#endif
 
 using namespace Shaders;
 
@@ -84,6 +104,9 @@ CLinuxRendererGLES::CLinuxRendererGLES()
 #endif
 #ifdef HAVE_VIDEOTOOLBOXDECODER
     m_buffers[i].cvBufferRef = NULL;
+#endif
+#if defined(HAVE_LIBSTAGEFRIGHT)
+    m_buffers[i].texture_id = -1;
 #endif
   }
 
@@ -112,10 +135,29 @@ CLinuxRendererGLES::CLinuxRendererGLES()
 
   m_dllSwScale = new DllSwScale;
   m_sw_context = NULL;
+  
+#ifdef HAVE_LIBSTAGEFRIGHT
+  g_xbmcapp.InitStagefright();
+  if (!eglCreateImageKHR)
+  {
+    GETEXTENSION(PFNEGLCREATEIMAGEKHRPROC,  eglCreateImageKHR);
+  }
+  if (!eglDestroyImageKHR)
+  {
+    GETEXTENSION(PFNEGLDESTROYIMAGEKHRPROC, eglDestroyImageKHR);
+  }
+  if (!glEGLImageTargetTexture2DOES)
+  {
+    GETEXTENSION(PFNGLEGLIMAGETARGETTEXTURE2DOESPROC, glEGLImageTargetTexture2DOES);
+  }
+#endif
 }
 
 CLinuxRendererGLES::~CLinuxRendererGLES()
 {
+#ifdef HAVE_LIBSTAGEFRIGHT
+  g_xbmcapp.UninitStagefright();
+#endif
   UnInit();
   for (int i = 0; i < NUM_BUFFERS; i++)
     delete m_eventTexturesDone[i];
@@ -217,6 +259,10 @@ int CLinuxRendererGLES::GetImage(YV12Image *image, int source, bool readonly)
    source = NextYV12Texture();
 
   if ( m_renderMethod & RENDER_OMXEGL )
+  {
+    return source;
+  }
+  if ( m_renderMethod & RENDER_TEXTURE )
   {
     return source;
   }
@@ -523,6 +569,9 @@ unsigned int CLinuxRendererGLES::PreInit()
 #ifdef HAVE_VIDEOTOOLBOXDECODER
   m_formats.push_back(RENDER_FMT_CVBREF);
 #endif
+#ifdef HAVE_LIBSTAGEFRIGHT
+  m_formats.push_back(RENDER_FMT_TEXTURE);
+#endif
 
   // setup the background colour
   m_clearColour = (float)(g_advancedSettings.m_videoBlackBarColour & 0xff) / 0xff;
@@ -620,6 +669,12 @@ void CLinuxRendererGLES::LoadShaders(int field)
       {
         CLog::Log(LOGNOTICE, "GL: Using OMXEGL RGBA render method");
         m_renderMethod = RENDER_OMXEGL;
+        break;
+      }
+      else if (m_format == RENDER_FMT_TEXTURE)
+      {
+        CLog::Log(LOGNOTICE, "GL: Using TEXTURE render method");
+        m_renderMethod = RENDER_TEXTURE;
         break;
       }
       else if (m_format == RENDER_FMT_BYPASS)
@@ -803,6 +858,11 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
   else if (m_renderMethod & RENDER_OMXEGL)
   {
     RenderOpenMax(index, m_currentField);
+    VerifyGLState();
+  }
+  else if (m_renderMethod & RENDER_TEXTURE)
+  {
+    RenderTexture(index, m_currentField);
     VerifyGLState();
   }
   else if (m_renderMethod & RENDER_CVREF)
@@ -1175,11 +1235,9 @@ void CLinuxRendererGLES::RenderSoftware(int index, int field)
   VerifyGLState();
 }
 
-void CLinuxRendererGLES::RenderOpenMax(int index, int field)
+void CLinuxRendererGLES::RenderTexture(GLuint textureId)
 {
-#if defined(HAVE_LIBOPENMAX)
-  GLuint textureId = m_buffers[index].openMaxBuffer->texture_id;
-
+#if defined(HAVE_LIBOPENMAX) || defined(HAVE_LIBSTAGEFRIGHT)
   glDisable(GL_DEPTH_TEST);
 
   // Y
@@ -1238,6 +1296,56 @@ void CLinuxRendererGLES::RenderOpenMax(int index, int field)
 
   glDisable(m_textureTarget);
   VerifyGLState();
+#endif
+}
+
+void CLinuxRendererGLES::RenderOpenMax(int index, int field)
+{
+#if defined(HAVE_LIBOPENMAX)
+  GLuint textureId = m_buffers[index].openMaxBuffer->texture_id;
+  RenderTexture(textureId);
+#endif
+}
+
+void CLinuxRendererGLES::RenderTexture(int index, int field)
+{
+#if defined(HAVE_LIBSTAGEFRIGHT)
+  g_xbmcapp.GetAndroidSurfaceTexture()->updateTexImage();
+
+  android::sp<android::GraphicBuffer> activeBuffer = g_xbmcapp.GetAndroidSurfaceTexture()->getCurrentBuffer();
+
+  if(!activeBuffer.get())
+    return;
+
+  int glerr;
+    
+  EGLint eglImgAttrs[] = { EGL_IMAGE_PRESERVED_KHR, EGL_TRUE, EGL_NONE, EGL_NONE };
+  EGLImageKHR  eglimg = eglCreateImageKHR(eglGetDisplay(EGL_DEFAULT_DISPLAY), EGL_NO_CONTEXT,
+                                  EGL_NATIVE_BUFFER_ANDROID,
+                                  (EGLClientBuffer)activeBuffer.get()->getNativeBuffer(),
+                                  eglImgAttrs);
+  if ((glerr = glGetError()) != 0)
+    CLog::Log(LOGERROR, ">>> eglCreateImageKHR error(%d)\n", glerr);
+
+  GLuint textureId;
+  glActiveTexture(GL_TEXTURE0);
+  glGenTextures(1, &textureId);
+  glBindTexture(GL_TEXTURE_2D, textureId);
+  glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, eglimg);
+  if ((glerr = glGetError()) != 0)
+    CLog::Log(LOGERROR, ">>> glEGLImageTargetTexture2DOES error(%d)\n", glerr);
+   
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+  eglDestroyImageKHR(eglGetDisplay(EGL_DEFAULT_DISPLAY), eglimg);
+  if ((glerr = glGetError()) != 0)
+    CLog::Log(LOGERROR, ">>> eglDestroyImageKHR error(%d)\n", glerr);
+
+  RenderTexture(textureId);
+
+  glDeleteTextures(1, &textureId);
+
 #endif
 }
 
@@ -1373,6 +1481,8 @@ void CLinuxRendererGLES::UploadYV12Texture(int source)
 
 #if defined(HAVE_LIBOPENMAX)
   if (!(im->flags&IMAGE_FLAG_READY) || m_buffers[source].openMaxBuffer)
+#elif defined(HAVE_LIBSTAGEFRIGHT)
+  if (!(im->flags&IMAGE_FLAG_READY) || m_buffers[source].texture_id >= 0)
 #else
   if (!(im->flags&IMAGE_FLAG_READY))
 #endif
@@ -1914,6 +2024,9 @@ bool CLinuxRendererGLES::Supports(EINTERLACEMETHOD method)
   if(m_renderMethod & RENDER_OMXEGL)
     return false;
 
+  if(m_renderMethod & RENDER_TEXTURE)
+    return false;
+
   if(m_renderMethod & RENDER_CVREF)
     return false;
 
@@ -1962,6 +2075,9 @@ EINTERLACEMETHOD CLinuxRendererGLES::AutoInterlaceMethod()
   if(m_renderMethod & RENDER_OMXEGL)
     return VS_INTERLACEMETHOD_NONE;
 
+  if(m_renderMethod & RENDER_TEXTURE)
+    return VS_INTERLACEMETHOD_NONE;
+
   if(m_renderMethod & RENDER_CVREF)
     return VS_INTERLACEMETHOD_NONE;
 
@@ -1988,6 +2104,13 @@ void CLinuxRendererGLES::AddProcessor(struct __CVBuffer *cvBufferRef)
   buf.cvBufferRef = cvBufferRef;
   // retain another reference, this way dvdplayer and renderer can issue releases.
   CVBufferRetain(buf.cvBufferRef);
+}
+#endif
+#ifdef HAVE_LIBSTAGEFRIGHT
+void CLinuxRendererGLES::AddProcessor(GLuint texture_id)
+{
+  YUVBUFFER &buf = m_buffers[NextYV12Texture()];
+  buf.texture_id = texture_id;
 }
 #endif
 

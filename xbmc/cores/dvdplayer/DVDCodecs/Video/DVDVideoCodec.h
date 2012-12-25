@@ -50,7 +50,6 @@ struct DVDVideoPicture
     struct {
       BYTE* data[4];      // [4] = alpha channel, currently not used
       int iLineSize[4];   // [4] = alpha channel, currently not used
-      void* stdcontext;
     };
     struct {
       DXVA::CSurfaceContext* context;
@@ -69,6 +68,10 @@ struct DVDVideoPicture
 
     struct {
       struct __CVBuffer *cvBufferRef;
+    };
+    
+    struct {
+      unsigned int texture_id;
     };
   };
 
