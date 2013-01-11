@@ -18,6 +18,8 @@
  *
  */
 
+#include "system.h"
+
 #include <sstream>
 
 #include <unistd.h>
@@ -26,6 +28,7 @@
 #include <string.h>
 
 #include <android/native_window.h>
+#include <android/native_window_jni.h>
 #include <android/configuration.h>
 #include <jni.h>
 
@@ -59,18 +62,9 @@ void* thread_run(void* obj)
 ANativeActivity *CXBMCApp::m_activity = NULL;
 ANativeWindow* CXBMCApp::m_window = NULL;
 
-CXBMCApp::CXBMCApp(ANativeActivity *nativeActivity)
-  : m_wakeLock(NULL), m_keyguardLock(NULL)
+CXBMCApp::CXBMCApp()
+  : m_wakeLock(NULL)
 {
-  m_activity = nativeActivity;
-  
-  if (m_activity == NULL)
-  {
-    android_printf("CXBMCApp: invalid ANativeActivity instance");
-    exit(1);
-    return;
-  }
-
   m_state.appState = Uninitialized;
 
   if (pthread_mutex_init(&m_state.mutex, NULL) != 0)
@@ -80,7 +74,18 @@ CXBMCApp::CXBMCApp(ANativeActivity *nativeActivity)
     exit(1);
     return;
   }
+}
 
+void CXBMCApp::SetActivity(ANativeActivity *nativeActivity)
+{
+  m_activity = nativeActivity;
+  
+  if (m_activity == NULL)
+  {
+    android_printf("CXBMCApp: invalid ANativeActivity instance");
+    exit(1);
+    return;
+  }
 }
 
 CXBMCApp::~CXBMCApp()
@@ -377,14 +382,6 @@ void CXBMCApp::stop()
     
     env->DeleteGlobalRef(m_wakeLock);
     m_wakeLock = NULL;
-  }
-  if (m_keyguardLock != NULL && m_activity != NULL)
-  {
-    JNIEnv *env = NULL;
-    m_activity->vm->AttachCurrentThread(&env, NULL);
-    
-    env->DeleteGlobalRef(m_keyguardLock);
-    m_keyguardLock = NULL;
   }
 }
 
@@ -1117,3 +1114,60 @@ void CXBMCApp::SetSystemVolume(JNIEnv *env, float percent)
   env->DeleteLocalRef(cAudioManager);
 }
 
+#ifdef HAVE_LIBSTAGEFRIGHT
+bool CXBMCApp::InitStagefrightSurface()
+{
+  if (m_VideoNativeWindow != NULL)
+    return true;
+    
+  JNIEnv *env = NULL;
+  AttachCurrentThread(&env);
+
+  jclass cSurfaceTexture = env->FindClass("android/graphics/SurfaceTexture");
+  jmethodID midSurfaceTextureCtor = env->GetMethodID(cSurfaceTexture, "<init>", "(I)V");
+  //m_midUpdateTexImage = env->GetMethodID(cSurfaceTexture, "updateTexImage", "()V");
+  //m_midGetTransformMatrix  = env->GetMethodID(cSurfaceTexture, "getTransformMatrix", "([F)V");
+  jobject oSurfTexture = env->NewObject(cSurfaceTexture, midSurfaceTextureCtor, 0);
+  
+  //jfieldID fidSurfaceTexture = env->GetFieldID(cSurfaceTexture, ANDROID_GRAPHICS_SURFACETEXTURE_JNI_ID, "I");
+  //m_SurfaceTexture = (android::SurfaceTexture*)env->GetIntField(oSurfTexture, fidSurfaceTexture);
+  
+  env->DeleteLocalRef(cSurfaceTexture);
+  m_SurfTexture = env->NewGlobalRef(oSurfTexture);
+  env->DeleteLocalRef(oSurfTexture);
+  
+  jclass cSurface = env->FindClass("android/view/Surface");
+  jmethodID midSurfaceCtor = env->GetMethodID(cSurface, "<init>", "(Landroid/graphics/SurfaceTexture;)V");
+  jmethodID midSurfaceRelease = env->GetMethodID(cSurface, "release", "()V");
+  jobject oSurface = env->NewObject(cSurface, midSurfaceCtor, m_SurfTexture);
+  env->DeleteLocalRef(cSurface);
+
+  m_VideoNativeWindow = ANativeWindow_fromSurface(env, oSurface);
+
+  env->CallVoidMethod(oSurface, midSurfaceRelease);
+  env->DeleteLocalRef(oSurface);
+  
+  DetachCurrentThread();
+  
+  return true;
+}
+
+void CXBMCApp::UninitStagefrightSurface()
+{
+  JNIEnv *env = NULL;
+  AttachCurrentThread(&env);
+
+  ANativeWindow_release(m_VideoNativeWindow.get());
+  m_VideoNativeWindow.clear();
+  m_VideoNativeWindow = NULL;
+  
+  jclass cSurfaceTexture = env->GetObjectClass(m_SurfTexture);
+  jmethodID midSurfaceTextureRelease = env->GetMethodID(cSurfaceTexture, "release", "()V");
+  env->CallVoidMethod(m_SurfTexture, midSurfaceTextureRelease);
+  env->DeleteLocalRef(cSurfaceTexture);
+  env->DeleteGlobalRef(m_SurfTexture);
+
+  DetachCurrentThread();
+
+}
+#endif
