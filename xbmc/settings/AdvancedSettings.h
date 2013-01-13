@@ -80,6 +80,17 @@ struct RefreshVideoLatency
   float delay;
 };
 
+struct StagefrightConfig
+{
+  int useAVCcodec;
+  int useVC1codec;
+  int useVPXcodec;
+  int useMP4codec;
+  int useMPEG2codec;
+  bool useSwRenderer;
+  bool useInputDTS;
+};
+
 typedef std::vector<TVShowRegexp> SETTINGS_TVSHOWLIST;
 
 class CAdvancedSettings : public ISettingsHandler
@@ -169,6 +180,7 @@ class CAdvancedSettings : public ISettingsHandler
     bool m_DXVANoDeintProcForProgressive;
     int  m_videoFpsDetect;
     bool m_videoDisableHi10pMultithreading;
+    StagefrightConfig m_stagefrightConfig;
 
     CStdString m_videoDefaultPlayer;
     CStdString m_videoDefaultDVDPlayer;
