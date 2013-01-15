@@ -231,8 +231,9 @@ public class Splash extends Activity {
 	}
 
 	protected void startXBMC() {
-		// Run XBMC
+    // Preload libxmc.so to be able to catch link errors
     System.loadLibrary("xbmc");
+		// Run XBMC
 		Intent intent = new Intent();
 		intent.setClass(this, android.app.NativeActivity.class);
 		startActivity(intent);
