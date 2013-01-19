@@ -578,7 +578,6 @@ unsigned int CLinuxRendererGLES::PreInit()
 #endif
 #ifdef HAVE_LIBSTAGEFRIGHT
   m_formats.push_back(RENDER_FMT_EGLIMG);
-  g_xbmcapp.InitStagefrightSurface();
 #endif
 
   // setup the background colour
@@ -802,10 +801,6 @@ void CLinuxRendererGLES::UnInit()
     m_dllSwScale->sws_freeContext(m_sw_context);
     m_sw_context = NULL;
   }
-
-#ifdef HAVE_LIBSTAGEFRIGHT  
-    g_xbmcapp.UninitStagefrightSurface();
-#endif
 
   // cleanup framebuffer object if it was in use
   m_fbo.Cleanup();
@@ -1994,8 +1989,8 @@ bool CLinuxRendererGLES::CreateEGLIMGTexture(int index)
 
   glBindTexture(m_textureTarget, plane.id);
 
-  glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(m_textureTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(m_textureTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	// This is necessary for non-power-of-two textures
   glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
