@@ -64,6 +64,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include "android/activity/XBMCApp.h"
+#include "DVDCodecs/Video/StageFrightVideo.h"
 
 // EGL extension functions
 static PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
@@ -106,6 +107,10 @@ CLinuxRendererGLES::CLinuxRendererGLES()
 #endif
 #ifdef HAVE_VIDEOTOOLBOXDECODER
     m_buffers[i].cvBufferRef = NULL;
+#endif
+#ifdef HAVE_LIBSTAGEFRIGHT
+    m_buffers[i].stf = NULL;
+    m_buffers[i].eglimg = EGL_NO_IMAGE_KHR;
 #endif
   }
 
@@ -189,7 +194,6 @@ bool CLinuxRendererGLES::ValidateRenderTarget()
      // create the yuv textures
     LoadShaders();
 
-    m_fbo.Initialize();
     for (int i = 0 ; i < m_NumYV12Buffers ; i++)
       (this->*m_textureCreate)(i);
 
@@ -1996,7 +2000,7 @@ bool CLinuxRendererGLES::CreateEGLIMGTexture(int index)
   glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(m_textureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-  glTexImage2D(m_textureTarget, 0, GL_RGBA, plane.texwidth, plane.texheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+  //glTexImage2D(m_textureTarget, 0, GL_RGBA, plane.texwidth, plane.texheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
   
   glDisable(m_textureTarget);
 
@@ -2199,9 +2203,14 @@ void CLinuxRendererGLES::AddProcessor(struct __CVBuffer *cvBufferRef)
 }
 #endif
 #ifdef HAVE_LIBSTAGEFRIGHT
-void CLinuxRendererGLES::AddProcessor(EGLImageKHR eglimg)
+void CLinuxRendererGLES::AddProcessor(CStageFrightVideo* stf, EGLImageKHR eglimg)
 {
   YUVBUFFER &buf = m_buffers[NextYV12Texture()];
+  if (buf.eglimg != EGL_NO_IMAGE_KHR)
+    stf->ReleaseBuffer(buf.eglimg);
+  stf->LockBuffer(eglimg);
+  
+  buf.stf = stf;
   buf.eglimg = eglimg;
 }
 #endif
