@@ -20,6 +20,7 @@
 #include "JNIManager.h"
 #include "XBMCApp.h"
 #include "BroadcastReceiver.h"
+#include "JNIThreading.h"
 #include <android/log.h>
 
 
@@ -76,6 +77,7 @@ bool CAndroidJNIManager::Load(JavaVM* vm, int jniVersion)
     if (vm->GetEnv(reinterpret_cast<void**>(&env), jniVersion) != JNI_OK) {
         return false;
     }
+    xbmc_jni_on_load(vm, env);
 
     RegisterClass(env, &g_xbmcapp);
     m_broadcastReceiver = new CBroadcastReceiver();
