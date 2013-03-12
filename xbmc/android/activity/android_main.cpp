@@ -160,8 +160,6 @@ extern void android_main(struct android_app* state)
 {
   // make sure that the linker doesn't strip out our glue
   app_dummy();
-  int val = xbmc_jni_on_load(state->activity->vm, state->activity->env);
-  __android_log_print(ANDROID_LOG_VERBOSE, "XBMC","xbmc_jni_on_load returned %i\n",val);
   CAndroidJNIManager::GetInstance().SetActivityInstance(state->activity->clazz);
   setup_env(state);
   CEventLoop eventLoop(state);
