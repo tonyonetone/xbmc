@@ -30,8 +30,8 @@
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include <android/configuration.h>
-#include <jni.h>
 
+#include "Intents.h"
 #include "XBMCApp.h"
 
 #include "input/MouseStat.h"
@@ -73,7 +73,8 @@ ANativeActivity *CXBMCApp::m_activity = NULL;
 ANativeWindow* CXBMCApp::m_window = NULL;
 
 CXBMCApp::CXBMCApp()
-  : m_wakeLock(NULL), m_VideoNativeWindow(NULL)
+  : CAndroidJNIBase("org/xbmc/xbmc/Main")
+  , m_wakeLock(NULL), m_VideoNativeWindow(NULL)
 {
   m_firstrun = true;
   m_exiting=false;
@@ -89,6 +90,8 @@ void CXBMCApp::SetActivity(ANativeActivity *nativeActivity)
     exit(1);
     return;
   }
+
+  AddMethod(jniNativeMethod("ReceiveViewIntent", "(Landroid/content/Intent;)V", (void*)jni_MainReceiveViewIntent));
 }
 
 CXBMCApp::~CXBMCApp()
@@ -302,6 +305,7 @@ void CXBMCApp::run()
   android_printf(" => running XBMC_Run...");
   try
   {
+    CAndroidIntents::getInstance().ReceiveInitialIntent(m_activity);
     status = XBMC_Run(true);
     android_printf(" => XBMC_Run finished with %d", status);
   }
@@ -990,6 +994,16 @@ void CXBMCApp::SetSystemVolume(JNIEnv *env, float percent)
   env->CallObjectMethod(oAudioManager, msetStreamVolume, stream_music, int(GetMaxSystemVolume(env)*percent), 0);
   env->DeleteLocalRef(oAudioManager);
   env->DeleteLocalRef(cAudioManager);
+}
+
+void CXBMCApp::ReceiveViewIntent(JNIEnv *env, jobject thiz, jobject intent)
+{
+  CAndroidIntents::getInstance().ReceiveViewIntent(env, intent);
+}
+
+void jni_MainReceiveViewIntent(JNIEnv *env, jobject thiz, jobject intent)
+{
+  g_xbmcapp.ReceiveViewIntent(env, thiz, intent);
 }
 
 #ifdef HAVE_LIBSTAGEFRIGHT
