@@ -651,12 +651,12 @@ case $host in
      use_cpu=cortex-a9
      ARCH="arm"
      ffmpeg_target_os=linux
-     use_joystick=no
      use_neon=yes
      use_gles=yes
      use_optical_drive=no
      use_sdl=no
      use_x11=no
+     use_libstagefright=yes
      build_shared_lib=yes
      ;;
   *)
@@ -2017,6 +2017,12 @@ if test "$use_openmax" != "no"; then
   final_message="$final_message\n  OpenMax:\tYes"
 else
   final_message="$final_message\n  OpenMax:\tNo"
+fi
+
+if test "$use_libstagefright" != "no"; then
+  final_message="$final_message\n  libstagefright:\tYes"
+else
+  final_message="$final_message\n  libstagefright:\tNo"
 fi
 
 if test "$use_joystick" = "yes"; then

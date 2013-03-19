@@ -26,11 +26,14 @@
 #include "ButtonTranslator.h"
 #include "utils/log.h"
 #include "MouseStat.h"
+#include "guilib/Key.h"
 
 // Include joystick APIs
 #if defined(TARGET_WINDOWS)
 #include "input/windows/WINJoystickXInput.h"
 #include "input/windows/WINJoystickDX.h"
+#elif defined(TARGET_ANDROID)
+#include "input/linux/LinuxJoystickAndroid.h"
 #elif defined(TARGET_LINUX)
 #include "input/linux/LinuxJoystick.h"
 #endif // TARGET_LINUX
@@ -61,6 +64,8 @@ void CJoystickManager::Initialize()
 #if defined(TARGET_WINDOWS)
   CJoystickXInput::Initialize(m_joysticks);
   CJoystickDX::Initialize(m_joysticks);
+#elif defined(TARGET_ANDROID)
+  CLinuxJoystickAndroid::Initialize(m_joysticks);
 #elif defined(TARGET_LINUX)
   CLinuxJoystick::Initialize(m_joysticks);
 #endif // TARGET_LINUX
@@ -78,6 +83,8 @@ void CJoystickManager::DeInitialize()
 #if defined(TARGET_WINDOWS)
   CJoystickXInput::DeInitialize(m_joysticks);
   CJoystickDX::DeInitialize(m_joysticks);
+#elif defined(TARGET_ANDROID)
+  CLinuxJoystickAndroid::DeInitialize(m_joysticks);
 #elif defined(TARGET_LINUX)
   CLinuxJoystick::DeInitialize(m_joysticks);
 #endif // TARGET_LINUX
@@ -105,13 +112,13 @@ void CJoystickManager::ProcessStateChanges()
     ProcessAxisMotion(m_states[joyID], m_joysticks[joyID]->GetState(), joyID);
   }
 
-  // If tracking an action and the time has elapsed, execute the action now
-  if (m_actionTracker.actionID && OCCURED(m_actionTracker.targetTime))
-  {
-    CAction action(m_actionTracker.actionID, 1.0f, 0.0f, m_actionTracker.name);
-    g_application.ExecuteInputAction(action);
-    m_actionTracker.Track(action); // Update the timer
-  }
+  // // If tracking an action and the time has elapsed, execute the action now
+  // if (m_actionTracker.actionID && OCCURED(m_actionTracker.targetTime))
+  // {
+    // CAction action(m_actionTracker.actionID, 1.0f, 0.0f, m_actionTracker.name);
+    // g_application.ExecuteInputAction(action);
+    // m_actionTracker.Track(action); // Update the timer
+  // }
 
   // Reset the wakeup check, so that the check will be performed next button press also
   ResetWakeup();
@@ -127,6 +134,12 @@ void CJoystickManager::ProcessButtonPresses(SJoystick &oldState, const SJoystick
 
     CLog::Log(LOGDEBUG, "Joystick %d button %d %s", joyID, i + 1, newState.buttons[i] ? "pressed" : "unpressed");
 
+    if (!newState.buttons[i])
+    {
+       m_actionTracker.Reset(); // If a button was released, reset the tracker
+       continue;
+    }
+    
     // Check to see if an action is registered for the button first
     int        actionID;
     CStdString actionName;
@@ -141,17 +154,13 @@ void CJoystickManager::ProcessButtonPresses(SJoystick &oldState, const SJoystick
     g_Mouse.SetActive(false);
 
     // Ignore all button presses during this ProcessStateChanges() if we woke
-    // up the screensaver (but always send joypad unpresses)
-    if (!Wakeup() && newState.buttons[i])
+    // up the screensaver
+    if (!Wakeup())
     {
       CAction action(actionID, 1.0f, 0.0f, actionName);
       g_application.ExecuteInputAction(action);
       // Track the button press for deferred repeated execution
       m_actionTracker.Track(action);
-    }
-    else if (!newState.buttons[i])
-    {
-      m_actionTracker.Reset(); // If a button was released, reset the tracker
     }
   }
 }
@@ -174,6 +183,13 @@ void CJoystickManager::ProcessHatPresses(SJoystick &oldState, const SJoystick &n
         continue;
       oldHat[j] = newHat[j];
 
+      if (!newHat[j])
+      {
+        // If a hat was released, reset the tracker
+        m_actionTracker.Reset();
+        continue;
+      }
+
       int        actionID;
       CStdString actionName;
       bool       fullrange;
@@ -190,17 +206,12 @@ void CJoystickManager::ProcessHatPresses(SJoystick &oldState, const SJoystick &n
 
       // Ignore all button presses during this ProcessStateChanges() if we woke
       // up the screensaver (but always send joypad unpresses)
-      if (!Wakeup() && newHat[j])
+      if (!Wakeup())
       {
         CAction action(actionID, 1.0f, 0.0f, actionName);
         g_application.ExecuteInputAction(action);
         // Track the hat press for deferred repeated execution
         m_actionTracker.Track(action);
-      }
-      else if (!newHat[j])
-      {
-        // If a hat was released, reset the tracker
-        m_actionTracker.Reset();
       }
     }
   }

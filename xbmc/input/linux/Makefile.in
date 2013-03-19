@@ -1,7 +1,12 @@
 SRCS=LIRC.cpp \
      LinuxInputDevices.cpp \
-     LinuxJoystick.cpp \
-     LinuxJoystickSDL.cpp
+
+ifeq (@USE_ANDROID@,1)
+SRCS += LinuxJoystickAndroid.cpp
+else
+SRCS += LinuxInputDevices.cpp 
+SRCS += LinuxJoystick.cpp 
+endif
 
 LIB=input_linux.a
 
