@@ -32,6 +32,14 @@
 #include "xbmc.h"
 #include "android/jni/Context.h"
 
+/*
+#ifdef HAVE_LIBSTAGEFRIGHT
+namespace android {
+  class SurfaceTexture;
+}
+#endif
+*/
+
 // forward delares
 class CJNIWakeLock;
 class CAESinkAUDIOTRACK;
@@ -98,6 +106,18 @@ public:
   static int GetMaxSystemVolume();
 
   static int GetDPI();
+  
+#ifdef HAVE_LIBSTAGEFRIGHT
+  bool InitStagefrightSurface();
+  void UninitStagefrightSurface();
+  void UpdateStagefrightTexture();
+  void GetStagefrightTransformMatrix(float* transformMatrix);
+
+  ANativeWindow* GetAndroidVideoWindow() const { return m_VideoNativeWindow;}
+  const unsigned int GetAndroidTexture() const { return m_VideoTextureId; }
+  //android::SurfaceTexture* GetSurfaceTexture() const { return m_SurfaceTexture; }
+#endif
+
 protected:
   // limit who can access Volume
   friend class CAESinkAUDIOTRACK;
@@ -119,9 +139,22 @@ private:
   pthread_t m_thread;
   
   static ANativeWindow* m_window;
+#ifdef HAVE_LIBSTAGEFRIGHT
+  unsigned int m_VideoTextureId;
+  jobject m_SurfTexture;
+  jobject m_Surface;
+  jmethodID m_midUpdateTexImage;
+  jmethodID m_midGetTransformMatrix;
+  jmethodID midSurfaceTextureRelease;
+  jmethodID midSurfaceRelease;
+  ANativeWindow* m_VideoNativeWindow;
+  //android::SurfaceTexture* m_SurfaceTexture;
+#endif
   
   void XBMC_Pause(bool pause);
   void XBMC_Stop();
   bool XBMC_DestroyDisplay();
   bool XBMC_SetupDisplay();
 };
+
+extern CXBMCApp* g_xbmcapp;
