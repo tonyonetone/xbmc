@@ -31,7 +31,15 @@
 #include "IInputHandler.h"
 
 #include "xbmc.h"
+#include "utils/GlobalsHandling.h"
 
+/*
+#ifdef HAVE_LIBSTAGEFRIGHT
+namespace android {
+  class SurfaceTexture;
+}
+#endif
+*/
 
 // forward delares
 class CAESinkAUDIOTRACK;
@@ -58,7 +66,8 @@ public:
   void ReceiveViewIntent(JNIEnv *env, jobject thiz, jobject intent);
 
 public:
-  CXBMCApp(ANativeActivity *nativeActivity);
+  CXBMCApp();
+  void SetActivity(ANativeActivity *nativeActivity);
   virtual ~CXBMCApp();
 
   bool isValid() { return m_activity != NULL; }
@@ -101,6 +110,18 @@ public:
   static int GetMaxSystemVolume();
 
   static int GetDPI();
+  
+#ifdef HAVE_LIBSTAGEFRIGHT
+  bool InitStagefrightSurface();
+  void UninitStagefrightSurface();
+  void UpdateStagefrightTexture();
+  void GetStagefrightTransformMatrix(float* transformMatrix);
+
+  ANativeWindow* GetAndroidVideoWindow() const { return m_VideoNativeWindow;}
+  const unsigned int GetAndroidTexture() const { return m_VideoTextureId; }
+  //android::SurfaceTexture* GetSurfaceTexture() const { return m_SurfaceTexture; }
+#endif
+
 protected:
   // limit who can access Volume
   friend class CAESinkAUDIOTRACK;
@@ -124,6 +145,17 @@ private:
   pthread_t m_thread;
   
   static ANativeWindow* m_window;
+#ifdef HAVE_LIBSTAGEFRIGHT
+  unsigned int m_VideoTextureId;
+  jobject m_SurfTexture;
+  jobject m_Surface;
+  jmethodID m_midUpdateTexImage;
+  jmethodID m_midGetTransformMatrix;
+  jmethodID midSurfaceTextureRelease;
+  jmethodID midSurfaceRelease;
+  ANativeWindow* m_VideoNativeWindow;
+  //android::SurfaceTexture* m_SurfaceTexture;
+#endif
   
   void XBMC_Pause(bool pause);
   void XBMC_Stop();
@@ -132,3 +164,6 @@ private:
 };
 
 extern "C" void jni_MainReceiveViewIntent(JNIEnv *env, jobject thiz, jobject intent);
+
+XBMC_GLOBAL_REF(CXBMCApp,g_xbmcapp);
+#define g_xbmcapp XBMC_GLOBAL_USE(CXBMCApp)
