@@ -992,6 +992,7 @@ static std::string GetRenderFormatName(ERenderFormat format)
     case RENDER_FMT_VAAPI:     return "VAAPI";
     case RENDER_FMT_OMXEGL:    return "OMXEGL";
     case RENDER_FMT_CVBREF:    return "BGRA";
+    case RENDER_FMT_EGLIMG:    return "EGLIMG";
     case RENDER_FMT_BYPASS:    return "BYPASS";
     case RENDER_FMT_NONE:      return "NONE";
   }
@@ -1096,7 +1097,6 @@ int CDVDPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
           |  GetFlagsColorTransfer(pPicture->color_transfer);
 
     CStdString formatstr = GetRenderFormatName(pPicture->format);
-
     if(m_bAllowFullscreen)
     {
       flags |= CONF_FLAGS_FULLSCREEN;
