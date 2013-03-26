@@ -47,11 +47,11 @@ public:
   static CJNIFile getExternalFilesDir(const std::string &path);
   virtual void onReceive(CJNIIntent intent)=0;
 protected:
-  CJNIContext(const ANativeActivity *nativeActivity);
+  CJNIContext();
+  void SetActivity(const ANativeActivity *nativeActivity);
   ~CJNIContext();
 
 private:
-  CJNIContext();
   void operator=(CJNIContext const&){};
   static jni::jhobject m_context;
 };
