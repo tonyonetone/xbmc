@@ -26,14 +26,12 @@
 
 CAndroidJNIManager::CAndroidJNIManager()
 {
-  m_broadcastReceiver = NULL;
   m_oActivity = NULL;
 }
 
 
 CAndroidJNIManager::~CAndroidJNIManager()
 {
-  delete m_broadcastReceiver;
 }
 
 bool CAndroidJNIManager::RegisterClass(JNIEnv* env, CAndroidJNIBase *native)
@@ -80,8 +78,7 @@ bool CAndroidJNIManager::Load(JavaVM* vm, int jniVersion)
     xbmc_jni_on_load(vm, env);
 
     RegisterClass(env, &g_xbmcapp);
-    m_broadcastReceiver = new CBroadcastReceiver();
-    RegisterClass(env, m_broadcastReceiver);
+    RegisterClass(env, &CBroadcastReceiver::GetInstance());
 
     return true;
   }
