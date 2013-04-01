@@ -5192,6 +5192,7 @@ bool CVideoDatabase::GetSetsByWhere(const CStdString& strBaseDir, const Filter &
     if (!setFilter.order.empty())
       setFilter.order += ",";
     setFilter.order += "sets.idSet";
+
     if (!GetMoviesByWhere(strBaseDir, setFilter, items))
       return false;
 
