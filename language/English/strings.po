@@ -690,7 +690,9 @@ msgctxt "#170"
 msgid "Adjust display refresh rate to match video"
 msgstr ""
 
-#empty string with id 171
+msgctxt "#171"
+msgid "Info"
+msgstr ""
 
 msgctxt "#172"
 msgid "Release date"
