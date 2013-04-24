@@ -886,9 +886,10 @@ void CGUIWindowVideoNav::GetContextButtons(int itemNumber, CContextButtons &butt
           else
             buttons.Add(CONTEXT_BUTTON_SET_CONTENT, 20333);
         }
-        if (info)
-          buttons.Add(CONTEXT_BUTTON_SCAN, 13349);
       }
+
+      if (info && !g_application.IsVideoScanning())
+        buttons.Add(CONTEXT_BUTTON_SCAN, 13349);
     }
   }
   else
@@ -1062,8 +1063,7 @@ void CGUIWindowVideoNav::GetContextButtons(int itemNumber, CContextButtons &butt
             if (info && info->Content() != CONTENT_NONE)
             {
               buttons.Add(CONTEXT_BUTTON_SET_CONTENT, 20442);
-              if (info)
-                buttons.Add(CONTEXT_BUTTON_SCAN, 13349);
+              buttons.Add(CONTEXT_BUTTON_SCAN, 13349);
             }
             else
               buttons.Add(CONTEXT_BUTTON_SET_CONTENT, 20333);
