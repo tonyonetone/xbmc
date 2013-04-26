@@ -723,7 +723,8 @@ bool URIUtils::IsInternetStream(const CURL& url, bool bStrictCheck /* = false */
 
   // Special case these
   if (strProtocol  == "ftp"   || strProtocol  == "ftps"   ||
-      strProtocol  == "dav"   || strProtocol  == "davs")
+      strProtocol  == "dav"   || strProtocol  == "davs"   ||
+      strProtocol  == "ampache" )
     return bStrictCheck;
 
   if (strProtocol2 == "http"  || strProtocol2 == "https"  ||
@@ -847,6 +848,11 @@ bool URIUtils::IsBluray(const CStdString& strFile)
 bool URIUtils::IsAndroidApp(const CStdString &path)
 {
   return path.Left(11).Equals("androidapp:");
+}
+
+bool URIUtils::IsAmpache(const CStdString& strFile)
+{
+  return strFile.Left(8).Equals("ampache:");
 }
 
 bool URIUtils::IsDOSPath(const CStdString &path)

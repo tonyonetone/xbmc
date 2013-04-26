@@ -1270,6 +1270,9 @@
     <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTag.cpp">
       <Filter>music\tags</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTagLoaderAmpache.cpp">
+      <Filter>music\tags</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTagLoaderASAP.cpp">
       <Filter>music\tags</Filter>
     </ClCompile>
@@ -1514,6 +1517,9 @@
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xbmc\utils\md5.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\xbmc\utils\sha2.cpp">
       <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xbmc\utils\PerformanceSample.cpp">
@@ -2027,6 +2033,9 @@
       <Filter>network\httprequesthandler</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xbmc\filesystem\AFPFile.cpp">
+      <Filter>filesystem</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\xbmc\filesystem\AmpacheFile.cpp">
       <Filter>filesystem</Filter>
     </ClCompile>
     <ClCompile Include="..\..\xbmc\filesystem\ASAPFileDirectory.cpp">
@@ -4168,6 +4177,9 @@
     <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTagLoaderASAP.h">
       <Filter>music\tags</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTagLoaderAmpache.h">
+      <Filter>music\tags</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTagLoaderCDDA.h">
       <Filter>music\tags</Filter>
     </ClInclude>
@@ -4436,6 +4448,9 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\utils\md5.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\xbmc\utils\sha2.h">
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\utils\PerformanceSample.h">
@@ -4938,6 +4953,9 @@
       <Filter>filesystem</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\filesystem\AFPFile.h">
+      <Filter>filesystem</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\xbmc\filesystem\AmpacheFile.h">
       <Filter>filesystem</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\filesystem\ASAPFileDirectory.h">

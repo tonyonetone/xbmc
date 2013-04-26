@@ -81,6 +81,7 @@
 #ifdef HAS_UPNP
 #include "UPnPFile.h"
 #endif
+#include "AmpacheFile.h"
 #include "PipesManager.h"
 #include "PipeFile.h"
 #include "MusicDatabaseFile.h"
@@ -198,6 +199,7 @@ IFile* CFileFactory::CreateLoader(const CURL& url)
 #if defined(TARGET_ANDROID)
     else if (strProtocol == "androidapp") return new CFileAndroidApp();
 #endif
+    else if (strProtocol == "ampache") return new CAmpacheFile();
   }
 
   CLog::Log(LOGWARNING, "%s - Unsupported protocol(%s) in %s", __FUNCTION__, strProtocol.c_str(), url.Get().c_str() );

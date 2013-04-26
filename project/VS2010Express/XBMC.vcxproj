@@ -450,6 +450,7 @@
     <ClCompile Include="..\..\xbmc\filesystem\AddonsDirectory.cpp" />
     <ClCompile Include="..\..\xbmc\filesystem\AFPDirectory.cpp" />
     <ClCompile Include="..\..\xbmc\filesystem\AFPFile.cpp" />
+    <ClCompile Include="..\..\xbmc\filesystem\AmpacheFile.cpp" />
     <ClCompile Include="..\..\xbmc\filesystem\ASAPFileDirectory.cpp" />
     <ClCompile Include="..\..\xbmc\filesystem\BlurayDirectory.cpp" />
     <ClCompile Include="..\..\xbmc\filesystem\CacheStrategy.cpp" />
@@ -804,6 +805,7 @@
     <ClCompile Include="..\..\xbmc\music\Song.cpp" />
     <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTag.cpp" />
     <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTagLoaderASAP.cpp" />
+    <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTagLoaderAmpache.cpp" />
     <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTagLoaderCDDA.cpp" />
     <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTagLoaderDatabase.cpp" />
     <ClCompile Include="..\..\xbmc\music\tags\MusicInfoTagLoaderFactory.cpp" />
@@ -1163,6 +1165,7 @@
     <ClInclude Include="..\..\xbmc\filesystem\AddonsDirectory.h" />
     <ClInclude Include="..\..\xbmc\filesystem\AFPDirectory.h" />
     <ClInclude Include="..\..\xbmc\filesystem\AFPFile.h" />
+    <ClInclude Include="..\..\xbmc\filesystem\AmpacheFile.h" />
     <ClInclude Include="..\..\xbmc\filesystem\ASAPFileDirectory.h" />
     <ClInclude Include="..\..\xbmc\filesystem\BlurayDirectory.h" />
     <ClInclude Include="..\..\xbmc\filesystem\CacheStrategy.h" />
@@ -1325,6 +1328,7 @@
     <ClCompile Include="..\..\xbmc\utils\LangCodeExpander.cpp" />
     <ClCompile Include="..\..\xbmc\utils\log.cpp" />
     <ClCompile Include="..\..\xbmc\utils\md5.cpp" />
+    <ClCompile Include="..\..\xbmc\utils\sha2.cpp" />
     <ClCompile Include="..\..\xbmc\utils\Observer.cpp" />
     <ClCompile Include="..\..\xbmc\utils\Mime.cpp" />
     <ClCompile Include="..\..\xbmc\utils\PerformanceSample.cpp" />
@@ -2235,6 +2239,7 @@
     <ClInclude Include="..\..\xbmc\music\tags\ImusicInfoTagLoader.h" />
     <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTag.h" />
     <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTagLoaderASAP.h" />
+    <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTagLoaderAmpache.h" />
     <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTagLoaderCDDA.h" />
     <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTagLoaderDatabase.h" />
     <ClInclude Include="..\..\xbmc\music\tags\MusicInfoTagLoaderFactory.h" />
@@ -2438,6 +2443,7 @@
     <ClInclude Include="..\..\xbmc\utils\log.h" />
     <ClInclude Include="..\..\xbmc\utils\MathUtils.h" />
     <ClInclude Include="..\..\xbmc\utils\md5.h" />
+    <ClInclude Include="..\..\xbmc\utils\sha2.h" />
     <ClInclude Include="..\..\xbmc\utils\Observer.h" />
     <ClInclude Include="..\..\xbmc\utils\Mime.h" />
     <ClInclude Include="..\..\xbmc\utils\PerformanceSample.h" />
