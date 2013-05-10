@@ -70,17 +70,17 @@ CEGLNativeTypeExynos::CEGLNativeTypeExynos()
   }
 #endif
 
-  m_iDeviceHandle = open("/dev/video10", O_RDWR, 0);
+  m_iDeviceHandle = open("/dev/video6", O_RDWR, 0);
   if(m_iDeviceHandle < 0)
   {
-    CLog::Log(LOGERROR, "%s::%s - open decoder device /dev/video10\n", CLASSNAME, __func__);
+    CLog::Log(LOGERROR, "%s::%s - open decoder device /dev/video6\n", CLASSNAME, __func__);
     printf("%s::%s - open decoder device /dev/video10\n", CLASSNAME, __func__);
   }
 
-  m_iDeviceHandle1 = open("/dev/video11", O_RDWR, 0);
+  m_iDeviceHandle1 = open("/dev/video7", O_RDWR, 0);
   if(m_iDeviceHandle1 < 0)
   {
-    CLog::Log(LOGERROR, "%s::%s - open decoder device /dev/video11\n", CLASSNAME, __func__);
+    CLog::Log(LOGERROR, "%s::%s - open decoder device /dev/video7\n", CLASSNAME, __func__);
     printf("%s::%s - open decoder device /dev/video11\n", CLASSNAME, __func__);
   }
 }
@@ -104,6 +104,7 @@ CEGLNativeTypeExynos::~CEGLNativeTypeExynos()
 
 bool CEGLNativeTypeExynos::CheckCompatibility()
 {
+  return true;
 
   struct media_entity_desc me_desc;
   struct stat devstat;
@@ -126,7 +127,8 @@ bool CEGLNativeTypeExynos::CheckCompatibility()
         break;
 
       CStdString strTmp = me_desc.name;
-      if(strTmp == "exynos4-fimc.0.m2m")
+      CLog::Log(LOGDEBUG, "media0: %s", strTmp.c_str());
+      if(strTmp == "exynos4210-fimc.0.m2m")
       {
         return true;
       }
