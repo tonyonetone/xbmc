@@ -663,8 +663,6 @@ case $host in
      use_joystick=no
      use_neon=yes
      use_gles=yes
-     use_sdl=no
-     use_x11=no
      ;;
   arm*-*linux-android*)
      target_platform=target_android
@@ -676,7 +674,6 @@ case $host in
      use_neon=yes
      use_gles=yes
      use_optical_drive=no
-     use_sdl=no
      use_x11=no
      use_libstagefright=yes
      build_shared_lib=yes
