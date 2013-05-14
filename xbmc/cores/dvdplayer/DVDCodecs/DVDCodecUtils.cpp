@@ -321,6 +321,171 @@ bool CDVDCodecUtils::CopyNV12Picture(YV12Image* pImage, DVDVideoPicture *pSrc)
   return true;
 }
 
+bool CDVDCodecUtils::CopyNV12MTPicture(YV12Image* pImage, DVDVideoPicture *pSrc)
+{
+#define NV12MT_HALIGN 64
+#define NV12MT_VALIGN 32
+#define INT_ROUND(x, y) ((x % y) > 0 ? (int(x/y)+1) : (int(x/y)) )
+
+  BYTE *s = pSrc->data[0];
+  BYTE *d = pImage->plane[0];
+  int w = INT_ROUND(pSrc->iWidth, 128) * 128;
+  int h = INT_ROUND(pSrc->iHeight, 32) * 32;
+
+  int b;
+  BYTE *s_offset, *d_offset;
+  int dbx, dby;
+  int num_bytes, num_lines;
+  int nb_xb = INT_ROUND(w, NV12MT_HALIGN);
+  int nb_yb = INT_ROUND(h, NV12MT_VALIGN);
+  int nb_xmb = nb_xb / 2;
+  int nb_ymb = nb_yb / 2;
+
+  // Copy Y
+  int ymb=0;
+  for (; ymb<nb_ymb; ymb++)
+  {
+    bool zed = true;
+
+    for (int xmb=0; xmb<nb_xmb; xmb++)
+    {
+      for (int yb=0; yb<2; yb++)
+      {
+        dby = (ymb*2) + yb;
+        num_lines = ((dby+1)*NV12MT_VALIGN) < pSrc->iHeight ? NV12MT_VALIGN : pSrc->iHeight - (dby*NV12MT_VALIGN);
+
+        for (int xb=0; xb<2; xb++)
+        {
+          b = (ymb*2*nb_xb) + (xmb*4) + (zed ? (yb*2) : ((1-yb)*2)) + xb;
+          s_offset = s + (b * NV12MT_HALIGN * NV12MT_VALIGN);
+          dbx = (xmb*2) + xb;
+          d_offset = d + (dby*NV12MT_VALIGN * pImage->stride[0]) + (dbx*NV12MT_HALIGN);
+          num_bytes = ((dbx+1)*NV12MT_HALIGN) < pSrc->iWidth ? NV12MT_HALIGN : pSrc->iWidth - (dbx*NV12MT_HALIGN);
+          // printf("NV12MT: b:%d dbx:%d dby:%d s_offset:%d d_offset:%d\n", b, dbx, dby, s_offset, d_offset);
+
+          for (int y=0; y<num_lines; y++)
+          {
+            fast_memcpy(d_offset, s_offset, num_bytes);
+            s_offset += NV12MT_HALIGN;
+            d_offset += pImage->stride[0];
+          }
+        }
+      }
+
+      zed = !zed;
+    }
+  }
+  if (ymb*2 < nb_yb)
+  {
+      dby = nb_yb-1;
+      num_lines = ((dby+1)*NV12MT_VALIGN) < pSrc->iHeight ? NV12MT_VALIGN : pSrc->iHeight - (dby*NV12MT_VALIGN);
+
+      for (int xb=0; xb<nb_xb; xb++)
+      {
+          b = ((nb_yb-1)*nb_xb) + xb;
+          s_offset = s + (b * NV12MT_HALIGN * NV12MT_VALIGN);
+          dbx = xb;
+          d_offset = d + (dby*NV12MT_VALIGN * pImage->stride[0]) + (dbx*NV12MT_HALIGN);
+          num_bytes = ((dbx+1)*NV12MT_HALIGN) < pSrc->iWidth ? NV12MT_HALIGN : pSrc->iWidth - (dbx*NV12MT_HALIGN);
+          // printf("NV12MT: b:%d dbx:%d dby:%d s_offset:%d d_offset:%d\n", b, dbx, dby, s_offset, d_offset);
+
+          for (int y=0; y<num_lines; y++)
+          {
+              fast_memcpy(d_offset, s_offset, num_bytes);
+              s_offset += NV12MT_HALIGN;
+              d_offset += pImage->stride[0];
+          }
+      }
+  }
+
+  s = pSrc->data[1];
+  BYTE* du = pImage->plane[1];
+  BYTE* dv = pImage->plane[2];
+  w = INT_ROUND(pSrc->iWidth, 128) * 128;
+  h = INT_ROUND(pSrc->iHeight / 2, 32) * 32;
+
+  nb_xb = INT_ROUND(w, NV12MT_HALIGN);
+  nb_yb = INT_ROUND(h, NV12MT_VALIGN);
+  nb_xmb = nb_xb / 2;
+  nb_ymb = nb_yb / 2;
+
+  BYTE *du_offset, *dv_offset;
+  int doff;
+
+  // Copy packed UV (width is same as for Y as it's both U and V components)
+  ymb=0;
+  for (; ymb<nb_ymb; ymb++)
+  {
+    bool zed = true;
+
+    for (int xmb=0; xmb<nb_xmb; xmb++)
+    {
+      for (int yb=0; yb<2; yb++)
+      {
+        dby = (ymb*2) + yb;
+        num_lines = ((dby+1)*NV12MT_VALIGN) < (pSrc->iHeight>>1) ? NV12MT_VALIGN : (pSrc->iHeight>>1) - (dby*NV12MT_VALIGN);
+
+        for (int xb=0; xb<2; xb++)
+        {
+          b = (ymb*2*nb_xb) + (xmb*4) + (zed ? (yb*2) : ((1-yb)*2)) + xb;
+          s_offset = s + (b * NV12MT_HALIGN * NV12MT_VALIGN);
+          dbx = (xmb*2) + xb;
+          doff = (dby*NV12MT_VALIGN * pImage->stride[1]) + (dbx*NV12MT_HALIGN>>1);
+          du_offset = du + doff;
+          dv_offset = dv + doff;
+          num_bytes = ((dbx+1)*NV12MT_HALIGN) < pSrc->iWidth ? NV12MT_HALIGN : (pSrc->iWidth) - (dbx*NV12MT_HALIGN);
+          //printf("NV12MT: b:%d dbx:%d dby:%d s_offset:%d d_offset:%d num_lines:%d num_bytes:%d\n", b, dbx, dby, s_offset, d_offset, num_lines, num_bytes);
+
+          for (int y=0; y<num_lines; y++)
+          {
+            for (int x=0; x<num_bytes; x+=2)
+            {
+              *(du_offset + (x>>1)) = *(s_offset + x);
+              *(dv_offset + (x>>1)) = *(s_offset + x+1);
+            }
+            s_offset += NV12MT_HALIGN;
+            du_offset += pImage->stride[1];
+            dv_offset += pImage->stride[1];
+          }
+        }
+      }
+
+      zed = !zed;
+    }
+  }
+  if (ymb*2 < nb_yb)
+  {
+      dby = nb_yb-1;
+      num_lines = ((dby+1)*NV12MT_VALIGN) < (pSrc->iHeight>>1) ? NV12MT_VALIGN : (pSrc->iHeight>>1) - (dby*NV12MT_VALIGN);
+
+      for (int xb=0; xb<nb_xb; xb++)
+      {
+          b = ((nb_yb-1)*nb_xb) + xb;
+          s_offset = s + (b * NV12MT_HALIGN * NV12MT_VALIGN);
+          dbx = xb;
+          doff = (dby*NV12MT_VALIGN * pImage->stride[1]) + (dbx*NV12MT_HALIGN>>1);
+          du_offset = du + doff;
+          dv_offset = dv + doff;
+          num_bytes = ((dbx+1)*NV12MT_HALIGN) < pSrc->iWidth ? NV12MT_HALIGN : (pSrc->iWidth) - (dbx*NV12MT_HALIGN);
+          // printf("NV12MT: b:%d dbx:%d dby:%d s_offset:%d d_offset:%d\n", b, dbx, dby, s_offset, d_offset);
+
+          for (int y=0; y<num_lines; y++)
+          {
+              for (int x=0; x<num_bytes; x+=2)
+              {
+                *(du_offset + (x>>1)) = *(s_offset + x);
+                *(dv_offset + (x>>1)) = *(s_offset + x+1);
+              }
+              s_offset += NV12MT_HALIGN;
+              du_offset += pImage->stride[1];
+              dv_offset += pImage->stride[1];
+          }
+      }
+  }
+
+  return true;
+}
+
 bool CDVDCodecUtils::CopyYUV422PackedPicture(YV12Image* pImage, DVDVideoPicture *pSrc)
 {
   BYTE *s = pSrc->data[0];

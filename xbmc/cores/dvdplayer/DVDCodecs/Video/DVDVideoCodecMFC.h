@@ -27,6 +27,7 @@
 #include <string>
 #include <queue>
 #include <list>
+#include "guilib/GraphicContext.h"
 
 #define NUM_INPUT_PLANES 1
 
@@ -75,10 +76,7 @@ protected:
   unsigned int m_iDecodedWidth;
   unsigned int m_iDecodedHeight;
   int m_iDecoderHandle;
-#if 0
-  int m_iVideoHandle;
   int m_iConverterHandle;
-#endif
 
   V4L2Buffer m_v4l2StreamBuffer;
 
@@ -92,6 +90,7 @@ protected:
   std::queue<MFCDemuxPacket> m_MFCDemuxPacket;
   std::list<MFCDemuxPacket *> m_MFCDecodeTimeStamp;
   std::queue<MFCDemuxPacket *> m_MFCFrameTimeStamp;
+  RESOLUTION_INFO m_res_info;
 
   std::queue<double> m_pts;
   std::queue<double> m_dts;
@@ -102,8 +101,9 @@ protected:
   int m_iBuffer;
 
   DVDVideoPicture   m_videoBuffer;
+  bool m_bMFCStartConverter;
 
-  bool AllocateOutputBuffers();
+  bool AllocateDecodeOutputBuffers();
 };
 
 inline int align(int v, int a) {
