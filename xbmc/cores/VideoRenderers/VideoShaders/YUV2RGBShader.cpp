@@ -305,7 +305,10 @@ YUV2RGBProgressiveShader::YUV2RGBProgressiveShader(bool rect, unsigned flags, ER
 #ifdef HAS_GL
   PixelShader()->LoadSource("yuv2rgb_basic.glsl", m_defines);
 #elif HAS_GLES == 2
-  PixelShader()->LoadSource("yuv2rgb_basic_gles.glsl", m_defines);
+  if (format == RENDER_FMT_NV12 || format == RENDER_FMT_NV12MT)
+    PixelShader()->LoadSource("yuv2rgb_basicNV12_gles.glsl", m_defines);
+  else
+    PixelShader()->LoadSource("yuv2rgb_basic_gles.glsl", m_defines);
 #endif
 }
 

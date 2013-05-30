@@ -38,14 +38,6 @@
 extern "C" {
 #endif
 
-typedef struct MFCDemuxPacket 
-{
-  uint8_t *buff;
-  int size;
-  double dts;
-  double pts;
-} MFCDemuxPacket;
-
 typedef struct MFCBuffer 
 {
   int index;
@@ -87,9 +79,6 @@ protected:
   CBitstreamConverter m_converter;
   V4L2Buffer *m_v4l2Buffers;
   V4L2Buffer *m_v4l2ConvertBuffer;
-  std::queue<MFCDemuxPacket> m_MFCDemuxPacket;
-  std::list<MFCDemuxPacket *> m_MFCDecodeTimeStamp;
-  std::queue<MFCDemuxPacket *> m_MFCFrameTimeStamp;
   RESOLUTION_INFO m_res_info;
 
   std::queue<double> m_pts;

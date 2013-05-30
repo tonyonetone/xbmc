@@ -50,7 +50,7 @@
 #endif
 #define CLASSNAME "CDVDVideoCodecMFC"
 
-#define USE_FIMC
+//#define USE_FIMC
 
 #define V4L2_PIX_FMT_MPEG2    v4l2_fourcc('M', 'P', 'G', '2') /* MPEG-2 ES     */
 
@@ -541,27 +541,6 @@ void CDVDVideoCodecMFC::Dispose()
   }
 #endif
 
-  while (!m_MFCDemuxPacket.empty())
-  {
-    MFCDemuxPacket demux_packet = m_MFCDemuxPacket.front();
-    delete demux_packet.buff;
-    m_MFCDemuxPacket.pop();
-  }
-
-  while (!m_MFCDecodeTimeStamp.empty())
-  {
-    MFCDemuxPacket *demux_packet = m_MFCDecodeTimeStamp.front();
-    free(demux_packet);
-    m_MFCDecodeTimeStamp.pop_front();
-  }
-
-  while (!m_MFCFrameTimeStamp.empty())
-  {
-    MFCDemuxPacket *demux_packet = m_MFCFrameTimeStamp.front();
-    free(demux_packet);
-    m_MFCFrameTimeStamp.pop();
-  }
-
   while(!m_pts.empty())
     m_pts.pop();
   while(!m_dts.empty())
@@ -617,73 +596,51 @@ int CDVDVideoCodecMFC::Decode(BYTE* pData, int iSize, double dts, double pts)
     int demuxer_bytes = iSize;
     uint8_t *demuxer_content = pData;
 
-    MFCDemuxPacket demux_packet;
-    demux_packet.dts = dts;
-    demux_packet.pts = pts;
-
-    demux_packet.size = demuxer_bytes;
-    demux_packet.buff = new uint8_t[demuxer_bytes];
-    memcpy(demux_packet.buff, demuxer_content, demuxer_bytes);
-
-    m_MFCDemuxPacket.push(demux_packet);
-  }
-
-  ret = CLinuxV4l2::PollOutput(m_iDecoderHandle, 25);
-  if(ret == V4L2_ERROR)
-  {
-    return VC_ERROR;
-  }
-  else if (ret == V4L2_READY)
-  {
-    MFCDemuxPacket demux_packet = m_MFCDemuxPacket.front();
-    m_MFCDemuxPacket.pop();
-
-    int demuxer_bytes = 0;
-    uint8_t *demuxer_content = NULL;
-
-    if(m_bVideoConvert)
+    ret = CLinuxV4l2::PollOutput(m_iDecoderHandle, 25);
+    if(ret == V4L2_ERROR)
     {
-      m_converter.Convert(demux_packet.buff, demux_packet.size);
-      demuxer_bytes = m_converter.GetConvertSize();
-      demuxer_content = m_converter.GetConvertBuffer();
+      return VC_ERROR;
     }
-    else
+    else if (ret == V4L2_READY)
     {
-      demuxer_bytes = demux_packet.size;
-      demuxer_content = demux_packet.buff;
-    }
-
-    if(demuxer_bytes < m_v4l2StreamBuffer.iSize[0])
-    {
-      m_pts.push(demux_packet.pts);
-      m_dts.push(demux_packet.dts);
-
-      int index = CLinuxV4l2::DequeueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, V4L2_MEMORY_MMAP,
-                    m_v4l2StreamBuffer.iNumPlanes);
-      if (index < 0)
+      if(m_bVideoConvert)
       {
-        CLog::Log(LOGERROR, "%s::%s - dequeue input buffer\n", CLASSNAME, __func__);
-        return VC_ERROR;
+        m_converter.Convert(demuxer_content, demuxer_bytes);
+        demuxer_bytes = m_converter.GetConvertSize();
+        demuxer_content = m_converter.GetConvertBuffer();
       }
 
-      fast_memcpy((uint8_t *)m_v4l2StreamBuffer.cPlane[0], demuxer_content, demuxer_bytes);
-      m_v4l2StreamBuffer.iBytesUsed[0] = demuxer_bytes;
-
-      ret = CLinuxV4l2::QueueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, V4L2_MEMORY_MMAP,
-                    m_v4l2StreamBuffer.iNumPlanes, index, &m_v4l2StreamBuffer);
-      if (ret < 0)
+      if(demuxer_bytes < m_v4l2StreamBuffer.iSize[0])
       {
-        CLog::Log(LOGERROR, "%s::%s - queue input buffer\n", CLASSNAME, __func__);
-        return VC_ERROR;
+        m_pts.push(pts);
+        m_dts.push(dts);
+
+        int index = CLinuxV4l2::DequeueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, V4L2_MEMORY_MMAP,
+                                              m_v4l2StreamBuffer.iNumPlanes);
+        if (index < 0)
+        {
+          CLog::Log(LOGERROR, "%s::%s - dequeue input buffer\n", CLASSNAME, __func__);
+          return VC_ERROR;
+        }
+
+        fast_memcpy((uint8_t *)m_v4l2StreamBuffer.cPlane[0], demuxer_content, demuxer_bytes);
+        m_v4l2StreamBuffer.iBytesUsed[0] = demuxer_bytes;
+
+        ret = CLinuxV4l2::QueueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, V4L2_MEMORY_MMAP,
+                                      m_v4l2StreamBuffer.iNumPlanes, index, &m_v4l2StreamBuffer);
+        if (ret < 0)
+        {
+          CLog::Log(LOGERROR, "%s::%s - queue input buffer\n", CLASSNAME, __func__);
+          return VC_ERROR;
+        }
+      }
+      else
+      {
+        CLog::Log(LOGERROR, "%s::%s - packet to big for streambuffer\n", CLASSNAME, __func__);
       }
     }
-    else
-    {
-      CLog::Log(LOGERROR, "%s::%s - packet to big for streambuffer\n", CLASSNAME, __func__);
-    }
-
-    delete demux_packet.buff;
   }
+
 
   {
     // dequeue decoded frame
@@ -724,11 +681,11 @@ bool CDVDVideoCodecMFC::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 {
 #define INT_ROUND(x, y) ((x % y) > 0 ? (int(x/y)+1)*y : (int(x/y))*y )
 #ifdef USE_FIMC
-    m_videoBuffer.format          = RENDER_FMT_YUV420P;
-#else
-    m_videoBuffer.format          = RENDER_FMT_NV12MT;
-#endif
   V4L2Buffer *convert_buffer    = NULL;
+  m_videoBuffer.format          = RENDER_FMT_YUV420P;
+#else
+  m_videoBuffer.format          = RENDER_FMT_NV12MT;
+#endif
   V4L2Buffer *decode_buffer     = NULL;
 
   if(m_pts.size())
