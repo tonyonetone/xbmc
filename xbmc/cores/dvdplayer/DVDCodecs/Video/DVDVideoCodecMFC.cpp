@@ -29,7 +29,6 @@
 #include "DVDCodecs/DVDCodecs.h"
 #include "DVDCodecs/DVDCodecUtils.h"
 
-#include "settings/GUISettings.h"
 #include "settings/Settings.h"
 #include "settings/DisplaySettings.h"
 #include "settings/AdvancedSettings.h"
@@ -66,6 +65,7 @@ CDVDVideoCodecMFC::CDVDVideoCodecMFC() : CDVDVideoCodec()
   m_bDropPictures = false;
 
   m_iBufferIndex = -1;
+  m_decode_buffer = NULL;
 
   memset(&m_v4l2StreamBuffer, 0, sizeof(V4L2Buffer));
   memset(&m_videoBuffer, 0, sizeof(DVDVideoPicture));
@@ -543,11 +543,6 @@ void CDVDVideoCodecMFC::Dispose()
 
   while(!m_pts.empty())
     m_pts.pop();
-  while(!m_dts.empty())
-    m_dts.pop();
-
-  while(!m_index.empty())
-    m_index.pop();
 
   m_iDecodedWidth = 0;
   m_iDecodedHeight = 0;
@@ -555,6 +550,7 @@ void CDVDVideoCodecMFC::Dispose()
   m_bVideoConvert = false;
   m_iMinBuffers = 0;
   m_iBufferIndex = -1;
+  m_decode_buffer = NULL;
   m_bDropPictures = false;
 
   memset(&m_videoBuffer, 0, sizeof(DVDVideoPicture));
@@ -566,22 +562,23 @@ void CDVDVideoCodecMFC::SetDropState(bool bDrop)
 
   if (m_bDropPictures)
   {
-    if(!m_index.empty())
+    if(m_iBufferIndex>=0)
     {
-      int index = m_index.front();
-
-      V4L2Buffer *buffer = &m_v4l2Buffers[index];
+      V4L2Buffer *buffer = &m_v4l2Buffers[m_iBufferIndex];
       if(buffer && !buffer->bQueue)
       {
         int ret = CLinuxV4l2::QueueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE, V4L2_MEMORY_MMAP,
-                                          V4L2_NUM_MAX_PLANES, index, buffer);
+                                          V4L2_NUM_MAX_PLANES, buffer->iIndex, buffer);
         if (ret < 0)
         {
           CLog::Log(LOGERROR, "%s::%s - queue output buffer\n", CLASSNAME, __func__);
         }
+        buffer->bQueue = true;
       }
 
-      m_index.pop();
+      if(m_pts.size())
+        m_pts.pop();
+      m_iBufferIndex = -1;
     }
   }
 }
@@ -612,9 +609,6 @@ int CDVDVideoCodecMFC::Decode(BYTE* pData, int iSize, double dts, double pts)
 
       if(demuxer_bytes < m_v4l2StreamBuffer.iSize[0])
       {
-        m_pts.push(pts);
-        m_dts.push(dts);
-
         int index = CLinuxV4l2::DequeueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, V4L2_MEMORY_MMAP,
                                               m_v4l2StreamBuffer.iNumPlanes);
         if (index < 0)
@@ -633,6 +627,7 @@ int CDVDVideoCodecMFC::Decode(BYTE* pData, int iSize, double dts, double pts)
           CLog::Log(LOGERROR, "%s::%s - queue input buffer\n", CLASSNAME, __func__);
           return VC_ERROR;
         }
+        m_pts.push(pts);
       }
       else
       {
@@ -662,9 +657,6 @@ int CDVDVideoCodecMFC::Decode(BYTE* pData, int iSize, double dts, double pts)
     }
 
     buffer->bQueue = false;
-
-    m_index.push(index);
-
     m_iBufferIndex = index;
 
     retStatus |= VC_PICTURE;
@@ -686,15 +678,14 @@ bool CDVDVideoCodecMFC::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 #else
   m_videoBuffer.format          = RENDER_FMT_NV12MT;
 #endif
-  V4L2Buffer *decode_buffer     = NULL;
 
   if(m_pts.size())
   {
-    m_videoBuffer.pts = m_pts.front();
-    m_videoBuffer.dts = m_dts.front();
+//    m_videoBuffer.pts = m_pts.front();
+    m_videoBuffer.pts           = DVD_NOPTS_VALUE;
+    m_videoBuffer.dts           = DVD_NOPTS_VALUE;
 
     m_pts.pop();
-    m_dts.pop();
   }
   else
   {
@@ -707,13 +698,10 @@ bool CDVDVideoCodecMFC::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 
   //m_videoBuffer.mfcBuffer     = NULL;
   //if(m_iBufferIndex >= 0 && m_iBufferIndex < m_iMinBuffers)
-  if(!m_index.empty())
+  if(m_iBufferIndex>=0)
   {
-    int index = m_index.front();
-    decode_buffer          = &m_v4l2Buffers[index];
+    m_decode_buffer          = &m_v4l2Buffers[m_iBufferIndex];
     int ret = 0;
-
-    m_index.pop();
 
     if (m_bDropPictures)
       m_videoBuffer.iFlags      |= DVP_FLAG_DROPPED;
@@ -722,7 +710,7 @@ bool CDVDVideoCodecMFC::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 #ifdef USE_FIMC
       // convert
       ret = CLinuxV4l2::QueueBuffer(m_iConverterHandle, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
-                                    V4L2_MEMORY_USERPTR, decode_buffer->iNumPlanes, 0, decode_buffer);
+                                    V4L2_MEMORY_USERPTR, m_decode_buffer->iNumPlanes, 0, m_decode_buffer);
       if (ret < 0)
       {
         CLog::Log(LOGERROR, "%s::%s - queue converter input buffer\n", CLASSNAME, __func__);
@@ -769,17 +757,6 @@ bool CDVDVideoCodecMFC::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 #endif
     }
 
-    decode_buffer->bQueue              = true;
-    ret = CLinuxV4l2::QueueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE, V4L2_MEMORY_MMAP,
-                V4L2_NUM_MAX_PLANES, index, decode_buffer);
-
-    if (ret < 0)
-    {
-      CLog::Log(LOGERROR, "%s::%s - queue output buffer\n", CLASSNAME, __func__);
-      m_videoBuffer.iFlags      |= DVP_FLAG_DROPPED;
-      m_videoBuffer.iFlags      &= DVP_FLAG_ALLOCATED;
-      return false;
-    }
 
   }
   else
@@ -821,8 +798,8 @@ bool CDVDVideoCodecMFC::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   m_videoBuffer.iLineSize[3] = 0;
   if (!m_bDropPictures)
   {
-    m_videoBuffer.data[0] = (BYTE*)decode_buffer->cPlane[0];
-    m_videoBuffer.data[1] = (BYTE*)decode_buffer->cPlane[1];
+    m_videoBuffer.data[0] = (BYTE*)m_decode_buffer->cPlane[0];
+    m_videoBuffer.data[1] = (BYTE*)m_decode_buffer->cPlane[1];
   }
 #endif
 
@@ -833,6 +810,22 @@ bool CDVDVideoCodecMFC::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 
 bool CDVDVideoCodecMFC::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
 {
+  if (m_decode_buffer && !m_decode_buffer->bQueue)
+  {
+    int ret = 0;
+
+    ret = CLinuxV4l2::QueueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE, V4L2_MEMORY_MMAP,
+                                  V4L2_NUM_MAX_PLANES, m_decode_buffer->iIndex, m_decode_buffer);
+
+    if (ret < 0)
+    {
+      CLog::Log(LOGERROR, "%s::%s - queue output buffer\n", CLASSNAME, __func__);
+      return false;
+    }
+    m_decode_buffer->bQueue = true;
+    m_decode_buffer = NULL;
+  }
+
   return CDVDVideoCodec::ClearPicture(pDvdVideoPicture);
 }
 

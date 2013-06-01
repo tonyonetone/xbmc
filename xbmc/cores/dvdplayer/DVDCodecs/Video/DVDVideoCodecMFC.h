@@ -76,14 +76,13 @@ protected:
 
   uint32_t m_iMinBuffers;
   int m_iBufferIndex;
+  V4L2Buffer *m_decode_buffer;
   CBitstreamConverter m_converter;
   V4L2Buffer *m_v4l2Buffers;
   V4L2Buffer *m_v4l2ConvertBuffer;
   RESOLUTION_INFO m_res_info;
 
   std::queue<double> m_pts;
-  std::queue<double> m_dts;
-  std::queue<int> m_index;
 
   bool m_bDropPictures;
 
