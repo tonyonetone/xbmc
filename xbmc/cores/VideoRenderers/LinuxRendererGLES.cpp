@@ -169,7 +169,6 @@ bool CLinuxRendererGLES::ValidateRenderTarget()
   if (!m_bValidated)
   {
     CLog::Log(LOGNOTICE,"Using GL_TEXTURE_2D");
-    m_textureTarget = GL_TEXTURE_2D;
 
      // create the yuv textures
     LoadShaders();
@@ -790,7 +789,7 @@ inline void CLinuxRendererGLES::ReorderDrawPoints()
 
   CBaseRenderer::ReorderDrawPoints();//call base impl. for rotating the points
 
-  //corevideo is flipped in y
+  //corevideo and EGL are flipped in y
   if(m_renderMethod & RENDER_CVREF)
   {
     CPoint tmp;
@@ -1340,7 +1339,7 @@ void CLinuxRendererGLES::RenderEglImage(int index, int field)
     ver[i][3] = 1.0f;
   }
 
-  // Set texture coordinates (corevideo is flipped in y)
+  // Set texture coordinates (is flipped in y)
   tex[0][0] = tex[3][0] = 0;
   tex[0][1] = tex[1][1] = 1;
   tex[1][0] = tex[2][0] = 1;
@@ -1450,9 +1449,9 @@ bool CLinuxRendererGLES::RenderCapture(CRenderCapture* capture)
 
   g_matrices.MatrixMode(MM_MODELVIEW);
   g_matrices.PushMatrix();
-  // fixme - we know that cvref is already flipped in y direction
+  // fixme - we know that cvref  & eglimg are already flipped in y direction
   // but somehow this also effects the rendercapture here
-  // for cvref we have to skip the flip here or we get upside down
+  // therefore we have to skip the flip here or we get upside down
   // images
   if (m_renderMethod != RENDER_CVREF)
   {
@@ -2176,7 +2175,8 @@ EINTERLACEMETHOD CLinuxRendererGLES::AutoInterlaceMethod()
 unsigned int CLinuxRendererGLES::GetProcessorSize()
 {
   if(m_format == RENDER_FMT_OMXEGL
-  || m_format == RENDER_FMT_CVBREF)
+  || m_format == RENDER_FMT_CVBREF
+  || m_format == RENDER_FMT_EGLIMG)
     return 1;
   else
     return 0;
@@ -2216,7 +2216,7 @@ void CLinuxRendererGLES::AddProcessor(CStageFrightVideo* stf, EGLImageKHR eglimg
   buf.eglimg = eglimg;
   
 #ifdef DEBUG_VERBOSE
-  CLog::Log(LOGDEBUG, "AddProcessor %d: img:%p: tm:%d\n", NextYV12Texture(), eglimg, XbmcThreads::SystemClockMillis() - time);
+  CLog::Log(LOGDEBUG, "AddProcessor %d: img:%p: tm:%d\n", index, eglimg, XbmcThreads::SystemClockMillis() - time);
 #endif
 }
 #endif

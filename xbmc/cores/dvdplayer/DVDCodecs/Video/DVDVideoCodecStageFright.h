@@ -34,8 +34,9 @@ public:
   // Required overrides
   virtual bool Open(CDVDStreamInfo &hints, CDVDCodecOptions &options);
   virtual void Dispose(void);
-  virtual int  Decode(BYTE *pData, int iSize, double dts, double pts);
+  virtual int  Decode(uint8_t *pData, int iSize, double dts, double pts);
   virtual void Reset(void);
+  virtual unsigned GetAllowedReferences() { return 2; }
   virtual bool GetPicture(DVDVideoPicture *pDvdVideoPicture);
   virtual bool ClearPicture(DVDVideoPicture* pDvdVideoPicture);
   virtual void SetDropState(bool bDrop);

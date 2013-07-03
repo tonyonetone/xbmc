@@ -19,7 +19,7 @@
  */
 /***************************************************************************/
 
-//#define DEBUG_VERBOSE 1
+#define DEBUG_VERBOSE 1
 
 #include "system.h"
 #include "system_gl.h"
@@ -55,30 +55,6 @@
 const char *MEDIA_MIMETYPE_VIDEO_WMV  = "video/x-ms-wmv";
 
 using namespace android;
-
-struct RK_VPU_FRAME
-{
-    uint32_t FrameBusAddr[2];       //0: Y address; 1: UV address;
-    uint32_t FrameWidth;         //16X▒▒▒▒▒▒
-    uint32_t FrameHeight;        //16X▒▒▒▒߶▒
-    uint32_t OutputWidth;        //▒▒16X▒▒▒▒
-    uint32_t OutputHeight;       //▒▒16X▒▒▒▒
-    uint32_t DisplayWidth;       //▒▒ʾ▒▒▒
-    uint32_t DisplayHeight;      //▒▒ʾ▒߶▒
-    uint32_t CodingType;
-    uint32_t FrameType;          //frame;top_field_first;bot_field_first
-    uint32_t ColorType;
-    uint32_t DecodeFrmNum;
-    uint32_t ShowTimeLow;
-    uint32_t ShowTimeHigh;
-    uint32_t ErrorInfo;          //▒▒֡▒Ĵ▒▒▒▒▒Ϣ▒▒▒▒▒ظ▒ϵͳ▒▒▒▒▒▒▒
-    uint32_t     employ_cnt;
-    /*
-    VPUMemLinear_t  vpumem;
-    RK_VPU_FRAME *    next_frame;
-    uint32_t Res[4];
-    */
-};
 
 static int64_t pts_dtoi(double pts)
 {
@@ -218,7 +194,6 @@ public:
       frame = (Frame*)malloc(sizeof(Frame));
       if (!frame) 
       {
-        frame->status = VC_ERROR;
         decode_done   = 1;
         continue;
       }
@@ -345,11 +320,10 @@ public:
         if (p->free_queue.empty())
         {
           CLog::Log(LOGERROR, "%s::%s - Error: No free output buffers\n", CLASSNAME, __func__);
-          if (frame->medbuf) {
+          if (frame->medbuf) 
             frame->medbuf->release();
-          }
           free(frame);
-          continue;;
+          continue;
         }  
 
         android::GraphicBuffer* graphicBuffer = static_cast<android::GraphicBuffer*>(frame->medbuf->graphicBuffer().get() );
@@ -514,24 +488,6 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
     break;
   }
 
-  /*
-  OMXCodec::findMatchingCodecs(mimetype, false, NULL, OMXCodec::kHardwareCodecsOnly | (p->quirks & QuirkSWRender ? OMXCodec::kClientNeedsFramebuffer : 0), &matchingCodecs);
-  if (matchingCodecs.isEmpty()) {
-    CLog::Log(LOGDEBUG, "%s::%s - no matching component\n", CLASSNAME, __func__);
-    goto fail;
-  }
-
-  for (size_t i = 0; i < matchingCodecs.size(); ++i) 
-  {
-    const char *componentNameBase = matchingCodecs[i].string();
-    if (!strncmp(componentNameBase, "OMX.rk.", 7))
-    {
-      // force opaque Software mode on rockchip
-      p->quirks |= QuirkRkSWRender;
-    }
-  }
-  */
-
   p->meta->setCString(kKeyMIMEType, mimetype);
   p->meta->setInt32(kKeyWidth, p->width);
   p->meta->setInt32(kKeyHeight, p->height);
@@ -605,8 +561,6 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
           
         }
       }
-      // Enable opaque Software mode on rockchip
-      p->quirks |= QuirkRkSWRender;
     }
   }
 
@@ -660,7 +614,7 @@ fail:
 }
 
 /*** Decode ***/
-int  CStageFrightVideo::Decode(BYTE *pData, int iSize, double dts, double pts)
+int  CStageFrightVideo::Decode(uint8_t *pData, int iSize, double dts, double pts)
 {
 #if defined(DEBUG_VERBOSE)
   unsigned int time = XbmcThreads::SystemClockMillis();
@@ -793,16 +747,10 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 
     unsigned int luma_pixels = frame->width  * frame->height;
     unsigned int chroma_pixels = luma_pixels/4;
-    BYTE* data = NULL;
+    uint8_t* data = NULL;
     if (frame->medbuf && !p->drop_state)
     {
-      if (p->quirks & QuirkRkSWRender)
-      {
-        RK_VPU_FRAME* rk_frame =  (RK_VPU_FRAME*)((long)frame->medbuf->data() + frame->medbuf->range_offset());
-        data = (BYTE*)((long)rk_frame->FrameBusAddr[0] + 0x60000000);
-      }
-      else
-        data = (BYTE*)((long)frame->medbuf->data() + frame->medbuf->range_offset());
+      data = (uint8_t*)((long)frame->medbuf->data() + frame->medbuf->range_offset());
     }
     switch (p->videoColorFormat)
     {

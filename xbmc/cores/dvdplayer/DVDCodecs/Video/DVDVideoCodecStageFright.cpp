@@ -139,7 +139,7 @@ void CDVDVideoCodecStageFright::SetDropState(bool bDrop)
   m_stf_decoder->SetDropState(bDrop);
 }
 
-int CDVDVideoCodecStageFright::Decode(BYTE* pData, int iSize, double dts, double pts)
+int CDVDVideoCodecStageFright::Decode(uint8_t *pData, int iSize, double dts, double pts)
 {
 #if defined(DEBUG_VERBOSE)
   unsigned int time = XbmcThreads::SystemClockMillis();
