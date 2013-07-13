@@ -19,7 +19,7 @@
  */
 /***************************************************************************/
 
-#define DEBUG_VERBOSE 1
+//#define DEBUG_VERBOSE 1
 
 #include "system.h"
 #include "system_gl.h"
@@ -345,9 +345,10 @@ public:
                                     // eglImgAttrs);
 
           p->free_mutex.lock();
-          std::list<std::pair<EGLImageKHR, int> >::iterator it = p->free_queue.begin();
-          int cur_slot = it->second;
-          p->free_mutex.unlock();
+          while (!p->free_queue.size())
+            usleep(10000);
+          std::list<std::pair<EGLImageKHR, int> >::iterator itfree = p->free_queue.begin();
+          int cur_slot = itfree->second;
           p->fbo.BindToTexture(GL_TEXTURE_2D, p->slots[cur_slot].texid);
           p->fbo.BeginRender();
 
@@ -394,11 +395,14 @@ public:
           glBindTexture(GL_TEXTURE_2D, 0);
 
           frame->eglimg = p->slots[cur_slot].eglimg;
+          p->busy_queue.push_back(std::pair<EGLImageKHR, int>(*itfree));
+          p->free_queue.erase(itfree);
+          p->free_mutex.unlock();
         }
       }
 
     #if defined(DEBUG_VERBOSE)
-      CLog::Log(LOGDEBUG, "%s: >>> pushed OUT frame; w:%d, h:%d, dw:%d, dh:%d, kf:%d, ur:%d, tm:%d\n", CLASSNAME, frame->width, frame->height, dw, dh, keyframe, unreadable, XbmcThreads::SystemClockMillis() - time);
+      CLog::Log(LOGDEBUG, "%s: >>> pushed OUT frame; w:%d, h:%d, dw:%d, dh:%d, kf:%d, ur:%d, img:%p, tm:%d\n", CLASSNAME, frame->width, frame->height, dw, dh, keyframe, unreadable, frame->eglimg, XbmcThreads::SystemClockMillis() - time);
     #endif
 
       p->out_mutex.lock();
@@ -672,6 +676,9 @@ bool CStageFrightVideo::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
  #if defined(DEBUG_VERBOSE)
   unsigned int time = XbmcThreads::SystemClockMillis();
 #endif
+  if (pDvdVideoPicture->format == RENDER_FMT_EGLIMG && pDvdVideoPicture->eglimg != EGL_NO_IMAGE_KHR)
+    ReleaseBuffer(pDvdVideoPicture->eglimg);
+
   if (p->prev_frame) {
     if (p->prev_frame->medbuf)
       p->prev_frame->medbuf->release();
@@ -921,10 +928,11 @@ void CStageFrightVideo::LockBuffer(EGLImageKHR eglimg)
   for(;it != p->free_queue.end(); ++it)
   {
     if ((*it).first == eglimg)
-    break;
+      break;
   }
   if (it == p->free_queue.end())
   {
+    p->busy_queue.push_back(std::pair<EGLImageKHR, int>(*it));
     p->free_mutex.unlock();
     return;
   }
@@ -943,13 +951,21 @@ void CStageFrightVideo::ReleaseBuffer(EGLImageKHR eglimg)
   unsigned int time = XbmcThreads::SystemClockMillis();
 #endif
   p->free_mutex.lock();
+  int cnt = 0;
   std::list<std::pair<EGLImageKHR, int> >::iterator it = p->busy_queue.begin();
+  std::list<std::pair<EGLImageKHR, int> >::iterator itfree;
   for(;it != p->busy_queue.end(); ++it)
   {
     if ((*it).first == eglimg)
-    break;
+    {
+      cnt++;
+      if (cnt==1)
+        itfree = it;
+      else
+        break;
+    }
   }
-  if (it == p->busy_queue.end())
+  if (it == p->busy_queue.end() && !cnt)
   {
     p->free_mutex.unlock();
     return;
@@ -958,7 +974,10 @@ void CStageFrightVideo::ReleaseBuffer(EGLImageKHR eglimg)
   CLog::Log(LOGDEBUG, "Unlocking %p: tm:%d\n", eglimg, XbmcThreads::SystemClockMillis() - time);
 #endif
 
-  p->free_queue.push_back(std::pair<EGLImageKHR, int>(*it));
-  p->busy_queue.erase(it);
+  if (cnt==1)
+  {
+    p->free_queue.push_back(std::pair<EGLImageKHR, int>(*itfree));
+    p->busy_queue.erase(itfree);
+  }
   p->free_mutex.unlock();
 }
