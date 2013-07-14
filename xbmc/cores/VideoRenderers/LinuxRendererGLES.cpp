@@ -1940,7 +1940,6 @@ void CLinuxRendererGLES::UploadEGLIMGTexture(int index)
     
     plane.flipindex = m_buffers[index].flipindex;
   }
-  m_eventTexturesDone[index]->Set();
   
 #ifdef DEBUG_VERBOSE
   CLog::Log(LOGDEBUG, "UploadEGLIMGTexture %d: img:%p, tm:%d\n", index, m_buffers[index].eglimg, XbmcThreads::SystemClockMillis() - time);
@@ -1995,8 +1994,6 @@ bool CLinuxRendererGLES::CreateEGLIMGTexture(int index)
   glTexImage2D(m_textureTarget, 0, GL_RGBA, plane.texwidth, plane.texheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
   
   glDisable(m_textureTarget);
-
-  m_eventTexturesDone[index]->Set();
 #endif
   return true;
 }
