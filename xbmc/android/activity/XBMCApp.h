@@ -26,6 +26,8 @@
 
 #include <android/native_activity.h>
 
+#include "system.h"
+
 #include "IActivityHandler.h"
 #include "IInputHandler.h"
 

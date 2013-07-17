@@ -18,8 +18,6 @@
  *
  */
 
-#include "system.h"
-
 #include <sstream>
 
 #include <unistd.h>
@@ -103,7 +101,9 @@ CXBMCApp::CXBMCApp(ANativeActivity* nativeActivity)
   : CJNIContext(nativeActivity)
   , CJNIBroadcastReceiver("org/xbmc/xbmc/XBMCBroadcastReceiver")
   , m_wakeLock(NULL)
+#ifdef HAS_LIBSTAGEFRIGHT
   , m_VideoNativeWindow(NULL)
+#endif
 {
   m_activity = nativeActivity;
   m_firstrun = true;
