@@ -40,6 +40,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 #include "windowing/egl/EGLWrapper.h"
+#include "windowing/WindowingFactory.h"
 
 #include <new>
 
@@ -228,34 +229,25 @@ public:
 
       if (frame->status == OK)
       {
+        frame->width = p->width;
+        frame->height = p->height;
+        frame->pts = 0;
+
         sp<MetaData> outFormat = p->decoder->getFormat();
         outFormat->findInt32(kKeyWidth , &w);
         outFormat->findInt32(kKeyHeight, &h);
 
-        if (!outFormat->findInt32(kKeyDisplayWidth , &dw))
-          dw = w;
-        if (!outFormat->findInt32(kKeyDisplayHeight, &dh))
-          dh = h;
-
-        if (!outFormat->findInt32(kKeyIsSyncFrame, &keyframe))
-          keyframe = 0;
-        if (!outFormat->findInt32(kKeyIsUnreadable, &unreadable))
-          unreadable = 0;
-
-        frame->pts = 0;
-
         // The OMX.SEC decoder doesn't signal the modified width/height
-        if (p->decoder_component && !strncmp(p->decoder_component, "OMX.SEC", 7) &&
-          (w & 15 || h & 15))
+        if (p->decoder_component && (w & 15 || h & 15) && !strncmp(p->decoder_component, "OMX.SEC", 7))
         {
           if (((w + 15)&~15) * ((h + 15)&~15) * 3/2 == frame->medbuf->range_length())
           {
             w = (w + 15)&~15;
             h = (h + 15)&~15;
+            frame->width = w;
+            frame->height = h;
           }
         }
-        frame->width = w;
-        frame->height = h;
         frame->medbuf->meta_data()->findInt64(kKeyTime, &(frame->pts));
       }
       else if (frame->status == INFO_FORMAT_CHANGED)
@@ -267,7 +259,7 @@ public:
         outFormat->findInt32(kKeyHeight, &p->height);
 
         cropLeft = cropTop = cropRight = cropBottom = 0;
-       if (!outFormat->findRect(kKeyCropRect, &cropLeft, &cropTop, &cropRight, &cropBottom))
+        if (!outFormat->findRect(kKeyCropRect, &cropLeft, &cropTop, &cropRight, &cropBottom))
         {
           p->x = 0;
           p->y = 0;
@@ -408,7 +400,15 @@ public:
 
 /***********************************************************/
 
-bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
+CStageFrightVideo::CStageFrightVideo()
+{
+}
+
+CStageFrightVideo::~CStageFrightVideo()
+{
+}
+
+bool CStageFrightVideo::Open(CDVDStreamInfo &hints, CWinSystemEGL* windowing)
 {
 #if defined(DEBUG_VERBOSE)
   CLog::Log(LOGDEBUG, "%s::Open\n", CLASSNAME);
@@ -437,7 +437,8 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   p->meta = new MetaData;
   if (p->meta == NULL)
   {
-    goto fail;
+    CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"cannot allocate MetaData");
+    return false;
   }
 
   const char* mimetype;
@@ -490,7 +491,8 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
 
   if (p->source == NULL || p->client == NULL)
   {
-    goto fail;
+    CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Cannot obtain source / client");
+    return false;
   }
 
   if (p->client->connect() !=  OK)
@@ -498,7 +500,7 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
     delete p->client;
     p->client = NULL;
     CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Cannot connect OMX client");
-    goto fail;
+    return false;
   }
 
   p->mVideoNativeWindow = NULL;
@@ -517,14 +519,14 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   if (!(p->decoder != NULL && p->decoder->start() ==  OK))
   {
     p->decoder = NULL;
-    goto fail;
+    return false;
   }
 
   outFormat = p->decoder->getFormat();
 
   if (!outFormat->findInt32(kKeyWidth, &p->width) || !outFormat->findInt32(kKeyHeight, &p->height)
         || !outFormat->findInt32(kKeyColorFormat, &p->videoColorFormat))
-    goto fail;
+    return false;
 
   const char *component;
   if (outFormat->findCString(kKeyDecoderComponent, &component))
@@ -536,8 +538,7 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
     {
       // Has issues with some XVID encoded MP4. Only fails after actual decoding starts...
       CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Blacklisted component (MP4)");
-      goto fail;
-
+      return false;
     }
     else if (!strncmp(component, "OMX.rk.", 7))
     {
@@ -547,12 +548,12 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
         {
           // Buggy. Hard crash on non MOD16 height videos and stride errors for non MOD32 width
           CLog::Log(LOGERROR, "%s::%s - %s\n", CLASSNAME, __func__,"Blacklisted component (MOD16)");
-          goto fail;
-
+          return false;
         }
       }
     }
   }
+  p->windowing = windowing;
 
   cropLeft = cropTop = cropRight = cropBottom = 0;
   if (!outFormat->findRect(kKeyCropRect, &cropLeft, &cropTop, &cropRight, &cropBottom))
@@ -587,20 +588,6 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
 #endif
 
   return true;
-
-fail:
-  if (p->decoder != 0)
-    p->decoder->stop();
-  if (p->client)
-  {
-    p->client->disconnect();
-    delete p->client;
-  }
-  if (p->decoder_component)
-    free(&p->decoder_component);
-  if ((p->quirks & QuirkSWRender) == 0)
-    p->UninitStagefrightSurface();
-  return false;
 }
 
 /*** Decode ***/
@@ -710,7 +697,6 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->iDisplayWidth = frame->width;
   pDvdVideoPicture->iDisplayHeight = frame->height;
   pDvdVideoPicture->iFlags  = DVP_FLAG_ALLOCATED;
-  pDvdVideoPicture->stf = this;
   pDvdVideoPicture->eglimg = EGL_NO_IMAGE_KHR;
 
   if (status != OK)
@@ -829,8 +815,10 @@ void CStageFrightVideo::Close()
 #if defined(DEBUG_VERBOSE)
   CLog::Log(LOGDEBUG, "Stopping omxcodec\n");
 #endif
-  p->decoder->stop();
-  p->client->disconnect();
+  if (p->decoder != NULL)
+    p->decoder->stop();
+  if (p->client)
+    p->client->disconnect();
 
 #if defined(DEBUG_VERBOSE)
   CLog::Log(LOGDEBUG, "Cleaning IN(%d)\n", p->in_queue.size());
@@ -845,19 +833,29 @@ void CStageFrightVideo::Close()
       frame->medbuf->release();
     free(frame);
   }
+  
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "Cleaning libstagefright\n", p->in_queue.size());
+#endif
+  if ((p->quirks & QuirkSWRender) == 0)
+    p->UninitStagefrightSurface();
 
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "Final Cleaning\n", p->in_queue.size());
+#endif
   if (p->decoder_component)
     free(&p->decoder_component);
 
   delete p->client;
 
-  if ((p->quirks & QuirkSWRender) == 0)
-    p->UninitStagefrightSurface();
-
   for (int i=0; i<INBUFCOUNT; ++i)
   {
-    p->inbuf[i]->setObserver(NULL);
-    p->inbuf[i]->release();
+    if (p->inbuf[i])
+    {
+      p->inbuf[i]->setObserver(NULL);
+      p->inbuf[i]->release();
+      p->inbuf[i] = NULL;
+    }
   }
 
   delete p;

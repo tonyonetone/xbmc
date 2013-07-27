@@ -24,6 +24,7 @@
 #include "cores/dvdplayer/DVDStreamInfo.h"
 #include "DVDVideoCodec.h"
 
+class CWinSystemEGL;
 class CStageFrightVideoPrivate;
 
 namespace android { class MediaBuffer; }
@@ -31,10 +32,10 @@ namespace android { class MediaBuffer; }
 class CStageFrightVideo
 {
 public:
-  CStageFrightVideo() {};
-  virtual ~CStageFrightVideo() {};
+  CStageFrightVideo();
+  virtual ~CStageFrightVideo();
 
-  bool Open(CDVDStreamInfo &hints);
+  bool Open(CDVDStreamInfo &hints, CWinSystemEGL* windowing);
   void Close(void);
   int  Decode(uint8_t *pData, int iSize, double dts, double pts);
   void Reset(void);

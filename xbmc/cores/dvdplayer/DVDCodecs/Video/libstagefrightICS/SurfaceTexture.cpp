@@ -19,7 +19,7 @@
  */
 
 #include "SurfaceTexture.h"
-#include "jutils/jutils-details.hpp"
+#include "android/jni/jutils/jutils-details.hpp"
 
 using namespace jni;
 
@@ -33,7 +33,6 @@ CJNISurfaceTexture::CJNISurfaceTexture(int texid) : CJNIBase("android/graphics/S
 
 CJNISurfaceTexture::~CJNISurfaceTexture()
 {
-  release();
 }
 
 void CJNISurfaceTexture::updateTexImage()

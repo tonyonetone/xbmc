@@ -19,13 +19,13 @@
  *
  */
 
-#include "JNIBase.h"
+#include "android/jni/JNIBase.h"
 
 class CJNISurfaceTexture;
 class CJNISurface : public CJNIBase
 {
 public:
-  CJNISurface(CJNISurfaceTexture *surf_texture);
+  CJNISurface(const CJNISurfaceTexture& surf_texture);
   ~CJNISurface();
 
   void release();

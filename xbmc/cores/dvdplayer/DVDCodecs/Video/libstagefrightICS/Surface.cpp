@@ -20,21 +20,20 @@
 
 #include "Surface.h"
 #include "SurfaceTexture.h"
-#include "jutils/jutils-details.hpp"
+#include "android/jni/jutils/jutils-details.hpp"
 
 using namespace jni;
 
-CJNISurface::CJNISurface(CJNISurfaceTexture *surf_texture) : CJNIBase("android/view/Surface")
+CJNISurface::CJNISurface(const CJNISurfaceTexture& surf_texture) : CJNIBase("android/view/Surface")
 {
   m_object = new_object(GetClassName(),
     "<init>", "(Landroid/graphics/SurfaceTexture;)V",
-    surf_texture->get_raw());
+    surf_texture.get_raw());
   m_object.setGlobal();
 }
 
 CJNISurface::~CJNISurface()
 {
-  release();
 }
 
 void CJNISurface::release()

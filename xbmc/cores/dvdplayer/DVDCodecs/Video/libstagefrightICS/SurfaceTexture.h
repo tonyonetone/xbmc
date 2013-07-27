@@ -19,7 +19,7 @@
  *
  */
 
-#include "JNIBase.h"
+#include "android/jni/JNIBase.h"
 
 class CJNISurfaceTexture : public CJNIBase
 {

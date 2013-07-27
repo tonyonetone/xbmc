@@ -10,7 +10,8 @@ XBMCTEX_DIRS= \
 
 DVDPCODECS_DIRS= \
 	lib \
-	lib/libdvd
+	lib/libdvd \
+	xbmc/cores/dvdplayer/DVDCodecs/Video/libstagefrightICS
 
 DVDPLAYER_ARCHIVES=xbmc/cores/dvdplayer/DVDPlayer.a \
                    xbmc/cores/dvdplayer/DVDCodecs/DVDCodecs.a \
@@ -289,7 +290,7 @@ all : $(FINAL_TARGETS)
 include Makefile.include
 
 .PHONY : dllloader exports visualizations screensavers eventclients papcodecs \
-	dvdpcodecs imagelib codecs externals force skins libaddon check \
+	dvdpcodecs dvdpextcodecs imagelib codecs externals force skins libaddon check \
 	testframework testsuite
 
 # hack targets to keep build system up to date
@@ -362,6 +363,10 @@ libaddon: exports
 dvdpcodecs: dllloader
 	$(MAKE) -C lib
 	$(MAKE) -C lib/libdvd
+dvdpextcodecs: libxbmc.so
+ifeq (@USE_LIBSTAGEFRIGHT@,1)
+	$(MAKE) -C xbmc/cores/dvdplayer/DVDCodecs/Video/libstagefrightICS
+endif
 eventclients:
 ifeq ($(findstring osx,@ARCH@), osx)
 ifneq ($(findstring arm,@ARCH@), arm)
@@ -402,7 +407,7 @@ ifeq (@USE_PVR_ADDONS@,1)
 	$(MAKE) -C pvr-addons
 endif
 
-codecs: papcodecs dvdpcodecs
+codecs: papcodecs dvdpcodecs dvdpextcodecs
 
 libs: libhdhomerun imagelib libexif system/libcpluff-@ARCH@.so $(CMYTH)
 

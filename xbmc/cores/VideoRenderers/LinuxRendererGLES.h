@@ -40,7 +40,7 @@ class CBaseTexture;
 namespace Shaders { class BaseYUV2RGBShader; }
 namespace Shaders { class BaseVideoFilterShader; }
 class COpenMaxVideo;
-class CStageFrightVideo;
+class CDVDVideoCodecStageFright;
 typedef std::vector<int>     Features;
 
 
@@ -163,7 +163,7 @@ public:
   virtual void         AddProcessor(struct __CVBuffer *cvBufferRef, int index);
 #endif
 #ifdef HAS_LIBSTAGEFRIGHT
-  virtual void         AddProcessor(CStageFrightVideo* stf, EGLImageKHR eglimg, int index);
+  virtual void         AddProcessor(CDVDVideoCodecStageFright* stf, EGLImageKHR eglimg, int index);
 #endif
 
 protected:
@@ -261,7 +261,7 @@ protected:
     struct __CVBuffer *cvBufferRef;
 #endif
 #ifdef HAS_LIBSTAGEFRIGHT
-    CStageFrightVideo* stf;
+    CDVDVideoCodecStageFright* stf;
     EGLImageKHR eglimg;
 #endif
   };

@@ -19,6 +19,8 @@
  */
 /***************************************************************************/
 
+//#define DEBUG_VERBOSE 1
+
 #include "StageFrightVideoPrivate.h"
 
 #include <EGL/egl.h>
@@ -29,8 +31,10 @@
 #include "windowing/WindowingFactory.h"
 #include "utils/log.h"
 
-#include "android/jni/Surface.h"
-#include "android/jni/SurfaceTexture.h"
+#include "Surface.h"
+#include "SurfaceTexture.h"
+
+#define CLASSNAME "CStageFrightVideoPrivate"
 
 GLint glerror;
 #define CheckEglError(x) while((glerror = eglGetError()) != EGL_SUCCESS) CLog::Log(LOGERROR, "EGL error in %s: %x",x, glerror);
@@ -69,6 +73,9 @@ CStageFrightVideoPrivate::CStageFrightVideoPrivate()
     eglDestroyImageKHR = (PFNEGLDESTROYIMAGEKHRPROC) CEGLWrapper::GetProcAddress("eglDestroyImageKHR");
   if (!glEGLImageTargetTexture2DOES)
     glEGLImageTargetTexture2DOES = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC) CEGLWrapper::GetProcAddress("glEGLImageTargetTexture2DOES");
+
+  for (int i=0; i<INBUFCOUNT; ++i)
+    inbuf[i] = NULL;
 }
 
 void CStageFrightVideoPrivate::signalBufferReturned(MediaBuffer *buffer)
@@ -224,27 +231,32 @@ void CStageFrightVideoPrivate::OES_shader_setUp()
 
 void CStageFrightVideoPrivate::InitializeEGL(int w, int h)
 {
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s: >>> InitializeEGL: w:%d; h:%d\n", CLASSNAME, w, h);
+#endif
   texwidth = w;
   texheight = h;
-  if (!g_Windowing.IsExtSupported("GL_TEXTURE_NPOT"))
+  if (!windowing->IsExtSupported("GL_TEXTURE_NPOT"))
   {
     texwidth  = NP2(texwidth);
     texheight = NP2(texheight);
   }
 
   eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+  if (eglDisplay == EGL_NO_DISPLAY)
+    CLog::Log(LOGERROR, "%s: InitializeEGL: no display\n", CLASSNAME);
   eglBindAPI(EGL_OPENGL_ES_API);
   EGLint contextAttributes[] = {
     EGL_CONTEXT_CLIENT_VERSION, 2,
     EGL_NONE
   };
-  eglContext = eglCreateContext(eglDisplay, g_Windowing.GetEGLConfig(), EGL_NO_CONTEXT, contextAttributes);
+  eglContext = eglCreateContext(eglDisplay, windowing->GetEGLConfig(), EGL_NO_CONTEXT, contextAttributes);
   EGLint pbufferAttribs[] = {
     EGL_WIDTH, texwidth,
     EGL_HEIGHT, texheight,
     EGL_NONE
   };
-  eglSurface = eglCreatePbufferSurface(eglDisplay, g_Windowing.GetEGLConfig(), pbufferAttribs);
+  eglSurface = eglCreatePbufferSurface(eglDisplay, windowing->GetEGLConfig(), pbufferAttribs);
   eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
   CheckGlError("stf init");
 
@@ -279,12 +291,15 @@ void CStageFrightVideoPrivate::InitializeEGL(int w, int h)
 
   eglInitialized = true;
 #if defined(DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, "%s: >>> Initialized EGL: w:%d; h:%d\n", CLASSNAME, texwidth, texheight);
+  CLog::Log(LOGDEBUG, "%s: <<< InitializeEGL: w:%d; h:%d\n", CLASSNAME, texwidth, texheight);
 #endif
 }
 
 void CStageFrightVideoPrivate::UninitializeEGL()
 {
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s: >>> UninitializeEGL\n", CLASSNAME);
+#endif
   fbo.Cleanup();
   for (int i=0; i<NUMFBOTEX; ++i)
   {
@@ -305,10 +320,11 @@ void CStageFrightVideoPrivate::UninitializeEGL()
 
 bool CStageFrightVideoPrivate::InitStagefrightSurface()
 {
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s: >>> InitStagefrightSurface\n", CLASSNAME);
+#endif
    if (mVideoNativeWindow != NULL)
     return true;
-
-  JNIEnv* env = xbmc_jnienv();
 
   mVideoTextureId = -1;
 
@@ -321,8 +337,9 @@ bool CStageFrightVideoPrivate::InitStagefrightSurface()
   glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
 
   mSurfTexture = new CJNISurfaceTexture(mVideoTextureId);
-  mSurface = new CJNISurface(mSurfTexture);
+  mSurface = new CJNISurface(*mSurfTexture);
 
+  JNIEnv* env = xbmc_jnienv();
   mVideoNativeWindow = ANativeWindow_fromSurface(env, mSurface->get_raw());
 
   return true;
@@ -330,11 +347,17 @@ bool CStageFrightVideoPrivate::InitStagefrightSurface()
 
 void CStageFrightVideoPrivate::UninitStagefrightSurface()
 {
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s: >>> IninitStagefrightSurface\n", CLASSNAME);
+#endif
   if (mVideoNativeWindow == NULL)
     return;
 
   ANativeWindow_release(mVideoNativeWindow.get());
   mVideoNativeWindow = NULL;
+
+  mSurface->release();
+  mSurfTexture->release();
 
   delete mSurface;
   delete mSurfTexture;
@@ -349,6 +372,6 @@ void CStageFrightVideoPrivate::UpdateStagefrightTexture()
 
 void CStageFrightVideoPrivate::GetStagefrightTransformMatrix(float* transformMatrix)
 {
-    mSurfTexture->getTransformMatrix(transformMatrix);
+  mSurfTexture->getTransformMatrix(transformMatrix);
 }
 
