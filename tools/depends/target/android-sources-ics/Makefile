@@ -29,7 +29,7 @@ install-sources: $(ANDROID_SOURCE)
 
 $(ANDROID_LIBS): $(PLATFORM)/libstagefright.so $(PLATFORM)/libutils.so $(PLATFORM)/libbinder.so $(PLATFORM)/libcutils.so $(PLATFORM)/libui.so $(PLATFORM)/libgui.so
 	mkdir -p $(PREFIX)/opt/$(ANDROID_LIBS)
-	rm -rf $(PREFIX)/opt/$(ANDROID_LIBS)
+	rm -f $(PREFIX)/opt/$(ANDROID_LIBS)/*
 	cp $(PLATFORM)/libstagefright.so $(PLATFORM)/libutils.so $(PLATFORM)/libbinder.so  $(PLATFORM)/libcutils.so $(PLATFORM)/libui.so $(PLATFORM)/libgui.so $(PREFIX)/opt/$(ANDROID_LIBS)
 
 $(PLATFORM): install-sources
