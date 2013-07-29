@@ -98,6 +98,8 @@ public:
   static bool GetExternalStorage(std::string &path, const std::string &type = "");
   static bool GetStorageUsage(const std::string &path, std::string &usage);
   static int GetMaxSystemVolume();
+  static int GetSystemVolume();
+  static void SetSystemVolume(int val);
 
   static int GetDPI();
 protected:
@@ -117,6 +119,7 @@ private:
   static ANativeActivity *m_activity;
   CJNIWakeLock *m_wakeLock;
   static int m_batteryLevel;  
+  static int m_initialVolume;  
   bool m_firstrun;
   bool m_exiting;
   pthread_t m_thread;

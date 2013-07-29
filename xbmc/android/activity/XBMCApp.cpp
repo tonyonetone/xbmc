@@ -85,6 +85,7 @@ void* thread_run(void* obj)
 ANativeActivity *CXBMCApp::m_activity = NULL;
 ANativeWindow* CXBMCApp::m_window = NULL;
 int CXBMCApp::m_batteryLevel = 0;
+int CXBMCApp::m_initialVolume = 0;
 
 CXBMCApp::CXBMCApp(ANativeActivity* nativeActivity)
   : CJNIContext(nativeActivity)
@@ -132,6 +133,10 @@ void CXBMCApp::onResume()
 void CXBMCApp::onPause()
 {
   android_printf("%s: ", __PRETTY_FUNCTION__);
+
+  // Restore volume
+  SetSystemVolume(m_initialVolume);
+
   unregisterReceiver(*this);
 }
 
@@ -244,6 +249,8 @@ void CXBMCApp::run()
   int status = 0;
 
   SetupEnv();
+  
+  m_initialVolume = GetSystemVolume();
 
   CJNIIntent startIntent = getIntent();
   android_printf("XBMC Started with action: %s\n",startIntent.getAction().c_str());
@@ -281,7 +288,7 @@ void CXBMCApp::run()
   {
     android_printf("ERROR: Exception caught on main loop. Exiting");
   }
-
+  
   // If we are have not been force by Android to exit, notify its finish routine.
   // This will cause android to run through its teardown events, it calls:
   // onPause(), onLostFocus(), onDestroyWindow(), onStop(), onDestroy().
@@ -515,6 +522,27 @@ int CXBMCApp::GetMaxSystemVolume(JNIEnv *env)
     return audioManager.getStreamMaxVolume();
     android_printf("CXBMCApp::SetSystemVolume: Could not get Audio Manager");
   return 0;
+}
+
+int CXBMCApp::GetSystemVolume()
+{
+  CJNIAudioManager audioManager(getSystemService("audio"));
+  if (audioManager)
+  {
+    return audioManager.getStreamVolume();
+  } else {
+    android_printf("CXBMCApp::GetSystemVolume: Could not get Audio Manager");
+    return 0;
+  }
+}
+
+void CXBMCApp::SetSystemVolume(int val)
+{
+  CJNIAudioManager audioManager(getSystemService("audio"));
+  if (audioManager)
+    audioManager.setStreamVolume(val);
+  else
+    android_printf("CXBMCApp::SetSystemVolume: Could not get Audio Manager");
 }
 
 void CXBMCApp::SetSystemVolume(JNIEnv *env, float percent)
