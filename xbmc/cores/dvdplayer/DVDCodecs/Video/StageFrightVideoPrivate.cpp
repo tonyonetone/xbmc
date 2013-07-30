@@ -23,9 +23,14 @@
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 #include "windowing/egl/EGLWrapper.h"
 #include "windowing/WindowingFactory.h"
 #include "utils/log.h"
+
+#include "android/jni/Surface.h"
+#include "android/jni/SurfaceTexture.h"
 
 GLint glerror;
 #define CheckEglError(x) while((glerror = eglGetError()) != EGL_SUCCESS) CLog::Log(LOGERROR, "EGL error in %s: %x",x, glerror);
@@ -47,7 +52,7 @@ int NP2( unsigned x ) {
 }
 
 CStageFrightVideoPrivate::CStageFrightVideoPrivate()
-    : decode_thread(NULL), source(NULL), natwin(NULL)
+    : decode_thread(NULL), source(NULL)
     , eglDisplay(EGL_NO_DISPLAY), eglSurface(EGL_NO_SURFACE), eglContext(EGL_NO_CONTEXT)
     , eglInitialized(false)
     , framecount(0)
@@ -56,6 +61,7 @@ CStageFrightVideoPrivate::CStageFrightVideoPrivate()
     , texwidth(-1), texheight(-1)
     , client(NULL), decoder(NULL), decoder_component(NULL)
     , drop_state(false), resetting(false)
+    , m_VideoNativeWindow(NULL) 
 {
   if (!eglCreateImageKHR)
     eglCreateImageKHR = (PFNEGLCREATEIMAGEKHRPROC) CEGLWrapper::GetProcAddress("eglCreateImageKHR");
@@ -296,3 +302,53 @@ void CStageFrightVideoPrivate::UninitializeEGL()
   
   eglInitialized = false;
 }
+
+bool CStageFrightVideoPrivate::InitStagefrightSurface()
+{
+   if (mVideoNativeWindow != NULL)
+    return true;
+    
+  JNIEnv* env = xbmc_jnienv();
+
+  m_VideoTextureId = -1;
+
+  glGenTextures(1, &mVideoTextureId);
+  glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_VideoTextureId);
+  glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
+  
+  mSurfTexture = new CJNISurfaceTexture(mVideoTextureId);
+  mSurface = new CJNISurface(mSurfTexture);
+  
+  mVideoNativeWindow = ANativeWindow_fromSurface(env, mSurface->get_raw());
+
+  return true;
+}
+
+void CStageFrightVideoPrivate::UninitStagefrightSurface()
+{
+  if (mVideoNativeWindow == NULL)
+    return;
+
+  ANativeWindow_release(mVideoNativeWindow);
+  m_VideoNativeWindow = NULL;
+
+  delete mSurface;
+  delete mSurfTexture;
+
+  glDeleteTextures(1, &mVideoTextureId);
+}
+
+void CStageFrightVideoPrivate::UpdateStagefrightTexture()
+{
+  mSurfTexture->updateTexImage();
+}
+
+void CStageFrightVideoPrivate::GetStagefrightTransformMatrix(float* transformMatrix)
+{
+    mSurfTexture->getTransformMatrix(transformMatrix);
+}
+

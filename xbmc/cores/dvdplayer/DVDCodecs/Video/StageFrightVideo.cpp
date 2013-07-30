@@ -27,7 +27,6 @@
 #include "StageFrightVideo.h"
 #include "StageFrightVideoPrivate.h"
 
-#include "android/activity/XBMCApp.h"
 #include "guilib/GraphicContext.h"
 #include "DVDClock.h"
 #include "utils/log.h"
@@ -327,23 +326,16 @@ public:
         }  
 
         ANativeWindowBuffer* graphicBuffer = frame->medbuf->graphicBuffer()->getNativeBuffer();
-        native_window_set_buffers_timestamp(p->natwin.get(), frame->pts * 1000);
-        int err = p->natwin.get()->queueBuffer(p->natwin.get(), graphicBuffer);
+        native_window_set_buffers_timestamp(p->mVideoNativeWindow.get(), frame->pts * 1000);
+        int err = p->mVideoNativeWindow.get()->queueBuffer(p->mVideoNativeWindow.get(), graphicBuffer);
         if (err == 0)
           frame->medbuf->meta_data()->setInt32(kKeyRendered, 1);
         frame->medbuf->release();
         frame->medbuf = NULL;
-        g_xbmcapp->UpdateStagefrightTexture();
-        // g_xbmcapp->GetSurfaceTexture()->updateTexImage();
+        p->UpdateStagefrightTexture();
 
         if (!p->drop_state)
         {
-          // static const EGLint eglImgAttrs[] = { EGL_IMAGE_PRESERVED_KHR, EGL_TRUE, EGL_NONE, EGL_NONE };
-          // EGLImageKHR img = eglCreateImageKHR(p->eglDisplay, EGL_NO_CONTEXT,
-                                    // EGL_NATIVE_BUFFER_ANDROID,
-                                    // (EGLClientBuffer)graphicBuffer->getNativeBuffer(),
-                                    // eglImgAttrs);
-
           p->free_mutex.lock();
           while (!p->free_queue.size())
             usleep(10000);
@@ -368,11 +360,7 @@ public:
           glUseProgram(p->mPgm);
           glUniform1i(p->mTexSamplerHandle, 0);
 
-          // glGenTextures(1, &texid);
-          // glBindTexture(GL_TEXTURE_EXTERNAL_OES, texid);
-          // glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, img);
-
-          glBindTexture(GL_TEXTURE_EXTERNAL_OES, g_xbmcapp->GetAndroidTexture());
+          glBindTexture(GL_TEXTURE_EXTERNAL_OES, p->mVideoTextureId);
           
           GLfloat texMatrix[16];
           // const GLfloat texMatrix[] = {
@@ -381,8 +369,7 @@ public:
             // 0, 0, 1, 0,
             // 0, 1, 0, 1
           // };
-          g_xbmcapp->GetStagefrightTransformMatrix(texMatrix);
-          // g_xbmcapp->GetSurfaceTexture()->getTransformMatrix(texMatrix);
+          p->GetStagefrightTransformMatrix(texMatrix);
           glUniformMatrix4fv(p->mTexMatrixHandle, 1, GL_FALSE, texMatrix);
 
           glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -514,18 +501,17 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
     goto fail;
   }
 
-  p->natwin = NULL;
+  p->mVideoNativeWindow = NULL;
   if ((p->quirks & QuirkSWRender) == 0)
   {
-    g_xbmcapp->InitStagefrightSurface();
-    p->natwin = g_xbmcapp->GetAndroidVideoWindow();
-    native_window_api_connect(p->natwin.get(), NATIVE_WINDOW_API_MEDIA);
+    p->InitStagefrightSurface();
+    native_window_api_connect(p->mVideoNativeWindow.get(), NATIVE_WINDOW_API_MEDIA);
   }
   
   p->decoder  = OMXCodec::Create(p->client->interface(), p->meta,
                                          false, p->source, NULL,
                                          OMXCodec::kHardwareCodecsOnly | (p->quirks & QuirkSWRender ? OMXCodec::kClientNeedsFramebuffer : 0),
-                                         p->natwin
+                                         p->mVideoNativeWindow
                                          );
 
   if (!(p->decoder != NULL && p->decoder->start() ==  OK))
@@ -613,7 +599,7 @@ fail:
   if (p->decoder_component)
     free(&p->decoder_component);
   if ((p->quirks & QuirkSWRender) == 0)
-    g_xbmcapp->UninitStagefrightSurface();
+    p->UninitStagefrightSurface();
   return false;
 }
 
@@ -866,7 +852,7 @@ void CStageFrightVideo::Close()
   delete p->client;
 
   if ((p->quirks & QuirkSWRender) == 0)
-    g_xbmcapp->UninitStagefrightSurface();
+    p->UninitStagefrightSurface();
 
   for (int i=0; i<INBUFCOUNT; ++i)
   {

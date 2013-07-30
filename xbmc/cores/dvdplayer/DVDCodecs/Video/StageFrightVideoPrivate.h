@@ -24,6 +24,8 @@
 #include "xbmc/guilib/FrameBufferObject.h"
 #include "cores/VideoRenderers/RenderFormats.h"
 
+#include <android/native_window.h> 
+
 #include <media/stagefright/MetaData.h>
 #include <media/stagefright/MediaBuffer.h>
 #include <media/stagefright/MediaBufferGroup.h>
@@ -50,6 +52,8 @@
 #define INBUFCOUNT 16
 
 class CStageFrightDecodeThread;
+class CJNISurface;
+class CJNISurfaceTexture;
 
 using namespace android;
 
@@ -95,7 +99,6 @@ public:
   CStageFrightDecodeThread* decode_thread;
 
   sp<MediaSource> source;
-  sp<ANativeWindow> natwin;
   
   MediaBuffer* inbuf[INBUFCOUNT];
 
@@ -144,4 +147,17 @@ public:
 #if defined(DEBUG_VERBOSE)
   unsigned int cycle_time;
 #endif
+
+  unsigned int mVideoTextureId;
+  CJNISurfaceTexture* mSurfTexture;
+  CJNISurface* mSurface;
+  sp<ANativeWindow> mVideoNativeWindow;
+
+  bool InitStagefrightSurface();
+  void UninitStagefrightSurface();
+  void UpdateStagefrightTexture();
+  void GetStagefrightTransformMatrix(float* transformMatrix);
+
+  ANativeWindow* GetAndroidVideoWindow() const { return m_VideoNativeWindow;}
+  const unsigned int GetAndroidTexture() const { return m_VideoTextureId; }
 };
