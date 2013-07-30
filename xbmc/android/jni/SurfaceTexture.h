@@ -30,4 +30,4 @@ public:
   void updateTexImage();
   void release();
   void getTransformMatrix(float* transformMatrix);
-}
+};

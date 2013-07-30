@@ -79,6 +79,9 @@
 #include <GLES2/gl2ext.h>
 
 #define ANDROID_GRAPHICS_SURFACETEXTURE_JNI_ID "mSurfaceTexture"
+
+#include "android/jni/Surface.h"
+#include "android/jni/SurfaceTexture.h"
 #endif
 
 #define GIGABYTES       1073741824
@@ -660,10 +663,10 @@ bool CXBMCApp::InitStagefrightSurface()
   glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
   
-  m_SurfTexture = new CSurfaceTexture(m_VideoTextureId);
-  m_Surface = new CSurface(m_SurfTexture);
+  m_SurfTexture = new CJNISurfaceTexture(m_VideoTextureId);
+  m_Surface = new CJNISurface(m_SurfTexture);
   
-  m_VideoNativeWindow = ANativeWindow_fromSurface(env, m_Surface.get_raw());
+  m_VideoNativeWindow = ANativeWindow_fromSurface(env, m_Surface->get_raw());
 
   return true;
 }
@@ -684,12 +687,12 @@ void CXBMCApp::UninitStagefrightSurface()
 
 void CXBMCApp::UpdateStagefrightTexture()
 {
-  m_SurfTexture.updateTexImage();
+  m_SurfTexture->updateTexImage();
 }
 
 void CXBMCApp::GetStagefrightTransformMatrix(float* transformMatrix)
 {
-    m_SurfTexture.getTransformMatrix(transformMatrix);
+    m_SurfTexture->getTransformMatrix(transformMatrix);
 }
 
 #endif

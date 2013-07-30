@@ -35,15 +35,15 @@
 #include "android/jni/Context.h"
 #include "android/jni/BroadcastReceiver.h"
 
-#ifdef HAS_LIBSTAGEFRIGHT
-#include "android/jni/Surface.h"
-#include "android/jni/SurfaceTexture.h"
-#endif
-
 // forward delares
 class CJNIWakeLock;
 class CAESinkAUDIOTRACK;
 typedef struct _JNIEnv JNIEnv;
+#ifdef HAS_LIBSTAGEFRIGHT
+class CJNISurface;
+class CJNISurfaceTexture;
+#endif
+
 
 struct androidIcon
 {
@@ -145,8 +145,8 @@ private:
   static ANativeWindow* m_window;
 #ifdef HAS_LIBSTAGEFRIGHT
   unsigned int m_VideoTextureId;
-  CSurfaceTexture* m_SurfTexture;
-  CSurface* m_Surface;
+  CJNISurfaceTexture* m_SurfTexture;
+  CJNISurface* m_Surface;
   ANativeWindow* m_VideoNativeWindow;
 #endif
   
