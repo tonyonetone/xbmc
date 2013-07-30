@@ -29,6 +29,7 @@ CJNISurface::CJNISurface(CJNISurfaceTexture *surf_texture) : CJNIBase("android/v
   m_object = new_object(GetClassName(),
     "<init>", "(Landroid/graphics/SurfaceTexture;)V", 
     surf_texture->get_raw());
+  m_object.setGlobal();
 }
 
 CJNISurface::~CJNISurface()

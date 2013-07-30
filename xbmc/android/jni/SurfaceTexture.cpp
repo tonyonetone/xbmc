@@ -28,6 +28,7 @@ CJNISurfaceTexture::CJNISurfaceTexture(int texid) : CJNIBase("android/graphics/S
   m_object = new_object(GetClassName(),
     "<init>", "(I)V", 
     texid);
+  m_object.setGlobal();
 }
 
 CJNISurfaceTexture::~CJNISurfaceTexture()
