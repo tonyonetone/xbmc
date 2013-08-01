@@ -1,4 +1,4 @@
-package org.xbmc.xbmc;
+package com.semperpax.xbmc;
 
 import android.app.NativeActivity;
 import android.content.Intent;

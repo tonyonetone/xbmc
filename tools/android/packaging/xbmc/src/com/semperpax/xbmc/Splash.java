@@ -1,4 +1,4 @@
-package org.xbmc.xbmc;
+package com.semperpax.xbmc;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -240,7 +240,7 @@ public class Splash extends Activity {
     
     // Run XBMC
     Intent intent = getIntent();
-    intent.setClass(this, org.xbmc.xbmc.Main.class);
+    intent.setClass(this, com.semperpax.xbmc.Main.class);
     startActivity(intent);
     finish();
   }
@@ -256,7 +256,7 @@ public class Splash extends Activity {
         .getRunningTasks(Integer.MAX_VALUE);
     for (RunningTaskInfo task : tasks)
       if (task.topActivity.toString().equalsIgnoreCase(
-          "ComponentInfo{org.xbmc.xbmc/org.xbmc.xbmc.Main}")) {
+          "ComponentInfo{com.semperpax.xbmc/com.semperpax.xbmc.Main}")) {
         // XBMC already running; just activate it
         startXBMC();
         return;
