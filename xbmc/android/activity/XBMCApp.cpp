@@ -89,7 +89,7 @@ int CXBMCApp::m_initialVolume = 0;
 
 CXBMCApp::CXBMCApp(ANativeActivity* nativeActivity)
   : CJNIContext(nativeActivity)
-  , CJNIBroadcastReceiver("org/xbmc/xbmc/XBMCBroadcastReceiver")
+  , CJNIBroadcastReceiver("com/semperpax/xbmc/XBMCBroadcastReceiver")
   , m_wakeLock(NULL)
 {
   m_activity = nativeActivity;
@@ -241,7 +241,7 @@ bool CXBMCApp::getWakeLock()
   if (m_wakeLock)
     return true;
 
-  m_wakeLock = new CJNIWakeLock(CJNIPowerManager(getSystemService("power")).newWakeLock("org.xbmc.xbmc"));
+  m_wakeLock = new CJNIWakeLock(CJNIPowerManager(getSystemService("power")).newWakeLock("com.semperpax.xbmc"));
 
   return true;
 }
@@ -598,7 +598,7 @@ void CXBMCApp::SetupEnv()
   std::string externalDir;
   CJNIFile androidPath = getExternalFilesDir("");
   if (!androidPath)
-    androidPath = getDir("org.xbmc.xbmc", 1);
+    androidPath = getDir("com.semperpax.xbmc", 1);
 
   if (androidPath)
     externalDir = androidPath.getAbsolutePath();
