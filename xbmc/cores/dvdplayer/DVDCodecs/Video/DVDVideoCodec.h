@@ -41,6 +41,7 @@ struct OpenMaxVideoBuffer;
 class CDVDVideoCodecStageFright;
 class CDVDMediaCodecInfo;
 typedef void* EGLImageKHR;
+struct V4L2Buffer;
 
 
 // should be entirely filled by all codecs
@@ -82,6 +83,11 @@ struct DVDVideoPicture
     struct {
       CDVDMediaCodecInfo *mediacodec;
     };
+  
+    struct {
+      V4L2Buffer *mfcBuffer;
+    }; 
+
   };
 
   unsigned int iFlags;
