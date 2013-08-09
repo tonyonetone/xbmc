@@ -33,6 +33,7 @@ INCLUDES += -I${prefix}/opt/android-source/frameworks/base/include/media/stagefr
 INCLUDES += -I${prefix}/opt/android-source/system/core/include
 INCLUDES += -I${prefix}/opt/android-source/libhardware/include
 endif
+SRCS += DVDVideoCodecMFC.cpp
 
 LIB=Video.a
 
