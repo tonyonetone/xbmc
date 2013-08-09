@@ -32,6 +32,12 @@
 #if defined(HAVE_VIDEOTOOLBOXDECODER)
 #include "Video/DVDVideoCodecVideoToolBox.h"
 #endif
+#if defined(HAVE_EXYNOS4)
+#include "Video/DVDVideoCodecExynos4.h"
+#endif
+#if defined(HAVE_EXYNOS5)
+#include "Video/DVDVideoCodecExynos5.h"
+#endif
 #include "Video/DVDVideoCodecFFmpeg.h"
 #include "Video/DVDVideoCodecOpenMax.h"
 #include "Video/DVDVideoCodecLibMpeg2.h"
@@ -199,7 +205,25 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, unsigne
 #else
   hwSupport += "iMXVPU:no ";
 #endif  
+#if defined(HAVE_EXYNOS4) && defined(_LINUX)
+  hwSupport += "MFCv5:yes";
+#elif defined(_LINUX)
+  hwSupport += "MFCv5:no";
+#endif
+#if defined(HAVE_EXYNOS5) && defined(_LINUX)
+  hwSupport += "MFCv6:yes";
+#elif defined(_LINUX)
+  hwSupport += "MFCv6:no";
+#endif
   CLog::Log(LOGDEBUG, "CDVDFactoryCodec: compiled in hardware support: %s", hwSupport.c_str());
+
+#if defined(HAVE_EXYNOS4) && defined(_LINUX)
+  if( (pCodec = OpenCodec(new CDVDVideoCodecExynos4(), hint, options)) ) return pCodec;
+#endif
+#if defined(HAVE_EXYNOS5) && defined(_LINUX)
+  if( (pCodec = OpenCodec(new CDVDVideoCodecExynos5(), hint, options)) ) return pCodec;
+#endif
+
 #if defined(HAS_LIBAMCODEC)
   // amcodec can handle dvd playback.
   if (!CSettings::Get().GetBool("videoplayer.useamcodec"))
