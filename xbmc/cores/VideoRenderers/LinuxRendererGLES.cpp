@@ -570,6 +570,7 @@ unsigned int CLinuxRendererGLES::PreInit()
 
   m_formats.push_back(RENDER_FMT_YUV420P);
   m_formats.push_back(RENDER_FMT_NV12);
+  m_formats.push_back(RENDER_FMT_NV12MT);
   m_formats.push_back(RENDER_FMT_BYPASS);
 #if defined(HAVE_LIBOPENMAX)
   m_formats.push_back(RENDER_FMT_OMXEGL);
