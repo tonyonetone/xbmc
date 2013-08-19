@@ -848,4 +848,6 @@ private:
 
   void AnnounceRemove(std::string content, int id);
   void AnnounceUpdate(std::string content, int id);
+
+  void FillArt(const CStdString& idlist, const CStdString& type, CFileItemList& items);
 };
