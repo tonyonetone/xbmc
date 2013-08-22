@@ -7511,7 +7511,7 @@ bool CVideoDatabase::GetMusicVideosByWhere(const CStdString &baseDir, const Filt
 	  if (idlist.size() > 0)
 	  {
 	    idlist.resize(idlist.size()-1);
-      FillArt(idlist, "episode", items);
+      FillArt(idlist, "musicvideo", items);
 	  }
 
     // cleanup
