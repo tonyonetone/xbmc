@@ -25,4 +25,19 @@ public class Main extends NativeActivity
     _onNewIntent(intent);
   }
 
+  @Override
+  public void onDestroy()
+  {
+    new Thread() {
+      public void run()
+      {
+        try
+        {
+          sleep(1000);
+          android.os.Process.killProcess(android.os.Process.myPid());
+        } catch (Exception e) {}
+      }
+    }.start();
+    super.onDestroy();
+  }
 }
