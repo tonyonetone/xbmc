@@ -17,6 +17,7 @@
  *  <http://www.gnu.org/licenses/>.
  *
  */
+#define DEBUG_VERBOSE 1
 
 #include "system.h"
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
@@ -78,7 +79,7 @@ CDVDVideoCodecExynos4::CDVDVideoCodecExynos4() : CDVDVideoCodec() {
   
   m_bFIMCStartConverter = true;
   
-  m_iFIMCdequeuedBufferNumber = -1;
+  m_iFIMCdequeuedBufferNumber = 0;
   
   memzero(m_videoBuffer);
 }
@@ -253,7 +254,21 @@ bool CDVDVideoCodecExynos4::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
     return false;
   }
   msg("\e[1;32mMFC OUTPUT\e[0m Setup MFC decoding buffer size=%u (requested=%u)", fmt.fmt.pix_mp.plane_fmt[0].sizeimage, STREAM_BUFFER_SIZE);
-  
+ 
+  /* 
+  // Find out number of output buffers
+  int num_out_buffers;
+
+  ctrl.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
+  ret = ioctl(m_iDecoderHandle, VIDIOC_G_CTRL, &ctrl);
+  if (ret != 0) {
+    err("\e[1;32mMFC OUTPUT\e[0m Get Control failed");
+    return false;
+  }
+  num_out_buffers = ctrl.value + 1;
+  msg("\e[1;32mMFC OUTPUT\e[0m Setup MFC decoding min num buffers=%d", num_out_buffers);
+  */
+
   // Request mfc output buffers
   m_MFCOutputBuffersCount = CLinuxV4l2::RequestBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, V4L2_MEMORY_MMAP, MFC_OUTPUT_BUFFERS_CNT);
   if (m_MFCOutputBuffersCount == V4L2_ERROR) {
@@ -348,10 +363,11 @@ bool CDVDVideoCodecExynos4::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
 		return false;
 	}
   msg("\e[1;31mFIMC OUTPUT\e[0m S_CROP %dx%d", crop.c.width, crop.c.height);
-/*
+
   int width = m_iDecodedWidth;
   int height = m_iDecodedHeight;
- */
+
+  /*
   RESOLUTION_INFO& res_info = g_settings.m_ResInfo[g_graphicsContext.GetVideoResolution()];
   double ratio = std::min((double)res_info.iScreenWidth / (double)m_iDecodedWidth, (double)res_info.iScreenHeight / (double)m_iDecodedHeight);
   int width = (int)((double)m_iDecodedWidth * ratio);
@@ -360,6 +376,7 @@ bool CDVDVideoCodecExynos4::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
     width--;
   if (height%2)
     height--;
+    */
 
   // Request mfc capture buffers
   m_MFCCaptureBuffersCount = CLinuxV4l2::RequestBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE, V4L2_MEMORY_MMAP, m_MFCCaptureBuffersCount);
@@ -538,7 +555,10 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
   int ret = -1;
   int index = 0;
 
-//  unsigned int dtime = XbmcThreads::SystemClockMillis();
+#if defined(DEBUG_VERBOSE)
+  unsigned int time = XbmcThreads::SystemClockMillis();
+  CLog::Log(LOGDEBUG, "%s::Decode - d:%p; s:%d; dts:%f; pts:%f\n", CLASSNAME, pData, iSize, dts, pts);
+#endif
 
   if(pData) {
     int demuxer_bytes = iSize;
@@ -550,7 +570,7 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
       index++;
 
     if (index >= m_MFCOutputBuffersCount) { //all input buffers are busy, dequeue needed
-      ret = CLinuxV4l2::PollOutput(m_iDecoderHandle, 1000); // POLLIN - Capture, POLLOUT - Output
+      ret = CLinuxV4l2::PollOutput(m_iDecoderHandle, 25); // POLLIN - Capture, POLLOUT - Output
       if (ret == V4L2_ERROR) {
         err("\e[1;32mMFC OUTPUT\e[0m PollInput Error");
         return VC_ERROR;
@@ -596,6 +616,10 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
       err("Packet to big for streambuffer");
   }
 
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::Decode: pushed OUTPUT frame; tm:%d\n", CLASSNAME, XbmcThreads::SystemClockMillis() - time);
+#endif
+
   // Dequeue decoded frame
   index = CLinuxV4l2::DequeueBuffer(m_iDecoderHandle, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE, V4L2_MEMORY_MMAP, V4L2_NUM_MAX_PLANES);
   if (index < 0) {
@@ -604,6 +628,11 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
     err("\e[1;32mMFC CAPTURE\e[0m error dequeue output buffer, got number %d, errno %d", ret, errno);
     return VC_ERROR;
   }
+
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::Decode: dq CAPTURE frame (%d); tm:%d\n", CLASSNAME, index, XbmcThreads::SystemClockMillis() - time);
+#endif
+
   dbg("\e[1;32mMFC CAPTURE\e[0m -> %d", index);
   m_v4l2MFCCaptureBuffers[index].bQueue = false;
 
@@ -622,6 +651,10 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
       m_v4l2FIMCCaptureBuffers[ret].bQueue = true;
       m_iFIMCdequeuedBufferNumber = -1;
     }
+
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::Decode: queue FIMC OUTPUT frame (%d); tm:%d\n", CLASSNAME, index, XbmcThreads::SystemClockMillis() - time);
+#endif
 
     ret = CLinuxV4l2::QueueBuffer(m_iConverterHandle, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, V4L2_MEMORY_USERPTR, m_v4l2MFCCaptureBuffers[index].iNumPlanes, index, &m_v4l2MFCCaptureBuffers[index]);
     if (ret == V4L2_ERROR) {
@@ -644,7 +677,11 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
       return VC_BUFFER; //Queue one more frame for double buffering on FIMC
     }
 
-    ret = CLinuxV4l2::PollOutput(m_iConverterHandle, 1000/25); // 25 fps
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::Decode: queued CAPTURE frame; tm:%d\n", CLASSNAME, XbmcThreads::SystemClockMillis() - time);
+#endif
+
+    ret = CLinuxV4l2::PollOutput(m_iConverterHandle, 10);
     if (ret == V4L2_ERROR) {
       err("\e[1;32mMFC OUTPUT\e[0m PollInput Error");
       return VC_ERROR;
@@ -659,7 +696,7 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
       m_v4l2MFCCaptureBuffers[index].bQueue = false;
     } else if (ret == V4L2_BUSY) { // buffer is still busy
       err("\e[1;31mFIMC OUTPUT\e[0m Buffer is still busy");
-      return VC_ERROR;
+      return VC_BUFFER;
     } else {
       err("\e[1;31mFIMC OUTPUT\e[0m PollOutput error %d, errno %d", ret, errno);
       return VC_ERROR;
@@ -710,6 +747,10 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
 #endif
   }
 
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::Decode: pulled CAPTURE frame; tm:%d\n", CLASSNAME, XbmcThreads::SystemClockMillis() - time);
+#endif
+
   // Pop pts/dts only when picture is finally ready to be showed up or skipped
   if(m_pts.size()) {
     m_videoBuffer.pts = -m_pts.top(); // MFC always return frames in order and assigning them their pts'es from the input
@@ -738,6 +779,10 @@ int CDVDVideoCodecExynos4::Decode(BYTE* pData, int iSize, double dts, double pts
   }
 
 //  msg("Decode time: %d", XbmcThreads::SystemClockMillis() - dtime);
+
+#if defined(DEBUG_VERBOSE)
+  CLog::Log(LOGDEBUG, "%s::Decode: done; tm:%d\n", CLASSNAME, XbmcThreads::SystemClockMillis() - time);
+#endif
   
   return VC_PICTURE; // Picture is finally ready to be processed further
 }
