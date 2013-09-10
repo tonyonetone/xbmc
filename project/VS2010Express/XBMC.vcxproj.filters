@@ -3116,6 +3116,9 @@
     <ClCompile Include="..\..\xbmc\filesystem\VideoDatabaseFile.cpp">
       <Filter>filesystem</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\xbmc\filesystem\LocationsDirectory.cpp">
+      <Filter>filesystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\xbmc\win32\pch.h">
@@ -6122,6 +6125,9 @@
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="..\..\xbmc\filesystem\VideoDatabaseFile.h">
+      <Filter>filesystem</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\xbmc\filesystem\LocationsDirectory.h">
       <Filter>filesystem</Filter>
     </ClInclude>
   </ItemGroup>
