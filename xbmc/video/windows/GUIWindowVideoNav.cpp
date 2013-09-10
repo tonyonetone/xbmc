@@ -260,6 +260,8 @@ CStdString CGUIWindowVideoNav::GetQuickpathName(const CStdString& strPath) const
     return "Playlists";
   else if (path.Equals("sources://video/"))
     return "Sources";
+  else if (path.Equals("locations://video@"))
+    return "Locations";
   else
   {
     CLog::Log(LOGERROR, "  CGUIWindowVideoNav::GetQuickpathName: Unknown parameter (%s)", strPath.c_str());
@@ -407,7 +409,7 @@ bool CGUIWindowVideoNav::GetDirectory(const CStdString &strDirectory, CFileItemL
       CStdString label;
       if (items.GetLabel().empty() && m_rootDir.IsSource(items.GetPath(), CMediaSourceSettings::Get().GetSources("video"), &label)) 
         items.SetLabel(label);
-      if (!items.IsSourcesPath())
+      if (!items.IsSourcesPath() && !items.IsLocationsPath())
         LoadVideoInfo(items);
     }
 
@@ -891,7 +893,7 @@ void CGUIWindowVideoNav::GetContextButtons(int itemNumber, CContextButtons &butt
         }
       }
 
-      if (!m_vecItems->IsVideoDb() && !m_vecItems->IsVirtualDirectoryRoot())
+      if (!m_vecItems->IsVideoDb() && !m_vecItems->IsVirtualDirectoryRoot() && !item->IsReadOnly())
       { // non-video db items, file operations are allowed
         if ((CSettings::Get().GetBool("filelists.allowfiledeletion") &&
             CUtil::SupportsWriteFileOperations(item->GetPath())) ||
@@ -1139,7 +1141,7 @@ CStdString CGUIWindowVideoNav::GetStartFolder(const CStdString &dir)
   else if (dir.Equals("Sources"))
     return "sources://video/";
   else if (dir.Equals("Files"))
-    return "sources://video/";
+    return "locations://video@";
   return CGUIWindowVideoBase::GetStartFolder(dir);
 }
 
