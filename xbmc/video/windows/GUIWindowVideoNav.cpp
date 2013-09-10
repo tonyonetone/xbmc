@@ -520,7 +520,7 @@ void CGUIWindowVideoNav::UpdateButtons()
     URIUtils::Split(m_vecItems->GetPath(), strDummy, strLabel);
   }
   else if (m_vecItems->GetPath().Equals("sources://video/"))
-    strLabel = g_localizeStrings.Get(744);
+    strLabel = g_localizeStrings.Get(752);
   // everything else is from a videodb:// path
   else if (m_vecItems->IsVideoDb())
   {

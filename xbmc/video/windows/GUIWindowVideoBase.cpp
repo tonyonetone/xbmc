@@ -252,7 +252,7 @@ void CGUIWindowVideoBase::UpdateButtons()
   g_windowManager.SendMessage(msg);
 
   // Add labels to the window selection
-  CStdString strItem = g_localizeStrings.Get(744); // Files
+  CStdString strItem = g_localizeStrings.Get(752); // Files
   CGUIMessage msg2(GUI_MSG_LABEL_ADD, GetID(), CONTROL_BTNTYPE);
   msg2.SetLabel(strItem);
   g_windowManager.SendMessage(msg2);

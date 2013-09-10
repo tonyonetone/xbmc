@@ -769,7 +769,7 @@ void CGUIWindowMusicBase::UpdateButtons()
 
   // Add labels to the window selection
   CGUIMessage msg2(GUI_MSG_LABEL_ADD, GetID(), CONTROL_BTNTYPE);
-  msg2.SetLabel(g_localizeStrings.Get(744)); // Files
+  msg2.SetLabel(g_localizeStrings.Get(752)); // Files
   g_windowManager.SendMessage(msg2);
 
   msg2.SetLabel(g_localizeStrings.Get(15100)); // Library
