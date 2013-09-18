@@ -1509,6 +1509,8 @@ bool CUtil::SupportsWriteFileOperations(const CStdString& strPath)
     return SupportsWriteFileOperations(CStackDirectory::GetFirstStackedFile(strPath));
   if (URIUtils::IsMultiPath(strPath))
     return CMultiPathDirectory::SupportsWriteFileOperations(strPath);
+  if (URIUtils::IsLocationsPath(strPath))
+    return true;
 
   return false;
 }

@@ -349,13 +349,16 @@ void CGUIDialogContextMenu::GetContextButtons(const CStdString &type, const CFil
         buttons.Add(CONTEXT_BUTTON_SET_DEFAULT, 13335); // Set as Default
       if (!share->m_ignore && !isAddon)
         buttons.Add(CONTEXT_BUTTON_REMOVE_SOURCE, 522); // Remove Source
-
       buttons.Add(CONTEXT_BUTTON_SET_THUMB, 20019);
+    }
+    else  // locations
+    {
+      if (!item->IsReadOnly())
+        buttons.Add(CONTEXT_BUTTON_REMOVE_LOCATION, 1052); // Remove location
+      buttons.Add(CONTEXT_BUTTON_ADD_SOURCE, 1026); // Add source
     }
     if (!GetDefaultShareNameByType(type).empty())
       buttons.Add(CONTEXT_BUTTON_CLEAR_DEFAULT, 13403); // Clear Default
-
-    buttons.Add(CONTEXT_BUTTON_ADD_SOURCE, 1026); // Add Source
   }
   if (share && LOCK_MODE_EVERYONE != CProfilesManager::Get().GetMasterProfile().getLockMode())
   {
@@ -394,7 +397,10 @@ bool CGUIDialogContextMenu::OnContextButton(const CStdString &type, const CFileI
     else if (!CProfilesManager::Get().GetCurrentProfile().canWriteSources() && !g_passwordManager.IsProfileLockUnlocked())
       return false;
 
-    return CGUIDialogMediaSource::ShowAndAddMediaSource(type);
+    CStdString path = item->GetPath();
+    if (path.compare(0, 3, "add") == 0)
+      path = "";
+    return CGUIDialogMediaSource::ShowAndAddMediaSource(type, path);
   }
 
   // buttons that are available on both sources and autosourced items
@@ -417,6 +423,15 @@ bool CGUIDialogContextMenu::OnContextButton(const CStdString &type, const CFileI
 #endif
     return true;
   default:
+    break;
+  }
+
+  // locations
+  switch (button)
+  {
+  case CONTEXT_BUTTON_ADD_LOCATION:
+    break;
+  case CONTEXT_BUTTON_REMOVE_LOCATION:
     break;
   }
 

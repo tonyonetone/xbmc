@@ -799,11 +799,13 @@ bool CGUIMediaWindow::Update(const CStdString &strDirectory, bool updateFilterPa
   else if (m_vecItems->GetPath().Equals("sources://programs/") ||
            m_vecItems->GetPath().Equals("sources://files/"))
     showLabel = 1026;
+  if (StringUtils::StartsWith(strDirectory, "locations://"))
+    showLabel = 1052;
   if (showLabel && (m_vecItems->Size() == 0 || !m_guiState->DisableAddSourceButtons())) // add 'add source button'
   {
     CStdString strLabel = g_localizeStrings.Get(showLabel);
     CFileItemPtr pItem(new CFileItem(strLabel));
-    pItem->SetPath("add");
+    pItem->SetPath(showLabel == 1052 ? "addlocation" : "addsource");
     pItem->SetIconImage("DefaultAddSource.png");
     pItem->SetLabel(strLabel);
     pItem->SetLabelPreformated(true);
@@ -930,9 +932,14 @@ bool CGUIMediaWindow::OnClick(int iItem)
     GoParentFolder();
     return true;
   }
-  if (pItem->GetPath() == "add" || pItem->GetPath() == "sources://add/") // 'add source button' in empty root
+  if (pItem->GetPath() == "addsource" || pItem->GetPath() == "sources://add/") // 'add source button' in empty root
   {
     OnContextButton(iItem, CONTEXT_BUTTON_ADD_SOURCE);
+    return true;
+  }
+  else if (pItem->GetPath() == "addlocation")
+  {
+    OnContextButton(iItem, CONTEXT_BUTTON_ADD_LOCATION);
     return true;
   }
 
