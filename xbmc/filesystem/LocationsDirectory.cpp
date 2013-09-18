@@ -50,7 +50,7 @@ bool CLocationsDirectory::GetDirectory(const CStdString& strPath, CFileItemList 
   CURL url(strPath);
   m_type = url.GetUserName();
 
-  if (url.GetHostName().IsEmpty())
+  if (url.GetHostName().empty())
   {
     VECSOURCES loclocations;
     g_mediaManager.GetLocalDrives(loclocations);
@@ -98,7 +98,7 @@ bool CLocationsDirectory::GetDirectory(const CStdString& strPath, CFileItemList 
 
       CStdString strIcon;
       // We have the real DVD-ROM, set icon on disktype
-      if (autosources[i].m_iDriveType == CMediaSource::SOURCE_TYPE_DVD && autosources[i].m_strThumbnailImage.IsEmpty())
+      if (autosources[i].m_iDriveType == CMediaSource::SOURCE_TYPE_DVD && autosources[i].m_strThumbnailImage.empty())
       {
         CUtil::GetDVDDriveIcon( autosources[i].strPath, strIcon );
         // CDetectDVDMedia::SetNewDVDShareUrl() caches disc thumb as special://temp/dvdicon.tbn

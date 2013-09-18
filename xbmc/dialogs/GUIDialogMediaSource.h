@@ -35,7 +35,7 @@ public:
   virtual void OnDeinitWindow(int nextWindowID);
   virtual bool OnBack(int actionID);
   virtual void OnWindowLoaded();
-  static bool ShowAndAddMediaSource(const CStdString &type);
+  static bool ShowAndAddMediaSource(const CStdString &type, const CStdString &location="");
   static bool ShowAndEditMediaSource(const CStdString &type, const CMediaSource &share);
   static bool ShowAndEditMediaSource(const CStdString &type, const CStdString &share);
 

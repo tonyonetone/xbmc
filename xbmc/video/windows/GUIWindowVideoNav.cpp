@@ -764,6 +764,11 @@ void CGUIWindowVideoNav::GetContextButtons(int itemNumber, CContextButtons &butt
   {
     // nothing to do here
   }
+  else if (m_vecItems->GetPath().Equals("locations://video@"))
+  {
+    // get the usual shares
+    CGUIDialogContextMenu::GetContextButtons("video", item, buttons);
+  }
   else if (m_vecItems->GetPath().Equals("sources://video/"))
   {
     // get the usual shares
@@ -845,6 +850,7 @@ void CGUIWindowVideoNav::GetContextButtons(int itemNumber, CContextButtons &butt
         if (!item->IsPlugin() && !item->IsScript() && !item->IsLiveTV() && !item->IsAddonsPath() &&
             item->GetPath() != "sources://video/" &&
             item->GetPath() != "special://videoplaylists/" &&
+            !StringUtils::StartsWith(item->GetPath(), "locations://video@") &&
             !StringUtils::StartsWith(item->GetPath(), "newsmartplaylist://") &&
             !StringUtils::StartsWith(item->GetPath(), "newplaylist://") &&
             !StringUtils::StartsWith(item->GetPath(), "newtag://"))
