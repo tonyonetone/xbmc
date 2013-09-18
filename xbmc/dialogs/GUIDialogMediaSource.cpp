@@ -128,12 +128,19 @@ bool CGUIDialogMediaSource::OnMessage(CGUIMessage& message)
 
 // \brief Show CGUIDialogMediaSource dialog and prompt for a new media source.
 // \return True if the media source is added, false otherwise.
-bool CGUIDialogMediaSource::ShowAndAddMediaSource(const CStdString &type)
+bool CGUIDialogMediaSource::ShowAndAddMediaSource(const CStdString &type, const CStdString &location /*=""*/)
 {
   CGUIDialogMediaSource *dialog = (CGUIDialogMediaSource *)g_windowManager.GetWindow(WINDOW_DIALOG_MEDIA_SOURCE);
   if (!dialog) return false;
   dialog->Initialize();
-  dialog->SetShare(CMediaSource());
+  dialog->m_paths->Clear();
+  if (!location.IsEmpty())
+  {
+    CFileItemPtr item(new CFileItem(location, true));
+    dialog->m_paths->Add(item);
+  }
+  else
+    dialog->SetShare(CMediaSource());
   dialog->SetTypeOfMedia(type);
   dialog->DoModal();
   bool confirmed(dialog->IsConfirmed());
