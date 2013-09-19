@@ -14912,3 +14912,7 @@ msgstr ""
 msgctxt "#37019"
 msgid "Enables system keys like printscreen, alt-tab and volume keys when in fullscreen"
 msgstr ""
+
+msgctxt "#37020"
+msgid "Export"
+msgstr ""
