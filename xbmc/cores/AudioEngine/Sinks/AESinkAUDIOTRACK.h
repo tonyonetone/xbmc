@@ -39,6 +39,7 @@ public:
   virtual double       GetDelay        ();
   virtual double       GetCacheTime    ();
   virtual double       GetCacheTotal   ();
+  CAEChannelInfo       GetChannelLayout(AEAudioFormat format);
   virtual unsigned int AddPackets      (uint8_t *data, unsigned int frames, bool hasAudio);
   virtual void         Drain           ();
   virtual bool         HasVolume       ();
@@ -49,6 +50,9 @@ private:
   virtual void Process();
 
   static CAEDeviceInfo m_info;
+  static CAEDeviceInfo m_info_passthrough;
+  bool               m_passthrough;
+  AEAudioFormat      m_initformat;
   AEAudioFormat      m_format;
   double             m_volume;
   bool               m_volume_changed;
