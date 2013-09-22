@@ -487,6 +487,22 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
     if (g_advancedSettings.m_stagefrightConfig.useVC1codec == 0)
       return false;
     mimetype = MEDIA_MIMETYPE_VIDEO_WMV;
+    if ( hints.extrasize )
+    {
+      char* data = (char*)hints.extradata;
+      CLog::Log(LOGDEBUG, "%s::%s - VC1 extradata size%d\n", CLASSNAME, __func__, hints.extrasize);
+      if (hints.extrasize >= 8)
+        CLog::Log(LOGDEBUG, "  %.2x %.2x %.2x %.2x %.2x %.2x %.2x %.2x\n"
+            , data[0]
+            , data[1]
+            , data[2]
+            , data[3]
+            , data[4]
+            , data[5]
+            , data[6]
+            , data[7]
+            );
+    }
     break;
   default:
     return false;
