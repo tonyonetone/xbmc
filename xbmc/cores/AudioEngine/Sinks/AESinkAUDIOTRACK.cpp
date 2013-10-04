@@ -31,6 +31,12 @@
 #include "android/jni/AudioFormat.h"
 #include "android/jni/AudioManager.h"
 #include "android/jni/AudioTrack.h"
+#define ANDROID_MAX_CHANNELS 8
+static enum AEChannel AndroidChannelMap[ANDROID_MAX_CHANNELS + 1] = {
+  AE_CH_FL      , AE_CH_FR      , AE_CH_FC      , AE_CH_LFE     , AE_CH_BL      , AE_CH_BR      , AE_CH_SL      , AE_CH_SR      ,
+  AE_CH_NULL
+};
+
 
 using namespace jni;
 
@@ -106,6 +112,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
     }
   }
   m_format.m_sampleRate = sampleRate;
+  m_format.m_channelLayout = GetChannelLayout(format);
 
   // default to AE_FMT_S16LE,
   // then check if we can support the requested format.
@@ -187,6 +194,35 @@ double CAESinkAUDIOTRACK::GetCacheTotal()
   return m_audiotrackbuffer_sec;
 }
 
+CAEChannelInfo CAESinkAUDIOTRACK::GetChannelLayout(AEAudioFormat format)
+{
+  unsigned int count = 0;
+
+       if (format.m_dataFormat == AE_FMT_AC3 ||
+           format.m_dataFormat == AE_FMT_DTS ||
+           format.m_dataFormat == AE_FMT_EAC3)
+           count = 2;
+  else if (format.m_dataFormat == AE_FMT_TRUEHD ||
+           format.m_dataFormat == AE_FMT_DTSHD)
+           count = 8;
+  else
+  {
+    for (unsigned int c = 0; c < 8; ++c)
+      for (unsigned int i = 0; i < format.m_channelLayout.Count(); ++i)
+        if (format.m_channelLayout[i] == AndroidChannelMap[c])
+        {
+          count = c + 1;
+          break;
+        }
+  }
+
+  CAEChannelInfo info;
+  for (unsigned int i = 0; i < count; ++i)
+    info += AndroidChannelMap[i];
+
+  return info;
+}
+
 // this method is supposed to block until all frames are written to the device buffer
 // when it returns ActiveAESink will take the next buffer out of a queue
 unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t *data, unsigned int frames, bool hasAudio, bool blocking)
@@ -256,8 +292,8 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   m_info.m_deviceName = "AudioTrack";
   m_info.m_displayName = "android";
   m_info.m_displayNameExtra = "audiotrack";
-  m_info.m_channels += AE_CH_FL;
-  m_info.m_channels += AE_CH_FR;
+  for (int j = 0; j < ANDROID_MAX_CHANNELS; ++j)
+      m_info.m_channels += AndroidChannelMap[j];
   m_info.m_sampleRates.push_back(44100);
   m_info.m_sampleRates.push_back(48000);
   m_info.m_dataFormats.push_back(AE_FMT_S16LE);
