@@ -29,6 +29,8 @@ class CJNIAudioFormat
 
     static int ENCODING_PCM_16BIT;
     static int CHANNEL_OUT_STEREO;
+    static int CHANNEL_OUT_5POINT1;
+    static int CHANNEL_OUT_7POINT1;
 };
 
 };
