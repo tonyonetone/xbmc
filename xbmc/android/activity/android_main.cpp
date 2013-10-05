@@ -104,7 +104,7 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
     env->RegisterNatives(cBroadcastReceiver, &mOnReceive, 1);
   }
 
-  jclass cFrameAvailableListener = env->FindClass("org/xbmc/xbmc/XBMCOnFrameAvailableListener");
+  jclass cFrameAvailableListener = env->FindClass("com/semperpax/xbmc/XBMCOnFrameAvailableListener");
   if(cFrameAvailableListener)
   {
     JNINativeMethod mOnFrameAvailable = {
