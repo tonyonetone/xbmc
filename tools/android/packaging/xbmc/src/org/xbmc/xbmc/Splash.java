@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.Properties;
 
 import android.os.AsyncTask;
 import android.os.Build;
@@ -29,6 +30,8 @@ import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.content.res.Resources;
+import android.content.res.Resources.NotFoundException;
 
 public class Splash extends Activity {
 
@@ -263,8 +266,9 @@ public class Splash extends Activity {
     
     mState = State.Checking;
 
+    String curArch = "";
     try {
-      String curArch = Build.CPU_ABI.substring(0,4);
+      curArch = Build.CPU_ABI.substring(0,4);
     } catch (IndexOutOfBoundsException e) {
       mErrorMsg = "Error! Unexpected architecture: " + Build.CPU_ABI;
       Log.e(TAG, mErrorMsg);
@@ -282,7 +286,7 @@ public class Splash extends Activity {
         properties.load(xbmcprop);
 
         if (curArch != properties.getProperty("native_arch")) {
-          mErrorMsg = "This XBMC package is not compatible with your device (" + curArch + "<>"+ properties.getProperty("native_arch") +").\nPlease check the <a href=\"http://wiki.xbmc.org/index.php?title=XBMC_for_Android_specific_FAQ\">XBMC Android wiki</a> for more information.";
+          mErrorMsg = "This XBMC package is not compatible with your device (" + curArch + "<>" + properties.getProperty("native_arch") +").\nPlease check the <a href=\"http://wiki.xbmc.org/index.php?title=XBMC_for_Android_specific_FAQ\">XBMC Android wiki</a> for more information.";
           Log.e(TAG, mErrorMsg);
           mState = State.InError;
         }
@@ -300,7 +304,7 @@ public class Splash extends Activity {
     if (mState != State.InError) {
       if (curArch == "arm") {
         // arm arch: check if the cpu supports neon
-        ret = ParseCpuFeature();
+        boolean ret = ParseCpuFeature();
         if (!ret) {
           mErrorMsg = "Error! Cannot parse CPU features.";
           Log.e(TAG, mErrorMsg);
