@@ -31,6 +31,7 @@
 #include "DVDClock.h"
 #include "utils/log.h"
 #include "utils/fastmemcpy.h"
+#include "utils/StringUtils.h"
 #include "threads/Thread.h"
 #include "threads/Event.h"
 #include "Application.h"
@@ -396,8 +397,8 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   CLog::Log(LOGDEBUG, "%s::Open\n", CLASSNAME);
 #endif
 
-  CLog::Log(LOGDEBUG,
-        "CStageFrightVideo - p:%s, d:%s, b:%s - m:%s, b:%s, m:%s, h:%s",
+  CLog::Log(LOGINFO,
+        "%s::%s Build - p:%s, d:%s, b:%s - m:%s, b:%s, m:%s, h:%s", CLASSNAME, __func__,
         CJNIBuild::PRODUCT.c_str(), CJNIBuild::DEVICE.c_str(), CJNIBuild::BOARD.c_str(),
         CJNIBuild::MANUFACTURER.c_str(), CJNIBuild::BRAND.c_str(), CJNIBuild::MODEL.c_str(), CJNIBuild::HARDWARE.c_str());
 
@@ -414,6 +415,11 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
 
   if (p->m_g_advancedSettings->m_stagefrightConfig.useSwRenderer)
     p->quirks |= QuirkSWRender;
+  //Rockchip quirk
+  if (StringUtils::StartsWith(CJNIBuild::HARDWARE, "rk30"))
+    p->quirks |= QuirkRK30;
+  else if (StringUtils::StartsWith(CJNIBuild::HARDWARE, "rk31"))
+    p->quirks |= QuirkRK31;
 
   p->meta = new MetaData;
   if (p->meta == NULL)
@@ -466,6 +472,7 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   }
 
   p->meta->setCString(kKeyMIMEType, mimetype);
+
   p->meta->setInt32(kKeyWidth, p->width);
   p->meta->setInt32(kKeyHeight, p->height);
 
@@ -571,16 +578,15 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
 
   for (int i=0; i<INBUFCOUNT; ++i)
   {
-    p->inbuf[i] = new MediaBuffer(300000);
+    p->inbuf[i] = new MediaBuffer(30000);
     p->inbuf[i]->setObserver(p);
   }
 
   p->decode_thread = new CStageFrightDecodeThread(p);
   p->decode_thread->Create(true /*autodelete*/);
 
-#if defined(DEBUG_VERBOSE)
-  CLog::Log(LOGDEBUG, ">>> format col:%d, w:%d, h:%d, sw:%d, sh:%d, ctl:%d,%d; cbr:%d,%d\n", p->videoColorFormat, p->width, p->height, p->videoStride, p->videoSliceHeight, cropTop, cropLeft, cropBottom, cropRight);
-#endif
+  CLog::Log(LOGINFO, "%s::%s >>> format col:%d, w:%d, h:%d, sw:%d, sh:%d, ctl:%d,%d; cbr:%d,%d\n", CLASSNAME, __func__, 
+            p->videoColorFormat, p->width, p->height, p->videoStride, p->videoSliceHeight, cropTop, cropLeft, cropBottom, cropRight);
 
   return true;
 }
