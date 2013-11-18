@@ -57,11 +57,12 @@ static bool CanSurfaceRenderWhiteList(const std::string &name)
     static const char *cansurfacerender_decoders[] = {
       "OMX.Nvidia",
       "OMX.rk",
+      "OMX.qcom",
       NULL
     };
     for (const char **ptr = cansurfacerender_decoders; *ptr; ptr++)
     {
-      if (!strncmp(*ptr, name.c_str(), strlen(*ptr)))
+      if (!strnicmp(*ptr, name.c_str(), strlen(*ptr)))
         return true;
     }
     return false;
