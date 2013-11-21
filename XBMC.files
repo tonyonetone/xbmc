@@ -9544,3 +9544,5 @@ xbmc/cores/dvdplayer/DVDCodecs/Video/libstagefrightICS/StageFrightVideo.cpp
 xbmc/cores/dvdplayer/DVDCodecs/Video/libstagefrightICS/StageFrightInterface.cpp
 xbmc/ApplicationPlayer.h
 xbmc/ApplicationPlayer.cpp
+xbmc/interfaces/json-rpc/SettingsOperations.h
+xbmc/interfaces/json-rpc/SettingsOperations.cpp
