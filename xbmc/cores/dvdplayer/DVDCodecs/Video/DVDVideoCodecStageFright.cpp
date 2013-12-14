@@ -1,6 +1,6 @@
 /*
  *      Copyright (C) 2013 Team XBMC
- *      http://xbmc.org
+ *      http://www.xbmc.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,8 +32,7 @@
 #include "DVDStreamInfo.h"
 #include "DVDVideoCodecStageFright.h"
 #include "utils/log.h"
-#include "Application.h"
-#include "ApplicationMessenger.h"
+#include "android/activity/XBMCApp.h"
 #include "windowing/WindowingFactory.h"
 #include "settings/AdvancedSettings.h"
 
@@ -62,13 +61,13 @@ CDVDVideoCodecStageFright::~CDVDVideoCodecStageFright()
 }
 
 bool CDVDVideoCodecStageFright::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
-{
+{  
   // we always qualify even if DVDFactoryCodec does this too.
   if (CSettings::Get().GetBool("videoplayer.usestagefright") && !hints.software)
   {
     m_convert_bitstream = false;
     CLog::Log(LOGDEBUG,
-          "%s::%s - trying to open, codec(%d), profile(%d), level(%d)",
+          "%s::%s - trying to open, codec(%d), profile(%d), level(%d)", 
           CLASSNAME, __func__, hints.codec, hints.profile, hints.level);
 
     switch (hints.codec)
@@ -110,12 +109,12 @@ bool CDVDVideoCodecStageFright::Open(CDVDStreamInfo &hints, CDVDCodecOptions &op
       return false;
     m_stf_dll->EnableDelayedUnload(false);
 
-    m_stf_handle = m_stf_dll->create_stf(&g_application, &CApplicationMessenger::Get(), &g_Windowing, &g_advancedSettings);
+    m_stf_handle = m_stf_dll->create_stf(NULL, &g_Windowing, &g_advancedSettings);
 
     if (!m_stf_dll->stf_Open(m_stf_handle, hints))
     {
       CLog::Log(LOGERROR,
-          "%s::%s - failed to open, codec(%d), profile(%d), level(%d)",
+          "%s::%s - failed to open, codec(%d), profile(%d), level(%d)", 
           CLASSNAME, __func__, hints.codec, hints.profile, hints.level);
       Dispose();
       return false;
@@ -137,7 +136,7 @@ void CDVDVideoCodecStageFright::Dispose()
   }
   if (m_stf_handle)
   {
-    m_stf_dll->stf_Dispose(m_stf_handle);
+    m_stf_dll->stf_Close(m_stf_handle);
     m_stf_dll->destroy_stf(m_stf_handle);
     m_stf_handle = NULL;
   }
@@ -164,7 +163,7 @@ int CDVDVideoCodecStageFright::Decode(uint8_t *pData, int iSize, double dts, dou
     {
       demuxer_content = m_converter->GetConvertBuffer();
       demuxer_bytes = m_converter->GetConvertSize();
-    }
+    } 
     else
       CLog::Log(LOGERROR,"%s::%s - bitstream_convert error", CLASSNAME, __func__);
   }
@@ -208,14 +207,14 @@ double CDVDVideoCodecStageFright::GetTimeSize(void)
   return 0;
 }
 
-void CDVDVideoCodecStageFright::LockBuffer(EGLImageKHR eglimg)
+void CDVDVideoCodecStageFright::LockBuffer(CDVDVideoCodecStageFrightBuffer* buf)
 {
-  m_stf_dll->stf_LockBuffer(m_stf_handle, eglimg);
+  m_stf_dll->stf_LockBuffer(m_stf_handle, buf);
 }
 
-void CDVDVideoCodecStageFright::ReleaseBuffer(EGLImageKHR eglimg)
+void CDVDVideoCodecStageFright::ReleaseBuffer(CDVDVideoCodecStageFrightBuffer* buf)
 {
-  m_stf_dll->stf_ReleaseBuffer(m_stf_handle, eglimg);
+  m_stf_dll->stf_ReleaseBuffer(m_stf_handle, buf);
 }
 
 #endif
