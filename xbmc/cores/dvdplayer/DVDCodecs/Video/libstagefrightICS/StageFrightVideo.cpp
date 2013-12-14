@@ -24,6 +24,7 @@
 #include "system.h"
 #include "system_gl.h"
 
+#include "DVDVideoCodecStageFright.h"
 #include "StageFrightVideo.h"
 #include "StageFrightVideoPrivate.h"
 
@@ -653,8 +654,8 @@ bool CStageFrightVideo::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
  #if defined(DEBUG_VERBOSE)
   unsigned int time = XbmcThreads::SystemClockMillis();
 #endif
-  if (pDvdVideoPicture->format == RENDER_FMT_EGLIMG && pDvdVideoPicture->eglimg != EGL_NO_IMAGE_KHR)
-    ReleaseBuffer(pDvdVideoPicture->eglimg);
+  if (pDvdVideoPicture->format == RENDER_FMT_EGLIMG)
+    ReleaseBuffer(pDvdVideoPicture->stfbuf);
 
   if (p->prev_frame) {
     if (p->prev_frame->medbuf)
@@ -701,7 +702,7 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->iDisplayWidth = frame->width;
   pDvdVideoPicture->iDisplayHeight = frame->height;
   pDvdVideoPicture->iFlags  = DVP_FLAG_ALLOCATED;
-  pDvdVideoPicture->eglimg = EGL_NO_IMAGE_KHR;
+  pDvdVideoPicture->stfbuf = NULL;
 
   if (status != OK)
   {
@@ -718,13 +719,18 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
 
   if (pDvdVideoPicture->format == RENDER_FMT_EGLIMG)
   {
-    pDvdVideoPicture->eglimg = frame->eglimg;
-    if (pDvdVideoPicture->eglimg == EGL_NO_IMAGE_KHR)
+    if (frame->eglimg != EGL_NO_IMAGE_KHR)
+    {
+      CDVDVideoCodecStageFrightBuffer* stfbuf = new CDVDVideoCodecStageFrightBuffer;
+      stfbuf->format = RENDER_FMT_EGLIMG;
+      stfbuf->subformat = 0;
+      stfbuf->buffer = (void*)frame->eglimg;
+      pDvdVideoPicture->stfbuf = stfbuf;
+      LockBuffer(stfbuf);
+    } else
       pDvdVideoPicture->iFlags |= DVP_FLAG_DROPPED;
-    else
-      LockBuffer(pDvdVideoPicture->eglimg);
-  #if defined(DEBUG_VERBOSE)
-    CLog::Log(LOGDEBUG, ">>> pic dts:%f, pts:%llu, img:%p, tm:%d\n", pDvdVideoPicture->dts, frame->pts, pDvdVideoPicture->eglimg, XbmcThreads::SystemClockMillis() - time);
+#if defined(DEBUG_VERBOSE)
+    CLog::Log(LOGDEBUG, ">>> pic dts:%f, pts:%llu, img:%p, tm:%d\n", pDvdVideoPicture->dts, frame->pts, pDvdVideoPicture->stfbuf, XbmcThreads::SystemClockMillis() - time);
   #endif
   }
   else if (pDvdVideoPicture->format == RENDER_FMT_YUV420P)
@@ -911,6 +917,26 @@ void CStageFrightVideo::SetSpeed(int iSpeed)
 }
 
 /***************/
+void CStageFrightVideo::LockBuffer(CDVDVideoCodecStageFrightBuffer *buf)
+{
+  if (buf)
+  {
+    if (buf->format == RENDER_FMT_EGLIMG)
+      LockBuffer((EGLImageKHR) buf->buffer);
+  }
+}
+
+void CStageFrightVideo::ReleaseBuffer(CDVDVideoCodecStageFrightBuffer *buf)
+{
+  if (buf)
+  {
+    bool ret = false;
+    if (buf->format == RENDER_FMT_EGLIMG)
+      ret = ReleaseBuffer((EGLImageKHR) buf->buffer);
+    if (ret)
+      delete buf;
+  }
+}
 
 void CStageFrightVideo::LockBuffer(EGLImageKHR eglimg)
 {
@@ -933,7 +959,7 @@ void CStageFrightVideo::LockBuffer(EGLImageKHR eglimg)
   p->free_mutex.unlock();
 }
 
-void CStageFrightVideo::ReleaseBuffer(EGLImageKHR eglimg)
+bool CStageFrightVideo::ReleaseBuffer(EGLImageKHR eglimg)
 {
 #if defined(DEBUG_VERBOSE)
   unsigned int time = XbmcThreads::SystemClockMillis();
@@ -944,13 +970,13 @@ void CStageFrightVideo::ReleaseBuffer(EGLImageKHR eglimg)
   {
     CLog::Log(LOGDEBUG, "STF: ReleaseBuffer: Unknown img(%p)", eglimg);
     p->free_mutex.unlock();
-    return;
+    return true;
   }
   if (slot->use_cnt == 0)
   {
     CLog::Log(LOGDEBUG, "STF: ReleaseBuffer: already unlocked img(%p)", eglimg);
     p->free_mutex.unlock();
-    return;
+    return true;
   }
   slot->use_cnt--;
 
@@ -958,4 +984,5 @@ void CStageFrightVideo::ReleaseBuffer(EGLImageKHR eglimg)
   CLog::Log(LOGDEBUG, "STF: ReleaseBuffer: Unlocking %p: cnt:%d tm:%d\n", eglimg, slot->use_cnt, XbmcThreads::SystemClockMillis() - time);
 #endif
   p->free_mutex.unlock();
+  return (slot->use_cnt == 0);
 }
