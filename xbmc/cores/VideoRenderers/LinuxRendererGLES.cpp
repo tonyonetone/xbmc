@@ -269,7 +269,7 @@ int CLinuxRendererGLES::GetImage(YV12Image *image, int source, bool readonly)
     return source;
   }
 #ifdef HAS_LIBSTAGEFRIGHT
-  if ( m_renderMethod & RENDER_EGLIMG || m_renderMethod & RENDER_STFBUF )
+  if ( m_renderMethod & RENDER_EGLIMG )
   {
     return source;
   }
@@ -713,7 +713,6 @@ void CLinuxRendererGLES::LoadShaders(int field)
       else if (m_format == RENDER_FMT_STFBUF)
       {
         CLog::Log(LOGNOTICE, "GL: Using STF buffer render method");
-        m_renderMethod = RENDER_STFBUF;
       }
       else if (m_format == RENDER_FMT_MEDIACODEC)
       {
@@ -923,7 +922,7 @@ void CLinuxRendererGLES::Render(DWORD flags, int index)
 
   (this->*m_textureUpload)(index);
 
-  if (m_renderMethod & RENDER_GLSL || m_renderMethod & RENDER_STFBUF)
+  if (m_renderMethod & RENDER_GLSL)
   {
     UpdateVideoFilter();
     switch(m_renderQuality)
@@ -2056,7 +2055,7 @@ void CLinuxRendererGLES::UploadStfBufTexture(int source)
   if (!stfbuf || !(im->flags & IMAGE_FLAG_READY))
     return;
 
-  if (!stfbuf->rendered)
+  //if (!stfbuf->rendered)
   {
     bool deinterlacing;
     if (m_currentField == FIELD_FULL)
