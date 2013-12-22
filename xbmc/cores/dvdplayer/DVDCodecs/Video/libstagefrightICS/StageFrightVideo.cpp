@@ -48,6 +48,8 @@
 
 #include <new>
 
+#define RINT(x) ((x) >= 0 ? ((int)((x) + 0.5)) : ((int)((x) - 0.5)))
+
 #define OMX_QCOM_COLOR_FormatYVU420SemiPlanar 0x7FA30C00
 #define OMX_TI_COLOR_FormatYUV420PackedSemiPlanar 0x7F000100
 
@@ -412,6 +414,7 @@ bool CStageFrightVideo::Open(CDVDStreamInfo &hints)
   }
   p->width     = hints.width;
   p->height    = hints.height;
+  p->aspect_ratio = hints.aspect;
 
   if (p->m_g_advancedSettings->m_stagefrightConfig.useSwRenderer)
     p->quirks |= QuirkSWRender;
@@ -702,10 +705,23 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->format = frame->format;
   pDvdVideoPicture->dts = DVD_NOPTS_VALUE;
   pDvdVideoPicture->pts = frame->pts;
-  pDvdVideoPicture->iWidth  = frame->width;
-  pDvdVideoPicture->iHeight = frame->height;
-  pDvdVideoPicture->iDisplayWidth = frame->width;
-  pDvdVideoPicture->iDisplayHeight = frame->height;
+  pDvdVideoPicture->iWidth  = p->width;
+  pDvdVideoPicture->iHeight = p->height;
+  if (p->aspect_ratio == 1.0)
+  {
+    pDvdVideoPicture->iDisplayWidth = p->width;
+    pDvdVideoPicture->iDisplayHeight = p->height;
+  }
+  else
+  {
+    pDvdVideoPicture->iDisplayHeight = pDvdVideoPicture->iHeight;
+    pDvdVideoPicture->iDisplayWidth  = ((int)RINT(pDvdVideoPicture->iHeight * p->aspect_ratio)) & -3;
+    if (pDvdVideoPicture->iDisplayWidth > pDvdVideoPicture->iWidth)
+    {
+      pDvdVideoPicture->iDisplayWidth  = pDvdVideoPicture->iWidth;
+      pDvdVideoPicture->iDisplayHeight = ((int)RINT(pDvdVideoPicture->iWidth / p->aspect_ratio)) & -3;
+    }
+  }
   pDvdVideoPicture->iFlags  = DVP_FLAG_ALLOCATED;
   pDvdVideoPicture->eglimg = EGL_NO_IMAGE_KHR;
 
