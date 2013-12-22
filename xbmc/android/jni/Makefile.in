@@ -49,6 +49,8 @@ SRCS      += SurfaceTexture.cpp
 SRCS      += View.cpp
 SRCS      += Window.cpp
 SRCS      += Build.cpp
+SRCS      += WindowManager.cpp
+SRCS      += Display.cpp
 
 LIB        = jni.a
 

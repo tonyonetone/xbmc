@@ -9546,3 +9546,8 @@ xbmc/ApplicationPlayer.h
 xbmc/ApplicationPlayer.cpp
 xbmc/interfaces/json-rpc/SettingsOperations.h
 xbmc/interfaces/json-rpc/SettingsOperations.cpp
+xbmc/android/jni/WindowManager.h
+xbmc/android/jni/Display.h
+xbmc/android/jni/WindowManager.cpp
+xbmc/android/jni/Display.cpp
+xbmc/android/jni/Makefile.in

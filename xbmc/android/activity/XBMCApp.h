@@ -102,6 +102,8 @@ public:
   static int GetSystemVolume();
   static void SetSystemVolume(int val);
 
+  static float GetRefreshRate();
+
   static int GetDPI();
 protected:
   // limit who can access Volume

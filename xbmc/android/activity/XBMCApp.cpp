@@ -70,6 +70,8 @@
 #include "android/jni/Cursor.h"
 #include "android/jni/ContentResolver.h"
 #include "android/jni/MediaStore.h"
+#include "android/jni/WindowManager.h"
+#include "android/jni/Display.h"
 
 #define GIGABYTES       1073741824
 
@@ -564,6 +566,27 @@ void CXBMCApp::SetSystemVolume(JNIEnv *env, float percent)
     audioManager.setStreamVolume(maxVolume);
   else
     android_printf("CXBMCApp::SetSystemVolume: Could not get Audio Manager");
+}
+
+float CXBMCApp::GetRefreshRate()
+{
+  CJNIWindowManager windowManager(getSystemService("window"));
+  if (windowManager)
+  {
+    CJNIDisplay display = windowManager.getDefaultDisplay();
+    if (display)
+      return display.getRefreshRate();
+    else
+    {
+      android_printf("CXBMCApp::GetRefreshRate: Could not get default display");
+      return 0;
+    }
+  }
+  else
+  {
+    android_printf("CXBMCApp::GetRefreshRate: Could not get Window Manager");
+    return 0;
+  }
 }
 
 void CXBMCApp::onReceive(CJNIIntent intent)

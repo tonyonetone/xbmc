@@ -125,6 +125,11 @@ bool CEGLNativeTypeAndroid::GetNativeResolution(RESOLUTION_INFO *res) const
   res->iHeight= ANativeWindow_getHeight(*nativeWindow);
   ANativeWindow_release(*nativeWindow);
 
+  /*
+  res->fRefreshRate = CXBMCApp::GetRefreshRate();
+  if (res->fRefreshRate < 1)
+    res->fRefreshRate = 60;
+    */
   res->fRefreshRate = 60;
   res->dwFlags= D3DPRESENTFLAG_PROGRESSIVE;
   res->iScreen       = 0;
