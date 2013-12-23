@@ -35,7 +35,11 @@ void CJNIAudioFormat::PopulateStaticFields()
     jhclass c = find_class("android/media/AudioFormat");
     CJNIAudioFormat::ENCODING_PCM_16BIT = get_static_field<int>(c, "ENCODING_PCM_16BIT");
     if (sdk >= 5)
+    {
       CJNIAudioFormat::CHANNEL_OUT_STEREO = get_static_field<int>(c, "CHANNEL_OUT_STEREO");
+      CJNIAudioFormat::CHANNEL_OUT_5POINT1 = get_static_field<int>(c, "CHANNEL_OUT_5POINT1");
+      CJNIAudioFormat::CHANNEL_OUT_7POINT1 = get_static_field<int>(c, "CHANNEL_OUT_7POINT1");
+    }
   }
 }
 
