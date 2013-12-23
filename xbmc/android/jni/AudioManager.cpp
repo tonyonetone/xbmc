@@ -29,6 +29,7 @@ void CJNIAudioManager::PopulateStaticFields()
 {
   jhclass clazz = find_class("android/media/AudioManager");
   STREAM_MUSIC  = (get_static_field<int>(clazz, "STREAM_MUSIC"));
+  STREAM_VOICE_CALL  = (get_static_field<int>(clazz, "STREAM_VOICE_CALL"));
 }
 
 int CJNIAudioManager::getStreamMaxVolume()
