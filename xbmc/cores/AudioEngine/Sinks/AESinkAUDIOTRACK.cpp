@@ -137,17 +137,29 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
                               (CAEUtil::DataFormatToBits(AE_FMT_S16LE) / 8);
   m_min_frames              = min_buffer_size / m_sink_frameSize;
   m_audiotrackbuffer_sec    = (double)m_min_frames / (double)m_format.m_sampleRate;
-  if (!m_passthrough)
-    m_at_jni                  = new CJNIAudioTrack( CJNIAudioManager::STREAM_MUSIC,
-                                                  m_format.m_sampleRate,
-                                                  CJNIAudioFormat::CHANNEL_OUT_STEREO,
-                                                  CJNIAudioFormat::ENCODING_PCM_16BIT,
-                                                  min_buffer_size,
-                                                  CJNIAudioTrack::MODE_STREAM);
+
+  int channel_out           = CJNIAudioFormat::CHANNEL_OUT_STEREO;
+  int stream                = CJNIAudioManager::STREAM_MUSIC;
+  if (m_passthrough)
+    stream                  = CJNIAudioManager::STREAM_VOICE_CALL;
   else
-    m_at_jni                  = new CJNIAudioTrack( CJNIAudioManager::STREAM_VOICE_CALL,
+  {
+    switch  (m_format.m_channelLayout.Count())
+    {
+      case 8:
+        channel_out  = CJNIAudioFormat::CHANNEL_OUT_7POINT1;
+        break;
+      case 6:
+        channel_out  = CJNIAudioFormat::CHANNEL_OUT_5POINT1;
+        break;
+      default:
+        break;
+    }
+  }
+
+  m_at_jni                  = new CJNIAudioTrack( stream,
                                                   m_format.m_sampleRate,
-                                                  CJNIAudioFormat::CHANNEL_OUT_STEREO,
+                                                  channel_out,
                                                   CJNIAudioFormat::ENCODING_PCM_16BIT,
                                                   min_buffer_size,
                                                   CJNIAudioTrack::MODE_STREAM);
@@ -174,7 +186,7 @@ void CAESinkAUDIOTRACK::Deinitialize()
   m_at_jni->stop();
   m_at_jni->flush();
   m_at_jni->release();
-  
+
   m_frames_written = 0;
 
   delete m_at_jni;
