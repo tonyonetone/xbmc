@@ -27,6 +27,7 @@
 #include "utils/AMLUtils.h"
 #endif
 #include "utils/log.h"
+#include "utils/StringUtils.h"
 
 #include "android/jni/AudioFormat.h"
 #include "android/jni/AudioManager.h"
@@ -68,6 +69,8 @@ static void pa_sconv_s16le_from_f32ne_neon(unsigned n, const float32_t *a, int16
 #endif
 
 CAEDeviceInfo CAESinkAUDIOTRACK::m_info;
+CAEDeviceInfo CAESinkAUDIOTRACK::m_infoMC;
+CAEDeviceInfo CAESinkAUDIOTRACK::m_infoPT;
 ////////////////////////////////////////////////////////////////////////////////////////////
 CAESinkAUDIOTRACK::CAESinkAUDIOTRACK()
 {
@@ -90,10 +93,22 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   m_lastFormat  = format;
   m_format      = format;
 
-  if (AE_IS_RAW(m_format.m_dataFormat))
+  CAEDeviceInfo info;
+  if (StringUtils::EqualsNoCase(device, "AudioTrackPT"))
+  {
+    info = m_infoPT;
     m_passthrough = true;
-  else
+  }
+  else if (StringUtils::EqualsNoCase(device, "AudioTrackMC"))
+  {
+    info = m_infoMC;
     m_passthrough = false;
+  }
+  else
+  {
+    info = m_info;
+    m_passthrough = false;
+  }
 
 #if defined(HAS_LIBAMCODEC)
   if (CSettings::Get().GetBool("videoplayer.useamcodec"))
@@ -103,9 +118,9 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   // default to 44100, all android devices support it.
   // then check if we can support the requested rate.
   unsigned int sampleRate = 44100;
-  for (size_t i = 0; i < m_info.m_sampleRates.size(); i++)
+  for (size_t i = 0; i < info.m_sampleRates.size(); i++)
   {
-    if (m_format.m_sampleRate == m_info.m_sampleRates[i])
+    if (m_format.m_sampleRate == info.m_sampleRates[i])
     {
       sampleRate = m_format.m_sampleRate;
       break;
@@ -117,26 +132,14 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   // default to AE_FMT_S16LE,
   // then check if we can support the requested format.
   AEDataFormat dataFormat = AE_FMT_S16LE;
-  for (size_t i = 0; i < m_info.m_dataFormats.size(); i++)
+  for (size_t i = 0; i < info.m_dataFormats.size(); i++)
   {
-    if (m_format.m_dataFormat == m_info.m_dataFormats[i])
+    if (m_format.m_dataFormat == info.m_dataFormats[i])
     {
       dataFormat = m_format.m_dataFormat;
       break;
     }
   }
-
-  m_format.m_dataFormat     = dataFormat;
-  m_format.m_channelLayout  = m_info.m_channels;
-  m_format.m_frameSize      = m_format.m_channelLayout.Count() *
-                              (CAEUtil::DataFormatToBits(m_format.m_dataFormat) / 8);
-  int min_buffer_size       = CJNIAudioTrack::getMinBufferSize( m_format.m_sampleRate,
-                                                                CJNIAudioFormat::CHANNEL_OUT_STEREO,
-                                                                CJNIAudioFormat::ENCODING_PCM_16BIT);
-  m_sink_frameSize          = m_format.m_channelLayout.Count() *
-                              (CAEUtil::DataFormatToBits(AE_FMT_S16LE) / 8);
-  m_min_frames              = min_buffer_size / m_sink_frameSize;
-  m_audiotrackbuffer_sec    = (double)m_min_frames / (double)m_format.m_sampleRate;
 
   int channel_out           = CJNIAudioFormat::CHANNEL_OUT_STEREO;
   int stream                = CJNIAudioManager::STREAM_MUSIC;
@@ -156,6 +159,17 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
         break;
     }
   }
+
+  m_format.m_dataFormat     = dataFormat;
+  m_format.m_frameSize      = m_format.m_channelLayout.Count() *
+                              (CAEUtil::DataFormatToBits(m_format.m_dataFormat) / 8);
+  int min_buffer_size       = CJNIAudioTrack::getMinBufferSize( m_format.m_sampleRate,
+                                                                channel_out,
+                                                                CJNIAudioFormat::ENCODING_PCM_16BIT);
+  m_sink_frameSize          = m_format.m_channelLayout.Count() *
+                              (CAEUtil::DataFormatToBits(AE_FMT_S16LE) / 8);
+  m_min_frames              = min_buffer_size / m_sink_frameSize;
+  m_audiotrackbuffer_sec    = (double)m_min_frames / (double)m_format.m_sampleRate;
 
   m_at_jni                  = new CJNIAudioTrack( stream,
                                                   m_format.m_sampleRate,
@@ -307,7 +321,7 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   m_info.m_deviceName = "AudioTrack";
   m_info.m_displayName = "android";
   m_info.m_displayNameExtra = "audiotrack";
-  for (int j = 0; j < ANDROID_MAX_CHANNELS; ++j)
+  for (int j = 0; j < 2; ++j)
       m_info.m_channels += AndroidChannelMap[j];
   m_info.m_sampleRates.push_back(44100);
   m_info.m_sampleRates.push_back(48000);
@@ -318,5 +332,37 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
 #endif
 
   list.push_back(m_info);
+
+  m_infoMC.m_channels.Reset();
+  m_infoMC.m_dataFormats.clear();
+  m_infoMC.m_sampleRates.clear();
+
+  m_infoMC.m_deviceType = AE_DEVTYPE_PCM;
+  m_infoMC.m_deviceName = "AudioTrackMC";
+  m_infoMC.m_displayName = "android(MC)";
+  m_infoMC.m_displayNameExtra = "audiotrack";
+  for (int j = 0; j < ANDROID_MAX_CHANNELS; ++j)
+      m_infoMC.m_channels += AndroidChannelMap[j];
+  m_infoMC.m_sampleRates.push_back(44100);
+  m_infoMC.m_sampleRates.push_back(48000);
+  m_infoMC.m_dataFormats.push_back(AE_FMT_S16LE);
+
+  list.push_back(m_infoMC);
+
+  m_infoPT.m_channels.Reset();
+  m_infoPT.m_dataFormats.clear();
+  m_infoPT.m_sampleRates.clear();
+
+  m_infoPT.m_deviceType = AE_DEVTYPE_IEC958;
+  m_infoPT.m_deviceName = "AudioTrackPT";
+  m_infoPT.m_displayName = "android(PT)";
+  m_infoPT.m_displayNameExtra = "audiotrack";
+  for (int j = 0; j < 2; ++j)
+      m_infoPT.m_channels += AndroidChannelMap[j];
+  m_infoPT.m_sampleRates.push_back(44100);
+  m_infoPT.m_sampleRates.push_back(48000);
+  m_infoPT.m_dataFormats.push_back(AE_FMT_S16LE);
+
+  list.push_back(m_infoPT);
 }
 
