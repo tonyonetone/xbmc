@@ -55,6 +55,8 @@ private:
   uint32_t              m_frames_written;
 
   static CAEDeviceInfo m_info;
+  static CAEDeviceInfo m_infoMC;
+  static CAEDeviceInfo m_infoPT;
   AEAudioFormat      m_format;
   AEAudioFormat      m_lastFormat;
   double             m_volume;

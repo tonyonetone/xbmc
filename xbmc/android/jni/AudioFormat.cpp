@@ -26,6 +26,8 @@ using namespace jni;
 
 int CJNIAudioFormat::ENCODING_PCM_16BIT = 0x00000002;
 int CJNIAudioFormat::CHANNEL_OUT_STEREO = 0x0000000c;
+int CJNIAudioFormat::CHANNEL_OUT_5POINT1 = 0x000000fc;
+int CJNIAudioFormat::CHANNEL_OUT_7POINT1 = 0x000003fc;
 
 void CJNIAudioFormat::PopulateStaticFields()
 {
