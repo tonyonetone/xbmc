@@ -120,7 +120,6 @@ struct YUVBuffer : SVideoBuffer
 private:
   unsigned int     m_width;
   unsigned int     m_height;
-  ERenderFormat    m_format;
   unsigned int     m_activeplanes;
 };
 
