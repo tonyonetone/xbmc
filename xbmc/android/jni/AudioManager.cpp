@@ -24,6 +24,7 @@
 using namespace jni;
 
 int CJNIAudioManager::STREAM_MUSIC(3);
+int CJNIAudioManager::STREAM_VOICE_CALL(0);
 
 void CJNIAudioManager::PopulateStaticFields()
 {
