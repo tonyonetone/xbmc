@@ -707,7 +707,7 @@ bool CStageFrightVideo::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->pts = frame->pts;
   pDvdVideoPicture->iWidth  = p->width;
   pDvdVideoPicture->iHeight = p->height;
-  if (p->aspect_ratio == 1.0)
+  if (!p->aspect_ratio || p->aspect_ratio == 1.0)
   {
     pDvdVideoPicture->iDisplayWidth = p->width;
     pDvdVideoPicture->iDisplayHeight = p->height;
