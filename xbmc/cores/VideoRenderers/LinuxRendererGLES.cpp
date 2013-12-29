@@ -2043,6 +2043,7 @@ void CLinuxRendererGLES::UploadNV12Texture(int source)
 void CLinuxRendererGLES::UploadStfBufTexture(int source)
 {
   YUVBUFFER& buf    =  m_buffers[source];
+  CDVDVideoCodecStageFright* stf               = buf.stf;
   CDVDVideoCodecStageFrightBuffer* stfbuf      = buf.stfbuf;
   YV12Image* im     = &buf.image;
   YUVFIELDS& fields =  buf.fields;
@@ -2052,10 +2053,10 @@ void CLinuxRendererGLES::UploadStfBufTexture(int source)
   CLog::Log(LOGDEBUG, "UploadRkVpuTexture %d: buf:%p\n", source, stfbuf);
 #endif
 
-  if (!stfbuf || !(im->flags & IMAGE_FLAG_READY))
+  if (!stf || !stfbuf || !(im->flags & IMAGE_FLAG_READY))
     return;
 
-  //if (!stfbuf->rendered)
+  if (stf->IsValid())
   {
     bool deinterlacing;
     if (m_currentField == FIELD_FULL)
@@ -2402,7 +2403,10 @@ void CLinuxRendererGLES::UploadEGLIMGTexture(int index)
   unsigned int time = XbmcThreads::SystemClockMillis();
 #endif
 
-  if(m_buffers[index].stfbuf->buffer != EGL_NO_IMAGE_KHR)
+  YUVBUFFER& buf    =  m_buffers[index];
+  CDVDVideoCodecStageFright* stf               = buf.stf;
+  CDVDVideoCodecStageFrightBuffer* stfbuf      = buf.stfbuf;
+  if(stf && stf->IsValid() && stfbuf && stfbuf->buffer != EGL_NO_IMAGE_KHR)
   {
     YUVPLANE &plane = m_buffers[index].fields[0][0];
 

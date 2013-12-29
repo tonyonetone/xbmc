@@ -70,8 +70,9 @@ public:
   virtual int GetDataSize(void);
   virtual double GetTimeSize(void);
 
-  virtual void LockBuffer(CDVDVideoCodecStageFrightBuffer* buf);
-  virtual void ReleaseBuffer(CDVDVideoCodecStageFrightBuffer* buf);
+  static bool IsValid();
+  static void LockBuffer(CDVDVideoCodecStageFrightBuffer* buf);
+  static void ReleaseBuffer(CDVDVideoCodecStageFrightBuffer* buf);
 
 protected:
   const char        *m_pFormatName;
@@ -79,7 +80,8 @@ protected:
   CBitstreamConverter   *m_converter;
   
   static DllLibStageFrightCodec*     m_stf_dll;
-  void *            m_stf_handle;  
+  static bool       m_isvalid;
+  static void *     m_stf_handle;
 };
 
 #endif
