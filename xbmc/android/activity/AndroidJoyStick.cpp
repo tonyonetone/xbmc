@@ -139,7 +139,7 @@ static void SetupJoySticks(APP_InputDeviceAxes *axes, int device)
 #endif
 
     // ignore anything we do not understand
-    if (source != AINPUT_SOURCE_JOYSTICK)
+    if (source != XBMC_AINPUT_SOURCE_JOYSTICK)
       continue;
 
     // match axis/source to our handlers
@@ -147,27 +147,27 @@ static void SetupJoySticks(APP_InputDeviceAxes *axes, int device)
     switch(axis)
     {
       // Left joystick
-      case AMOTION_EVENT_AXIS_X:
+      case XBMC_AMOTION_EVENT_AXIS_X:
         SetupAxis(input_device, axes->x_axis,  axis, source);
         break;
       break;
-      case AMOTION_EVENT_AXIS_Y:
+      case XBMC_AMOTION_EVENT_AXIS_Y:
         SetupAxis(input_device, axes->y_axis,  axis, source);
         break;
 
       // Right joystick
-      case AMOTION_EVENT_AXIS_Z:
+      case XBMC_AMOTION_EVENT_AXIS_Z:
         SetupAxis(input_device, axes->z_axis,  axis, source);
         break;
-      case AMOTION_EVENT_AXIS_RZ:
+      case XBMC_AMOTION_EVENT_AXIS_RZ:
         SetupAxis(input_device, axes->rz_axis, axis, source);
         break;
 
       // D-Pad
-      case AMOTION_EVENT_AXIS_HAT_X:
+      case XBMC_AMOTION_EVENT_AXIS_HAT_X:
         SetupAxis(input_device, axes->x_hat,   axis, source);
         break;
-      case AMOTION_EVENT_AXIS_HAT_Y:
+      case XBMC_AMOTION_EVENT_AXIS_HAT_Y:
         SetupAxis(input_device, axes->y_hat,   axis, source);
       break;
     }
@@ -222,7 +222,7 @@ bool CAndroidJoyStick::onJoyStickKeyEvent(AInputEvent *event)
   // Gamestick Controller    == AINPUT_SOURCE_GAMEPAD | AINPUT_SOURCE_KEYBOARD
   // NVidiaShield Controller == AINPUT_SOURCE_GAMEPAD | AINPUT_SOURCE_KEYBOARD
   // we want to reject AML IR Controller.
-  if (AInputEvent_getSource(event) == (AINPUT_SOURCE_GAMEPAD | AINPUT_SOURCE_KEYBOARD))
+  if (AInputEvent_getSource(event) == (XBMC_AINPUT_SOURCE_GAMEPAD | AINPUT_SOURCE_KEYBOARD))
   {
     // GamePad events are AINPUT_EVENT_TYPE_KEY events,
     // trap them here and revector valid ones as JoyButtons
@@ -301,21 +301,21 @@ void CAndroidJoyStick::ProcessMotionEvents(AInputEvent *event,
 {
   // Left joystick
   if (axes->y_axis.enabled)
-    ProcessAxis(event, pointer_index, axes->y_axis, device, AXIS_LEFT_STICK_L_R, AMOTION_EVENT_AXIS_Y);
+    ProcessAxis(event, pointer_index, axes->y_axis, device, AXIS_LEFT_STICK_L_R, XBMC_AMOTION_EVENT_AXIS_Y);
   if (axes->x_axis.enabled)
-    ProcessAxis(event, pointer_index, axes->x_axis, device, AXIS_LEFT_STICK_U_D, AMOTION_EVENT_AXIS_X);
+    ProcessAxis(event, pointer_index, axes->x_axis, device, AXIS_LEFT_STICK_U_D, XBMC_AMOTION_EVENT_AXIS_X);
 
   // Right joystick
   if (axes->z_axis.enabled)
-    ProcessAxis(event, pointer_index, axes->z_axis, device, AXIS_RIGHT_STICK_L_R, AMOTION_EVENT_AXIS_Z);
+    ProcessAxis(event, pointer_index, axes->z_axis, device, AXIS_RIGHT_STICK_L_R, XBMC_AMOTION_EVENT_AXIS_Z);
   if (axes->rz_axis.enabled)
-    ProcessAxis(event, pointer_index, axes->rz_axis,device, AXIS_RIGHT_STICK_U_D, AMOTION_EVENT_AXIS_RZ);
+    ProcessAxis(event, pointer_index, axes->rz_axis,device, AXIS_RIGHT_STICK_U_D, XBMC_AMOTION_EVENT_AXIS_RZ);
 
   // Dpad
   if (axes->y_hat.enabled)
-    ProcessHat(event, pointer_index,  axes->y_hat,  device, AMOTION_EVENT_AXIS_HAT_Y);
+    ProcessHat(event, pointer_index,  axes->y_hat,  device, XBMC_AMOTION_EVENT_AXIS_HAT_Y);
   if (axes->x_hat.enabled)
-    ProcessHat(event, pointer_index,  axes->x_hat,  device, AMOTION_EVENT_AXIS_HAT_X);
+    ProcessHat(event, pointer_index,  axes->x_hat,  device, XBMC_AMOTION_EVENT_AXIS_HAT_X);
 
 #ifdef DEBUG_VERBOSE
   CLog::Log(LOGDEBUG, "joystick event. x(%f),  y(%f)", axes->x_axis.value, axes->y_axis.value);
@@ -336,14 +336,14 @@ bool CAndroidJoyStick::ProcessHat(AInputEvent *event, size_t pointer_index,
     if (value != 0)
       switch (android_axis)
       {
-        case AMOTION_EVENT_AXIS_HAT_X:
+        case XBMC_AMOTION_EVENT_AXIS_HAT_X:
           if (value < 0)
             hatvalue |= XBMC_HAT_LEFT;
           else
             hatvalue |= XBMC_HAT_RIGHT;
           break;
 
-        case AMOTION_EVENT_AXIS_HAT_Y:
+        case XBMC_AMOTION_EVENT_AXIS_HAT_Y:
           if (value < 0)
             hatvalue |= XBMC_HAT_UP;
           else
