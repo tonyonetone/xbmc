@@ -152,7 +152,7 @@ int32_t CEventLoop::processInput(AInputEvent* event)
   switch(type)
   {
     case AINPUT_EVENT_TYPE_KEY:
-      if (source & AINPUT_SOURCE_GAMEPAD || source & AINPUT_SOURCE_JOYSTICK)
+      if (source & XBMC_AINPUT_SOURCE_GAMEPAD || source & XBMC_AINPUT_SOURCE_JOYSTICK)
       {
         if (m_inputHandler->onJoyStickKeyEvent(event))
           return true;
@@ -168,8 +168,8 @@ int32_t CEventLoop::processInput(AInputEvent* event)
         case AINPUT_SOURCE_MOUSE:
           rtn = m_inputHandler->onMouseEvent(event);
           break;
-        case AINPUT_SOURCE_GAMEPAD:
-        case AINPUT_SOURCE_JOYSTICK:
+        case XBMC_AINPUT_SOURCE_GAMEPAD:
+        case XBMC_AINPUT_SOURCE_JOYSTICK:
           rtn = m_inputHandler->onJoyStickMotionEvent(event);
           break;
       }

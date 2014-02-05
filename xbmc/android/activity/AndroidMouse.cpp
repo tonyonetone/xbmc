@@ -59,8 +59,8 @@ bool CAndroidMouse::onMouseEvent(AInputEvent* event)
     case AMOTION_EVENT_ACTION_DOWN:
       MouseButton(x,y,mouseAction,AMotionEvent_getButtonState(event));
       return true;
-    case AMOTION_EVENT_ACTION_SCROLL:
-      MouseWheel(x, y, AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_VSCROLL, mousePointerIdx));
+    case XBMC_AMOTION_EVENT_ACTION_SCROLL:
+      MouseWheel(x, y, AMotionEvent_getAxisValue(event, XBMC_AMOTION_EVENT_AXIS_VSCROLL, mousePointerIdx));
       return true;
     default:
       MouseMove(x,y);
@@ -107,11 +107,11 @@ void CAndroidMouse::MouseButton(float x, float y, int32_t action, int32_t button
   newEvent.button.type = newEvent.type;
   newEvent.button.x = x;
   newEvent.button.y = y;
-  if (checkButtons & AMOTION_EVENT_BUTTON_PRIMARY)
+  if (checkButtons & XBMC_AMOTION_EVENT_BUTTON_PRIMARY)
     newEvent.button.button = XBMC_BUTTON_LEFT;
-  else if (checkButtons & AMOTION_EVENT_BUTTON_SECONDARY)
+  else if (checkButtons & XBMC_AMOTION_EVENT_BUTTON_SECONDARY)
     newEvent.button.button = XBMC_BUTTON_RIGHT;
-  else if (checkButtons & AMOTION_EVENT_BUTTON_TERTIARY)
+  else if (checkButtons & XBMC_AMOTION_EVENT_BUTTON_TERTIARY)
     newEvent.button.button = XBMC_BUTTON_MIDDLE;
   CWinEvents::MessagePush(&newEvent);
 
