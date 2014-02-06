@@ -374,6 +374,9 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
     if (IsBlacklisted(m_codecname))
       continue;
 
+    CJNIMediaCodecInfoCodecCapabilities codec_caps = codec_info.getCapabilitiesForType(m_mime);
+    std::vector<int> color_formats = codec_caps.colorFormats();
+
     std::vector<std::string> types = codec_info.getSupportedTypes();
     // return the 1st one we find, that one is typically 'the best'
     for (size_t j = 0; j < types.size(); ++j)
@@ -381,9 +384,6 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
       if (types[j] == m_mime)
       {
         m_codec = boost::shared_ptr<CJNIMediaCodec>(new CJNIMediaCodec(CJNIMediaCodec::createByCodecName(m_codecname)));
-
-        CJNIMediaCodecInfoCodecCapabilities codec_caps = codec_info.getCapabilitiesForType(m_mime);
-        std::vector<int> color_formats = codec_caps.colorFormats();
 
         // clear any jni exceptions, jni gets upset if we do not.
         if (xbmc_jnienv()->ExceptionOccurred())
@@ -393,6 +393,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
           m_codec.reset();
           continue;
         }
+
         hasSupportedColorFormat = false;
         for (size_t k = 0; k < color_formats.size(); ++k)
         {
