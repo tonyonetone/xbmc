@@ -39,6 +39,13 @@ public:
     , context(NULL)
     {}
 
+  // reference counting
+  virtual void Lock();
+  virtual long Release();
+
+  virtual bool IsValid();
+
+public:
   CDVDVideoCodecStageFright* stf;
   ERenderFormat format;
   int subformat;
@@ -52,6 +59,8 @@ public:
 
 class CDVDVideoCodecStageFright : public CDVDVideoCodec
 {
+  friend class CDVDVideoCodecStageFrightBuffer;
+
 public:
   CDVDVideoCodecStageFright();
   virtual ~CDVDVideoCodecStageFright();
@@ -70,11 +79,8 @@ public:
   virtual int GetDataSize(void);
   virtual double GetTimeSize(void);
 
-  static bool IsValid();
-  static void LockBuffer(CDVDVideoCodecStageFrightBuffer* buf);
-  static void ReleaseBuffer(CDVDVideoCodecStageFrightBuffer* buf);
-
 protected:
+
   const char        *m_pFormatName;
   bool              m_convert_bitstream;
   CBitstreamConverter   *m_converter;
