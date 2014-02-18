@@ -42,7 +42,6 @@
 #define IMX_MAX_QUEUE_SIZE 1
 // Experiments show that we need at least one more (+1) V4L buffer than the min value returned by the VPU
 const int CDVDVideoCodecIMX::m_extraVpuBuffers = IMX_MAX_QUEUE_SIZE + 6;
-VpuDecHandle CDVDVideoCodecIMX::m_vpuHandle = 0;
 
 bool CDVDVideoCodecIMX::VpuAllocBuffers(VpuMemInfo *pMemBlock)
 {
@@ -289,6 +288,17 @@ bool CDVDVideoCodecIMX::VpuAllocFrameBuffers(void)
   return true;
 }
 
+void CDVDVideoCodecIMX::ReleaseFramebuffer(CDVDVideoCodecIMXBuffer *buf)
+{
+  VpuDecRetCode ret = VPU_DecOutFrameDisplayed(m_vpuHandle, buf->m_frameInfo.pDisplayFrameBuf);
+  if(ret != VPU_DEC_RET_SUCCESS)
+  {
+    CLog::Log(LOGERROR, "%s: vpu clear frame display failure: ret=%d \r\n",__FUNCTION__,ret);
+  }
+  buf->Invalidate();
+  m_outbuffers.erase(buf);
+}
+
 CDVDVideoCodecIMX::CDVDVideoCodecIMX()
 {
   m_pFormatName = "iMX-xxx";
@@ -448,6 +458,12 @@ void CDVDVideoCodecIMX::Dispose(void)
 
   if (m_vpuHandle)
   {
+    while (m_outbuffers.size())
+    {
+      CDVDVideoCodecIMXBuffer* buf = *(m_outbuffers.begin());
+      ReleaseFramebuffer(buf);
+    }
+
     ret = VPU_DecFlushAll(m_vpuHandle);
     if (ret != VPU_DEC_RET_SUCCESS)
     {
@@ -714,6 +730,11 @@ void CDVDVideoCodecIMX::Reset()
   CLog::Log(LOGDEBUG, "%s - called\n", __FUNCTION__);
 
   m_pts.clear();
+  while (m_outbuffers.size())
+  {
+    CDVDVideoCodecIMXBuffer* buf = *(m_outbuffers.begin());
+    ReleaseFramebuffer(buf);
+  }
 
   /* Flush VPU */
   ret = VPU_DecFlushAll(m_vpuHandle);
@@ -766,11 +787,13 @@ bool CDVDVideoCodecIMX::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->iDisplayWidth = m_frameInfo.pExtInfo->FrmCropRect.nRight - m_frameInfo.pExtInfo->FrmCropRect.nLeft;
   pDvdVideoPicture->iDisplayHeight = m_frameInfo.pExtInfo->FrmCropRect.nBottom - m_frameInfo.pExtInfo->FrmCropRect.nTop;
 
-  pDvdVideoPicture->codecinfo = new CDVDVideoCodecIMXBuffer(m_frameInfo);
+  pDvdVideoPicture->codecinfo = new CDVDVideoCodecIMXBuffer(this, m_vpuHandle, m_frameInfo);
   pDvdVideoPicture->codecinfo->iWidth = m_frameInfo.pExtInfo->nFrmWidth;
   pDvdVideoPicture->codecinfo->iHeight = m_frameInfo.pExtInfo->nFrmHeight;
   pDvdVideoPicture->codecinfo->data[0] = m_frameInfo.pDisplayFrameBuf->pbufVirtY;
   pDvdVideoPicture->codecinfo->data[1] = m_frameInfo.pDisplayFrameBuf->pbufY;
+
+  m_outbuffers.insert(pDvdVideoPicture->codecinfo);
 
   return true;
 }
@@ -791,9 +814,11 @@ void CDVDVideoCodecIMX::SetDropState(bool bDrop)
 
 /*******************************************/
 
-CDVDVideoCodecIMXBuffer::CDVDVideoCodecIMXBuffer(VpuDecOutFrameInfo frameInfo)
+CDVDVideoCodecIMXBuffer::CDVDVideoCodecIMXBuffer(CDVDVideoCodecIMX* codec, VpuDecOutFrameInfo frameInfo)
   : m_refs(1)
+  , m_codec(codec)
   , m_frameInfo(frameInfo)
+  , m_isvalid(true)
 {
 }
 
@@ -807,11 +832,8 @@ long CDVDVideoCodecIMXBuffer::Release()
   long count = AtomicDecrement(&m_refs);
   if (count == 0)
   {
-    VpuDecRetCode ret = VPU_DecOutFrameDisplayed(CDVDVideoCodecIMX::m_vpuHandle, m_frameInfo.pDisplayFrameBuf);
-    if(ret != VPU_DEC_RET_SUCCESS)
-    {
-      CLog::Log(LOGERROR, "%s: vpu clear frame display failure: ret=%d \r\n",__FUNCTION__,ret);
-    }
+    if (m_isvalid)
+      m_codec->ReleaseFramebuffer(this);
     delete this;
   }
 
@@ -820,7 +842,12 @@ long CDVDVideoCodecIMXBuffer::Release()
 
 bool CDVDVideoCodecIMXBuffer::IsValid()
 {
-  return (CDVDVideoCodecIMX::m_vpuHandle != 0);
+  return m_isvalid;
+}
+
+void CDVDVideoCodecIMXBuffer::Invalidate()
+{
+  m_isvalid = false;
 }
 
 CDVDVideoCodecIMXBuffer::~CDVDVideoCodecIMXBuffer()

@@ -28,6 +28,7 @@
 #include "utils/BitstreamConverter.h"
 
 #include <list>
+#include <set>
 
 //#define IMX_PROFILE
 
@@ -47,28 +48,34 @@ typedef struct
   unsigned int phyMem_size[VPU_DEC_MAX_NUM_MEM_NUM];
 } DecMemInfo;
 
+class CDVDVideoCodecIMX;
+
 class CDVDVideoCodecIMXBuffer : public CDVDVideoCodecBuffer
 {
+  friend class CDVDVideoCodecIMX;
+
 public:
-  CDVDVideoCodecIMXBuffer(VpuDecOutFrameInfo frameInfo);
+  CDVDVideoCodecIMXBuffer(CDVDVideoCodecIMX* codec, VpuDecOutFrameInfo frameInfo);
 
   // reference counting
   virtual void                Lock();
   virtual long                Release();
   virtual bool                IsValid();
 
+  void                        Invalidate();
+
 protected:
   // private because we are reference counted
   virtual            ~CDVDVideoCodecIMXBuffer();
 
   long                m_refs;
+  CDVDVideoCodecIMX*  m_codec;
   VpuDecOutFrameInfo  m_frameInfo;
+  bool                m_isvalid;
 };
 
 class CDVDVideoCodecIMX : public CDVDVideoCodec
 {
-  friend class CDVDVideoCodecIMXBuffer;
-
 public:
   CDVDVideoCodecIMX();
   virtual ~CDVDVideoCodecIMX();
@@ -91,13 +98,15 @@ protected:
   bool VpuFreeBuffers(void);
   bool VpuAllocFrameBuffers(void);
 
+  void ReleaseFramebuffer(CDVDVideoCodecIMXBuffer* buf);
+
   static const int    m_extraVpuBuffers;   // Number of additional buffers for VPU
 
   CDVDStreamInfo      m_hints;             // Hints from demuxer at stream opening
   const char         *m_pFormatName;       // Current decoder format name
   VpuDecOpenParam     m_decOpenParam;      // Parameters required to call VPU_DecOpen
   DecMemInfo          m_decMemInfo;        // VPU dedicated memory description
-  static VpuDecHandle m_vpuHandle;         // Handle for VPU library calls
+  VpuDecHandle        m_vpuHandle;         // Handle for VPU library calls
   VpuDecInitInfo      m_initInfo;          // Initial info returned from VPU at decoding start
   bool                m_dropState;         // Current drop state
   int                 m_vpuFrameBufferNum; // Total number of allocated frame buffers
@@ -109,6 +118,8 @@ protected:
   VpuDecOutFrameInfo  m_frameInfo;
   CBitstreamConverter *m_converter;
   bool                m_convert_bitstream;
+
   std::list<double>   m_pts;
+  std::set<CDVDVideoCodecIMXBuffer*>  m_outbuffers;
 
 };
