@@ -27,10 +27,8 @@
 #include "threads/CriticalSection.h"
 #include "utils/BitstreamConverter.h"
 
-#include <list>
+#include <queue>
 #include <set>
-
-//#define IMX_PROFILE
 
 /* FIXME TODO Develop real proper CVPUBuffer class */
 #define VPU_DEC_MAX_NUM_MEM_NUM 20
@@ -119,7 +117,7 @@ protected:
   CBitstreamConverter *m_converter;
   bool                m_convert_bitstream;
 
-  std::list<double>   m_pts;
+  std::priority_queue<double>         m_pts;
   std::set<CDVDVideoCodecIMXBuffer*>  m_outbuffers;
 
 };

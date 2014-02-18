@@ -31,6 +31,7 @@
 #include "DVDClock.h"
 #include "threads/Atomics.h"
 
+//#define IMX_PROFILE
 
 // FIXME get rid of these defines properly
 #define FRAME_ALIGN 16
@@ -495,7 +496,8 @@ void CDVDVideoCodecIMX::Dispose(void)
     }
   }
 
-  m_pts.clear();
+  while(!m_pts.empty())
+    m_pts.pop();
 
   if (m_converter)
   {
@@ -554,7 +556,7 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
     }
 
     double frame_pts = (pts != DVD_NOPTS_VALUE) ? pts : dts;
-    m_pts.push_front(frame_pts);
+    m_pts.push(-frame_pts);
 
     inData.nSize = demuxer_bytes;
     inData.pPhyAddr = NULL;
@@ -684,10 +686,7 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
         break;
       }
       if (!(decRet & VPU_DEC_INPUT_USED))
-      {
         CLog::Log(LOGERROR, "%s - input not used : addr %p  size :%d!\n", __FUNCTION__, inData.pVirAddr, inData.nSize);
-        m_pts.pop_front();
-      }
 
 
       if (!(decRet & VPU_DEC_OUTPUT_DIS)  &&
@@ -716,7 +715,6 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
   return retStatus;
 
 out_error:
-  m_pts.pop_front();
   return VC_ERROR;
 }
 
@@ -726,7 +724,9 @@ void CDVDVideoCodecIMX::Reset()
 
   CLog::Log(LOGDEBUG, "%s - called\n", __FUNCTION__);
 
-  m_pts.clear();
+  while(!m_pts.empty())
+    m_pts.pop();
+
   while (m_outbuffers.size())
   {
     CDVDVideoCodecIMXBuffer* buf = *(m_outbuffers.begin());
@@ -774,8 +774,8 @@ bool CDVDVideoCodecIMX::GetPicture(DVDVideoPicture* pDvdVideoPicture)
       CLog::Log(LOGDEBUG, "%s - logic error: no pts available", __FUNCTION__);
     else
     {
-      pDvdVideoPicture->pts = m_pts.back();
-      m_pts.pop_back();
+      pDvdVideoPicture->pts = -m_pts.top();
+      m_pts.pop();
     }
   }
   pDvdVideoPicture->dts = DVD_NOPTS_VALUE;
@@ -791,6 +791,9 @@ bool CDVDVideoCodecIMX::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->codecinfo->data[1] = m_frameInfo.pDisplayFrameBuf->pbufY;
 
   m_outbuffers.insert((CDVDVideoCodecIMXBuffer*)pDvdVideoPicture->codecinfo);
+#ifdef IMX_PROFILE
+  CLog::Log(LOGDEBUG, "%s - pts %f", __FUNCTION__, pDvdVideoPicture->pts);
+#endif
 
   return true;
 }
