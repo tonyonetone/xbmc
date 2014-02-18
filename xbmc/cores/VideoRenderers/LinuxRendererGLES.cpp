@@ -2738,6 +2738,8 @@ void CLinuxRendererGLES::DeleteIMXMAPTexture(int index)
   if(plane.id && glIsTexture(plane.id))
     glDeleteTextures(1, &plane.id);
   plane.id = 0;
+
+  SAFE_RELEASE(buf.codecinfo);
 }
 bool CLinuxRendererGLES::CreateIMXMAPTexture(int index)
 {
