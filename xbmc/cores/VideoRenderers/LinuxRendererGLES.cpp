@@ -2712,8 +2712,7 @@ void CLinuxRendererGLES::DeleteIMXMAPTexture(int index)
     glDeleteTextures(1, &plane.id);
   plane.id = 0;
 
-  CDVDVideoCodecBuffer* codecinfo = buf.codecinfo;
-  SAFE_RELEASE(codecinfo);
+  SAFE_RELEASE(buf.codecinfo);
 }
 bool CLinuxRendererGLES::CreateIMXMAPTexture(int index)
 {

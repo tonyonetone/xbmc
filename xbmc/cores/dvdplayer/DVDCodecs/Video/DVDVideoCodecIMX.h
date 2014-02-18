@@ -91,14 +91,14 @@ public:
   virtual const char* GetName(void) { return (const char*)m_pFormatName; }
   virtual unsigned GetAllowedReferences();
 
+  void ReleaseFramebuffer(CDVDVideoCodecIMXBuffer* buf);
+
 protected:
 
   bool VpuOpen(void);
   bool VpuAllocBuffers(VpuMemInfo *);
   bool VpuFreeBuffers(void);
   bool VpuAllocFrameBuffers(void);
-
-  void ReleaseFramebuffer(CDVDVideoCodecIMXBuffer* buf);
 
   static const int    m_extraVpuBuffers;   // Number of additional buffers for VPU
 

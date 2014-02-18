@@ -784,13 +784,13 @@ bool CDVDVideoCodecIMX::GetPicture(DVDVideoPicture* pDvdVideoPicture)
   pDvdVideoPicture->iDisplayWidth = m_frameInfo.pExtInfo->FrmCropRect.nRight - m_frameInfo.pExtInfo->FrmCropRect.nLeft;
   pDvdVideoPicture->iDisplayHeight = m_frameInfo.pExtInfo->FrmCropRect.nBottom - m_frameInfo.pExtInfo->FrmCropRect.nTop;
 
-  pDvdVideoPicture->codecinfo = new CDVDVideoCodecIMXBuffer(this, m_vpuHandle, m_frameInfo);
+  pDvdVideoPicture->codecinfo = new CDVDVideoCodecIMXBuffer(this, m_frameInfo);
   pDvdVideoPicture->codecinfo->iWidth = m_frameInfo.pExtInfo->nFrmWidth;
   pDvdVideoPicture->codecinfo->iHeight = m_frameInfo.pExtInfo->nFrmHeight;
   pDvdVideoPicture->codecinfo->data[0] = m_frameInfo.pDisplayFrameBuf->pbufVirtY;
   pDvdVideoPicture->codecinfo->data[1] = m_frameInfo.pDisplayFrameBuf->pbufY;
 
-  m_outbuffers.insert(pDvdVideoPicture->codecinfo);
+  m_outbuffers.insert((CDVDVideoCodecIMXBuffer*)pDvdVideoPicture->codecinfo);
 
   return true;
 }
