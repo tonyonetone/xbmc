@@ -929,8 +929,6 @@ void CLinuxRendererGLES::ReleaseBuffer(int idx)
     SAFE_RELEASE(buf.mediacodec);
   }
 #endif
-  if ( m_renderMethod & RENDER_IMXMAP)
-    SAFE_RELEASE(buf.codecinfo);
 }
 
 void CLinuxRendererGLES::Render(DWORD flags, int index)
@@ -2695,7 +2693,6 @@ void CLinuxRendererGLES::UploadIMXMAPTexture(int index)
     glTexDirectVIVMap(m_textureTarget, codecinfo->iWidth, codecinfo->iHeight, GL_VIV_NV12,
                       (GLvoid **)(&codecinfo->data[0]), &physical);
     glTexDirectInvalidateVIV(m_textureTarget);
-    glFinish();  // glTexDirectVIVMap is asynchronous; Apply so that we can free buffer
 
     glBindTexture(m_textureTarget, 0);
 
@@ -2703,7 +2700,6 @@ void CLinuxRendererGLES::UploadIMXMAPTexture(int index)
     plane.texheight = codecinfo->iHeight;
 
     CalculateTextureSourceRects(index, 1);
-    SAFE_RELEASE(buf.codecinfo);
   }
 #endif
 }
@@ -2715,7 +2711,9 @@ void CLinuxRendererGLES::DeleteIMXMAPTexture(int index)
   if(plane.id && glIsTexture(plane.id))
     glDeleteTextures(1, &plane.id);
   plane.id = 0;
-  SAFE_RELEASE(buf.codecinfo);
+
+  CDVDVideoCodecBuffer* codecinfo = buf.codecinfo;
+  SAFE_RELEASE(codecinfo);
 }
 bool CLinuxRendererGLES::CreateIMXMAPTexture(int index)
 {
