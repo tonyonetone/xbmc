@@ -78,6 +78,7 @@ static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 
 #ifdef HAS_IMXVPU
 // GLES extension functions
+#define GL_GLEXT_PROTOTYPES
 #include <GLES/gl.h>
 #include <GLES/glext.h>
 #endif
