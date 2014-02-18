@@ -479,8 +479,7 @@ void CDVDVideoCodecIMX::Dispose(void)
     }
   }
 
-  while(!m_pts.empty())
-    m_pts.pop();
+  m_pts.clear();
 
   if (m_converter)
   {
@@ -635,7 +634,7 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
 
       if (decRet & VPU_DEC_OUTPUT_REPEAT)
       {
-        m_pts.push_front(mpts.front());
+        m_pts.push_front(m_pts.front());
         CLog::Log(LOGDEBUG, "%s - Frame repeat.\n", __FUNCTION__);
       }
       if (decRet & VPU_DEC_OUTPUT_DROPPED)
@@ -714,8 +713,7 @@ void CDVDVideoCodecIMX::Reset()
 
   CLog::Log(LOGDEBUG, "%s - called\n", __FUNCTION__);
 
-  while(!m_pts.empty())
-    m_pts.pop();
+  m_pts.clear();
 
   /* Flush VPU */
   ret = VPU_DecFlushAll(m_vpuHandle);
@@ -750,12 +748,17 @@ bool CDVDVideoCodecIMX::GetPicture(DVDVideoPicture* pDvdVideoPicture)
     pDvdVideoPicture->iFlags &= ~DVP_FLAG_DROPPED;
 
   pDvdVideoPicture->format = RENDER_FMT_IMXMAP;
-  pDvdVideoPicture->pts = m_pts.back();
-  m_pts.pop_back();
+  pDvdVideoPicture->pts = DVD_NOPTS_VALUE;
 
-  if (!m_usePTS)
+  if (m_usePTS)
   {
-    pDvdVideoPicture->pts = DVD_NOPTS_VALUE;
+    if (m_pts.empty())
+      CLog::Log(LOGDEBUG, "%s - logic error: no pts available", __FUNCTION__);
+    else
+    {
+      pDvdVideoPicture->pts = m_pts.back();
+      m_pts.pop_back();
+    }
   }
   pDvdVideoPicture->dts = DVD_NOPTS_VALUE;
   pDvdVideoPicture->iWidth = m_frameInfo.pExtInfo->FrmCropRect.nRight - m_frameInfo.pExtInfo->FrmCropRect.nLeft;
