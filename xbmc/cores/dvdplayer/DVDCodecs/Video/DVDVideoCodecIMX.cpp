@@ -29,7 +29,6 @@
 #include "threads/SingleLock.h"
 #include "utils/log.h"
 #include "DVDClock.h"
-#include "mfw_gst_ts.h"
 #include "threads/Atomics.h"
 
 
@@ -187,10 +186,6 @@ bool CDVDVideoCodecIMX::VpuOpen(void)
     goto VpuOpenError;
   }
 
-  /* Initialize ts manager */
-  m_tsm = createTSManager(0);
-  setTSManagerFrameRate(m_tsm, m_hints.fpsrate, m_hints.fpsscale);
-
   return true;
 
 VpuOpenError:
@@ -302,9 +297,7 @@ CDVDVideoCodecIMX::CDVDVideoCodecIMX()
   m_vpuFrameBuffers = NULL;
   m_extraMem = NULL;
   m_vpuFrameBufferNum = 0;
-  m_tsSyncRequired = true;
   m_dropState = false;
-  m_tsm = NULL;
   m_convert_bitstream = false;
   m_frameCounter = 0;
   m_usePTS = true;
@@ -486,11 +479,8 @@ void CDVDVideoCodecIMX::Dispose(void)
     }
   }
 
-  if (m_tsm != NULL)
-  {
-    destroyTSManager(m_tsm);
-    m_tsm = NULL;
-  }
+  while(!m_pts.empty())
+    m_pts.pop();
 
   if (m_converter)
   {
@@ -548,30 +538,8 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
         CLog::Log(LOGERROR,"%s - bitstream_convert error", __FUNCTION__);
     }
 
-    if (pts != DVD_NOPTS_VALUE)
-    {
-      if (m_tsSyncRequired)
-      {
-        m_tsSyncRequired = false;
-        resyncTSManager(m_tsm, llrint(pts) * 1000, MODE_AI);
-      }
-      //TSManagerReceive2(m_tsm, llrint(pts) * 1000, iSize);
-      TSManagerReceive(m_tsm, llrint(pts) * 1000);
-    }
-    else
-    {
-      //If no pts but dts available (AVI container for instance) then use this one
-      if (dts !=  DVD_NOPTS_VALUE)
-      {
-        if (m_tsSyncRequired)
-        {
-          m_tsSyncRequired = false;
-          resyncTSManager(m_tsm, llrint(dts) * 1000, MODE_AI);
-        }
-        //TSManagerReceive2(m_tsm, llrint(dts) * 1000, iSize);
-        TSManagerReceive(m_tsm, llrint(dts) * 1000);
-      }
-    }
+    double frame_pts = (pts != DVD_NOPTS_VALUE) ? pts : dts;
+    m_pts.push_front(frame_pts);
 
     inData.nSize = demuxer_bytes;
     inData.pPhyAddr = NULL;
@@ -646,7 +614,6 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
         {
           CLog::Log(LOGERROR, "%s - VPU error retireving info about consummed frame (%d).\n", __FUNCTION__, ret);
         }
-        // FIXME TSManagerValid2(m_tsm, frameLengthInfo.nFrameLength + frameLengthInfo.nStuffLength, frameLengthInfo.pFrame);
         //CLog::Log(LOGDEBUG, "%s - size : %d - key consummed : %x\n",  __FUNCTION__, frameLengthInfo.nFrameLength + frameLengthInfo.nStuffLength, frameLengthInfo.pFrame);
       }//VPU_DEC_ONE_FRM_CONSUMED
 
@@ -668,12 +635,12 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
 
       if (decRet & VPU_DEC_OUTPUT_REPEAT)
       {
-        TSManagerSend(m_tsm);
+        m_pts.push_front(mpts.front());
         CLog::Log(LOGDEBUG, "%s - Frame repeat.\n", __FUNCTION__);
       }
       if (decRet & VPU_DEC_OUTPUT_DROPPED)
       {
-        TSManagerSend(m_tsm);
+        m_pts.pop_front();
         CLog::Log(LOGDEBUG, "%s - Frame dropped.\n", __FUNCTION__);
       }
       if (decRet & VPU_DEC_NO_ENOUGH_BUF)
@@ -682,7 +649,7 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
       }
       if (decRet & VPU_DEC_SKIP)
       {
-        TSManagerSend(m_tsm);
+        m_pts.pop_front();
         CLog::Log(LOGDEBUG, "%s - Frame skipped.\n", __FUNCTION__);
       }
       if (decRet & VPU_DEC_FLUSH)
@@ -707,7 +674,7 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
       if (!(decRet & VPU_DEC_INPUT_USED))
       {
         CLog::Log(LOGERROR, "%s - input not used : addr %p  size :%d!\n", __FUNCTION__, inData.pVirAddr, inData.nSize);
-        TSManagerSend(m_tsm);
+        m_pts.pop_front();
       }
 
 
@@ -723,6 +690,7 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
       }
 
     } while (retry == true);
+  
   } //(pData && iSize)
 
   if (retStatus == 0)
@@ -736,6 +704,7 @@ int CDVDVideoCodecIMX::Decode(BYTE *pData, int iSize, double dts, double pts)
   return retStatus;
 
 out_error:
+  m_pts.pop_front();
   return VC_ERROR;
 }
 
@@ -745,8 +714,8 @@ void CDVDVideoCodecIMX::Reset()
 
   CLog::Log(LOGDEBUG, "%s - called\n", __FUNCTION__);
 
-  /* We have to resync timestamp manager */
-  m_tsSyncRequired = true;
+  while(!m_pts.empty())
+    m_pts.pop();
 
   /* Flush VPU */
   ret = VPU_DecFlushAll(m_vpuHandle);
@@ -781,7 +750,9 @@ bool CDVDVideoCodecIMX::GetPicture(DVDVideoPicture* pDvdVideoPicture)
     pDvdVideoPicture->iFlags &= ~DVP_FLAG_DROPPED;
 
   pDvdVideoPicture->format = RENDER_FMT_IMXMAP;
-  pDvdVideoPicture->pts = (double)TSManagerSend(m_tsm) / (double)1000.0;
+  pDvdVideoPicture->pts = m_pts.back();
+  m_pts.pop_back();
+
   if (!m_usePTS)
   {
     pDvdVideoPicture->pts = DVD_NOPTS_VALUE;

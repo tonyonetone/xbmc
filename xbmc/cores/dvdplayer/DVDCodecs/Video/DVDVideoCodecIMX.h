@@ -27,6 +27,7 @@
 #include "threads/CriticalSection.h"
 #include "utils/BitstreamConverter.h"
 
+#include <list>
 
 //#define IMX_PROFILE
 
@@ -98,8 +99,6 @@ protected:
   DecMemInfo          m_decMemInfo;        // VPU dedicated memory description
   static VpuDecHandle m_vpuHandle;         // Handle for VPU library calls
   VpuDecInitInfo      m_initInfo;          // Initial info returned from VPU at decoding start
-  void               *m_tsm;               // fsl Timestamp manager (from gstreamer implementation)
-  bool                m_tsSyncRequired;    // state whether timestamp manager has to be sync'ed
   bool                m_dropState;         // Current drop state
   int                 m_vpuFrameBufferNum; // Total number of allocated frame buffers
   VpuFrameBuffer     *m_vpuFrameBuffers;   // Table of VPU frame buffers description
@@ -110,5 +109,6 @@ protected:
   VpuDecOutFrameInfo  m_frameInfo;
   CBitstreamConverter *m_converter;
   bool                m_convert_bitstream;
+  std::list<double>   m_pts;
 
 };
