@@ -67,17 +67,11 @@ public:
   virtual long             Release();
   virtual bool             IsValid();
 
-<<<<<<< HEAD
   bool                     Rendered() const;
   void                     Queue(VpuDecOutFrameInfo *frameInfo);
   VpuDecRetCode            ReleaseFramebuffer(VpuDecHandle *handle);
   void                     SetPts(double pts);
   double                   GetPts(void) const;
-=======
-  bool               Rendered();
-  void               Queue(VpuFrameBuffer *buffer);
-  VpuDecRetCode      ReleaseFramebuffer(VpuDecHandle *handle);
->>>>>>> [imx] Use sorted queue for pts
 
 protected:
   // private because we are reference counted
