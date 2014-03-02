@@ -1053,7 +1053,7 @@ CDVDVideoCodecIPUBuffer::CDVDVideoCodecIPUBuffer()
   , m_pVirtAddr(NULL)
   , m_nSize(0)
 {
-  iFormat = GL_RGBA;
+  iFormat = GL_VIV_NV12;
 }
 
 CDVDVideoCodecIPUBuffer::~CDVDVideoCodecIPUBuffer()
@@ -1104,7 +1104,7 @@ bool CDVDVideoCodecIPUBuffer::Process(int fd, CDVDVideoCodecBuffer *currentBuffe
 {
   struct ipu_task task;
   memset(&task, 0, sizeof(task));
-  task.priority = IPU_TASK_PRIORITY_HIGH;
+  //task.priority = IPU_TASK_PRIORITY_HIGH;
 
   SAFE_RELEASE(m_source);
 
@@ -1120,7 +1120,7 @@ bool CDVDVideoCodecIPUBuffer::Process(int fd, CDVDVideoCodecBuffer *currentBuffe
   // Output is our IPU buffer
   task.output.width      = iWidth;
   task.output.height     = iHeight;
-  task.output.format     = IPU_PIX_FMT_RGBA32;
+  task.output.format     = IPU_PIX_FMT_NV12;
   task.output.paddr      = (int)GET_PHYS_ADDR(this);
 
   // Fill previous buffer address
