@@ -39,6 +39,8 @@
 #define MEDIAINFO 1
 #define _4CC(c1,c2,c3,c4) (((uint32_t)(c4)<<24)|((uint32_t)(c3)<<16)|((uint32_t)(c2)<<8)|(uint32_t)(c1))
 #define Align(ptr,align)  (((unsigned int)ptr + (align) - 1)/(align)*(align))
+#define GL_VIV_NV12 0x8FC1
+#define GL_RGBA 0x1908
 
 // Extrace physical and virtual addresses from CDVDVideoCodecBuffer pointers
 #define GET_PHYS_ADDR(buf) (buf)->data[1]
@@ -949,6 +951,7 @@ CDVDVideoCodecIMXBuffer::CDVDVideoCodecIMXBuffer()
   , m_frameBuffer(NULL)
   , m_rendered(false)
 {
+  iFormat = GL_VIV_NV12;
 }
 
 void CDVDVideoCodecIMXBuffer::Lock()
@@ -1050,6 +1053,7 @@ CDVDVideoCodecIPUBuffer::CDVDVideoCodecIPUBuffer()
   , m_pVirtAddr(NULL)
   , m_nSize(0)
 {
+  iFormat = GL_RGBA;
 }
 
 CDVDVideoCodecIPUBuffer::~CDVDVideoCodecIPUBuffer()
@@ -1116,7 +1120,7 @@ bool CDVDVideoCodecIPUBuffer::Process(int fd, CDVDVideoCodecBuffer *currentBuffe
   // Output is our IPU buffer
   task.output.width      = iWidth;
   task.output.height     = iHeight;
-  task.output.format     = IPU_PIX_FMT_NV12;
+  task.output.format     = IPU_PIX_FMT_RGBA32;
   task.output.paddr      = (int)GET_PHYS_ADDR(this);
 
   // Fill previous buffer address
@@ -1181,8 +1185,13 @@ bool CDVDVideoCodecIPUBuffer::Allocate(int fd, int width, int height, int nAlign
   uint8_t *phyAddr, *virtAddr;
   m_iWidth = Align(width,FRAME_ALIGN);
   m_iHeight = Align(height,(2*FRAME_ALIGN));
+  /*
   // NV12 == 12 bpp
   m_nSize = m_iWidth*m_iHeight*12/8;
+  */
+  // RGBA = 32 bpp
+  m_nSize = m_iWidth*m_iHeight*4;
+
   m_pPhyAddr = m_nSize;
 
   GET_PHYS_ADDR(this) = GET_VIRT_ADDR(this) = NULL;

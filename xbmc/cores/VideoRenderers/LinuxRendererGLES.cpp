@@ -78,7 +78,6 @@ static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 
 #ifdef HAS_IMXVPU
 #include "windowing/egl/EGLWrapper.h"
-#define GL_VIV_NV12 0x8FC1
 typedef void (GL_APIENTRYP PFNGLTEXDIRECTVIVMAPPROC) (GLenum Target, GLsizei Width, GLsizei Height, GLenum Format, GLvoid ** Logical, const GLuint * Physical);
 typedef void (GL_APIENTRYP PFNGLTEXDIRECTINVALIDATEVIVPROC) (GLenum Target);
 static PFNGLTEXDIRECTVIVMAPPROC glTexDirectVIVMap;
@@ -2791,7 +2790,7 @@ void CLinuxRendererGLES::UploadIMXMAPTexture(int index)
 
     GLuint physical = ~0U;
     GLvoid *virt = (GLvoid*)codecinfo->data[0];
-    glTexDirectVIVMap(m_textureTarget, codecinfo->iWidth, codecinfo->iHeight, GL_VIV_NV12,
+    glTexDirectVIVMap(m_textureTarget, codecinfo->iWidth, codecinfo->iHeight, codecinfo->iFormat,
                       (GLvoid **)&virt, &physical);
     glTexDirectInvalidateVIV(m_textureTarget);
 

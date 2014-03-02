@@ -31,6 +31,7 @@ public:
 
   uint32_t            iWidth;
   uint32_t            iHeight;
+  uint32_t            iFormat;
   uint8_t*            data[4];      // [4] = alpha channel, currently not used
   int                 iLineSize[4];   // [4] = alpha channel, currently not used
 };
