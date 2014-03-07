@@ -28,4 +28,9 @@
       <rotate>RotateGesture</rotate>
     </touch>
   </SlideShow>
+  <MyFiles>
+    <touch>
+      <tap>Select</tap>
+    </touch>
+  </MyFiles>
 </keymap>
