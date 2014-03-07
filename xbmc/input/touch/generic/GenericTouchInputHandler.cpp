@@ -24,6 +24,7 @@
 #include "input/touch/generic/GenericTouchPinchDetector.h"
 #include "input/touch/generic/GenericTouchRotateDetector.h"
 #include "input/touch/generic/GenericTouchSwipeDetector.h"
+#include "input/touch/generic/GenericTouchDoubleTapDetector.h"
 #include "threads/SingleLock.h"
 #include "utils/log.h"
 
@@ -93,6 +94,7 @@ bool CGenericTouchInputHandler::HandleTouchInput(TouchInput event, float x, floa
         m_detectors.insert(new CGenericTouchSwipeDetector(this, m_dpi));
         m_detectors.insert(new CGenericTouchPinchDetector(this, m_dpi));
         m_detectors.insert(new CGenericTouchRotateDetector(this, m_dpi));
+        m_detectors.insert(new CGenericTouchDoubleTapDetector(this, m_dpi));
         triggerDetectors(event, pointer);
 
         setGestureState(TouchGestureSingleTouch);

@@ -9552,3 +9552,5 @@ xbmc/windowing/egl/EGLNativeTypeIMX.h
 xbmc/windowing/egl/EGLNativeTypeIMX.cpp
 xbmc/cores/dvdplayer/DVDCodecs/Video/Makefile.in
 xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodecInfo.h
+xbmc/input/touch/generic/GenericTouchDoubleTapDetector.cpp
+xbmc/input/touch/generic/GenericTouchDoubleTapDetector.h
