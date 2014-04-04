@@ -438,13 +438,6 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
     }
   }
 
-  if (!ConfigureMediaCodec())
-  {
-    m_codec.reset();
-    SAFE_DELETE(m_bitstream);
-    return false;
-  }
-
   // setup a YUV420P DVDVideoPicture buffer.
   // first make sure all properties are reset.
   memset(&m_videobuffer, 0x00, sizeof(DVDVideoPicture));
@@ -459,6 +452,13 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
   // these will get reset to crop values later
   m_videobuffer.iDisplayWidth  = m_hints.width;
   m_videobuffer.iDisplayHeight = m_hints.height;
+
+  if (!ConfigureMediaCodec())
+  {
+    m_codec.reset();
+    SAFE_DELETE(m_bitstream);
+    return false;
+  }
 
   CLog::Log(LOGINFO, "CDVDVideoCodecAndroidMediaCodec:: "
     "Open Android MediaCodec %s", m_codecname.c_str());
