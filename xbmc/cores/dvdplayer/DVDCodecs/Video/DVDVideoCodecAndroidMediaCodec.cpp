@@ -45,6 +45,7 @@
 #include "android/jni/Surface.h"
 #include "android/jni/SurfaceTexture.h"
 #include "android/activity/AndroidFeatures.h"
+#include "android/jni/Build.h"
 
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
@@ -62,6 +63,10 @@ static bool CanSurfaceRenderWhiteList(const std::string &name)
     "OMX.Exynos",
     NULL
   };
+
+  if (CJNIBuild::PRODUCT == "bueller")  // Amazon FIRE
+    return false;
+
   for (const char **ptr = cansurfacerender_decoders; *ptr; ptr++)
   {
     if (!strnicmp(*ptr, name.c_str(), strlen(*ptr)))
