@@ -379,7 +379,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
   // CJNIMediaCodec::createDecoderByXXX doesn't handle errors nicely,
   // it crashes if the codec isn't found. This is fixed in latest AOSP,
   // but not in current 4.1 devices. So 1st search for a matching codec, then create it.
-  bool hasSupportedColorFormat = false;
+  m_colorFormat = -1;
   int num_codecs = CJNIMediaCodecList::getCodecCount();
   for (int i = 0; i < num_codecs; i++)
   {
@@ -391,7 +391,6 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
       continue;
 
     std::vector<std::string> types = codec_info.getSupportedTypes();
-    m_colorFormat = -1;
     // return the 1st one we find, that one is typically 'the best'
     for (size_t j = 0; j < types.size(); ++j)
     {
@@ -787,7 +786,6 @@ bool CDVDVideoCodecAndroidMediaCodec::ConfigureMediaCodec(void)
 
   // There is no guarantee we'll get an INFO_OUTPUT_FORMAT_CHANGED
   // Configure the output with defaults
-  mediaformat.setInteger("color-format", m_colorFormat);
   ConfigureOutputFormat(&mediaformat);
 
   return true;
@@ -954,6 +952,8 @@ void CDVDVideoCodecAndroidMediaCodec::ConfigureOutputFormat(CJNIMediaFormat* med
       width = stride = m_hints.width;
       height = slice_height = m_hints.height;
     }
+    if (color_format == 0)
+      color_format = m_colorFormat;
     if (stride <= width)
       stride = width;
     if (!crop_right)
