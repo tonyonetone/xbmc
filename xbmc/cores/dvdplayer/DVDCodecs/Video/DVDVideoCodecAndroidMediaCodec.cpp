@@ -64,7 +64,7 @@ static bool CanSurfaceRenderWhiteList(const std::string &name)
     NULL
   };
 
-  if (CJNIBuild::PRODUCT == "bueller")  // Amazon FIRE
+  if (CJNIBuild::PRODUCT == "bueller")  // Amazon FIRE, OMX.qcom
     return false;
 
   for (const char **ptr = cansurfacerender_decoders; *ptr; ptr++)
@@ -391,6 +391,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
       continue;
 
     std::vector<std::string> types = codec_info.getSupportedTypes();
+    m_colorFormat = -1;
     // return the 1st one we find, that one is typically 'the best'
     for (size_t j = 0; j < types.size(); ++j)
     {
@@ -409,13 +410,13 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
           m_codec.reset();
           continue;
         }
-        hasSupportedColorFormat = false;
+
         for (size_t k = 0; k < color_formats.size(); ++k)
         {
           CLog::Log(LOGDEBUG, "CDVDVideoCodecAndroidMediaCodec::Open "
             "m_codecname(%s), colorFormat(%d)", m_codecname.c_str(), color_formats[k]);
           if (IsSupportedColorFormat(color_formats[k]))
-            hasSupportedColorFormat = true;
+            m_colorFormat = color_formats[k];
         }
         break;
       }
@@ -434,7 +435,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
   m_render_sw = !CanSurfaceRenderWhiteList(m_codecname);
   if (m_render_sw)
   {
-    if (!hasSupportedColorFormat)
+    if (m_colorFormat == -1)
     {
       CLog::Log(LOGERROR, "CDVDVideoCodecAndroidMediaCodec:: No supported color format");
       m_codec.reset();
@@ -786,6 +787,7 @@ bool CDVDVideoCodecAndroidMediaCodec::ConfigureMediaCodec(void)
 
   // There is no guarantee we'll get an INFO_OUTPUT_FORMAT_CHANGED
   // Configure the output with defaults
+  mediaformat.setInteger("color-format", m_colorFormat);
   ConfigureOutputFormat(&mediaformat);
 
   return true;
