@@ -31,6 +31,7 @@
 #include "android/jni/AudioFormat.h"
 #include "android/jni/AudioManager.h"
 #include "android/jni/AudioTrack.h"
+#include "android/jni/Build.h"
 
 using namespace jni;
 
@@ -231,15 +232,19 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   m_info.m_sampleRates.clear();
 
   m_info.m_deviceType = AE_DEVTYPE_PCM;
+
+  bool hasPassthrough = false;
 #if defined(HAS_LIBAMCODEC)
-  // AML devices can do passthough
-  if (aml_present())
+  hasPassthrough |= aml_present();                        // AML devices can do passthough
+#endif
+  hasPassthrough |= (CJNIBuild::PRODUCT == "bueller");    // Amazon FIRE TV
+
+  if (hasPassthrough)
   {
     m_info.m_deviceType = AE_DEVTYPE_HDMI;
     m_info.m_dataFormats.push_back(AE_FMT_AC3);
     m_info.m_dataFormats.push_back(AE_FMT_DTS);
   }
-#endif
   m_info.m_deviceName = "AudioTrack";
   m_info.m_displayName = "android";
   m_info.m_displayNameExtra = "audiotrack";
