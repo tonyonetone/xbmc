@@ -36,6 +36,7 @@
 #include "utils/CPUInfo.h"
 #include "utils/log.h"
 
+#include "android/jni/Build.h"
 #include "android/jni/ByteBuffer.h"
 #include "android/jni/MediaCodec.h"
 #include "android/jni/MediaCrypto.h"
@@ -363,6 +364,8 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
     case AV_CODEC_ID_WMV3:
       m_mime = "video/wvc1";
       //m_mime = "video/wmv9";
+      if (CJNIBuild::MANUFACTURER == "Amazon" && CJNIBuild::MODEL == "AFTB")  // Amazon FIRE TV
+        m_mime = "video/x-ms-wmv";
       m_formatname = "amc-vc1";
       break;
     default:
