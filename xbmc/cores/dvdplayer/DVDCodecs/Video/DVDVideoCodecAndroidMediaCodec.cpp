@@ -163,6 +163,7 @@ CDVDMediaCodecInfo::CDVDMediaCodecInfo(
 )
 : m_refs(1)
 , m_valid(true)
+, m_isReleased(true)
 , m_index(index)
 , m_texture(texture)
 , m_timestamp(0)
@@ -186,6 +187,7 @@ CDVDMediaCodecInfo::~CDVDMediaCodecInfo()
 CDVDMediaCodecInfo* CDVDMediaCodecInfo::Retain()
 {
   AtomicIncrement(&m_refs);
+  m_isReleased = false;
 
   return this;
 }
@@ -193,11 +195,10 @@ CDVDMediaCodecInfo* CDVDMediaCodecInfo::Retain()
 long CDVDMediaCodecInfo::Release()
 {
   long count = AtomicDecrement(&m_refs);
-  if (count == 0)
-  {
+  if (count == 1)
     ReleaseOutputBuffer(false);
+  if (count == 0)
     delete this;
-  }
 
   return count;
 }
@@ -213,7 +214,7 @@ void CDVDMediaCodecInfo::ReleaseOutputBuffer(bool render)
 {
   CSingleLock lock(m_section);
 
-  if (!m_valid)
+  if (!m_valid || m_isReleased)
     return;
 
   // release OutputBuffer and render if indicated
@@ -223,6 +224,7 @@ void CDVDMediaCodecInfo::ReleaseOutputBuffer(bool render)
     m_frameready->Reset();
 
   m_codec->releaseOutputBuffer(m_index, render);
+  m_isReleased = true;
 
   if (xbmc_jnienv()->ExceptionOccurred())
   {
