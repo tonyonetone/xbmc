@@ -138,7 +138,7 @@ bool CGUIWindowFullScreen::OnAction(const CAction &action)
 
   switch (action.GetID())
   {
-  case ACTION_SHOW_OSD:
+  case ACTION_TOGGLE_OSD:
     ToggleOSD();
     return true;
 

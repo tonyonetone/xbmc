@@ -129,5 +129,5 @@ JSONRPC_STATUS CInputOperations::ShowCodec(const CStdString &method, ITransportL
 
 JSONRPC_STATUS CInputOperations::ShowOSD(const CStdString &method, ITransportLayer *transport, IClient *client, const CVariant &parameterObject, CVariant &result)
 {
-  return SendAction(ACTION_SHOW_OSD);
+  return SendAction(ACTION_TOGGLE_OSD);
 }

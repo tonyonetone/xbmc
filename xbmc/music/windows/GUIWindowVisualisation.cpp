@@ -64,7 +64,7 @@ bool CGUIWindowVisualisation::OnAction(const CAction &action)
     }
     break;
 
-  case ACTION_SHOW_OSD:
+  case ACTION_TOGGLE_OSD:
     g_windowManager.ActivateWindow(WINDOW_DIALOG_MUSIC_OSD);
     return true;
 

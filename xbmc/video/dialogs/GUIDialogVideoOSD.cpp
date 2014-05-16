@@ -63,7 +63,7 @@ void CGUIDialogVideoOSD::FrameMove()
 
 bool CGUIDialogVideoOSD::OnAction(const CAction &action)
 {
-  if (action.GetID() == ACTION_SHOW_OSD)
+  if (action.GetID() == ACTION_TOGGLE_OSD)
   {
     Close();
     return true;

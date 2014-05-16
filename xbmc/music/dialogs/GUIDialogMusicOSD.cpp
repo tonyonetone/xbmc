@@ -72,7 +72,7 @@ bool CGUIDialogMusicOSD::OnAction(const CAction &action)
 {
   switch (action.GetID())
   {
-  case ACTION_SHOW_OSD:
+  case ACTION_TOGGLE_OSD:
     Close();
     return true;
 
