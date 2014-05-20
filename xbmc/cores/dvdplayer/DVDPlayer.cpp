@@ -3833,10 +3833,6 @@ bool CDVDPlayer::OnAction(const CAction &action)
       }
       else
         break;
-    case ACTION_MOUSE_MOVE:
-    case ACTION_MOUSE_LEFT_CLICK:
-      CApplicationMessenger::Get().SendAction(CAction(ACTION_TRIGGER_OSD), WINDOW_INVALID, false);
-      return false;
   }
 
   // return false to inform the caller we didn't handle the message
