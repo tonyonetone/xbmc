@@ -1726,7 +1726,7 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
     if (artType.empty())
       return false;
 
-    if (artType == "fanart")
+    if (artType == "fanart" && type != "set")
       return OnGetFanart(item);
 
     if (currentArt.find(artType) != currentArt.end())
@@ -1751,11 +1751,32 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
   {
     CVideoInfoTag tag;
     if (type == "season")
+    {
       videodb.GetTvShowInfo("", tag, item->GetVideoInfoTag()->m_iIdShow);
+      tag.m_strPictureURL.GetThumbURLs(thumbs, artType, item->GetVideoInfoTag()->m_iSeason);
+    }
+    else if (type == "set")
+    {
+      CFileItemList items;
+      CStdString baseDir = StringUtils::Format("videodb://movies/sets/%d", item->GetVideoInfoTag()->m_iDbId);
+      if (videodb.GetMoviesNav(baseDir, items) && items.Size() > 0)
+      {
+        for (int i=0; i < items.Size(); i++)
+        {
+          map<string, string> artwork;
+          if (videodb.GetArtForItem(items[i]->GetVideoInfoTag()->m_iDbId, items[i]->GetVideoInfoTag()->m_type, artwork))
+          {
+            CVideoThumbLoader::SetArt(*items[i], artwork);
+            thumbs.push_back(items[i]->GetArt(artType));
+          }
+        }
+      }
+    }
     else
+    {
       tag = *item->GetVideoInfoTag();
-
-    tag.m_strPictureURL.GetThumbURLs(thumbs, artType, type == "season" ? item->GetVideoInfoTag()->m_iSeason : -1);
+      tag.m_strPictureURL.GetThumbURLs(thumbs, artType);
+    }
 
     for (size_t i = 0; i < thumbs.size(); i++)
     {
