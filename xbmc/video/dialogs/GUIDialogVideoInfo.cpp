@@ -1755,7 +1755,7 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
     {
       CFileItemList items;
       CStdString baseDir = StringUtils::Format("videodb://movies/sets/%d", item->GetVideoInfoTag()->m_iDbId);
-      if (videodb.GetMoviesNav(baseDir, items) && items.Size() > 0)
+      if (videodb.GetMoviesNav(baseDir, items))
       {
         for (int i=0; i < items.Size(); i++)
         {
