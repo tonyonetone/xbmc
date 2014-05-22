@@ -1722,7 +1722,7 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
     if (artType.empty())
       return false;
 
-    if (artType == "fanart" && type != "set")
+    if (artType == "fanart")
       return OnGetFanart(item);
 
     if (currentArt.find(artType) != currentArt.end())
@@ -1991,6 +1991,35 @@ bool CGUIDialogVideoInfo::OnGetFanart(const CFileItemPtr &videoItem)
     items.Add(itemCurrent);
   }
 
+  vector<CStdString> thumbs;
+  if (videoItem->GetVideoInfoTag()->m_type == "set")
+  {
+    CFileItemList movies;
+    CStdString baseDir = StringUtils::Format("videodb://movies/sets/%d", videoItem->GetVideoInfoTag()->m_iDbId);
+    if (videodb.GetMoviesNav(baseDir, movies))
+    {
+      for (int i=0; i < movies.Size(); i++)
+      {
+        // ensure the fanart is unpacked
+        movies[i]->GetVideoInfoTag()->m_fanart.Unpack();
+
+        // Grab the thumbnails from the web
+        for (unsigned int j = 0; j < movies[i]->GetVideoInfoTag()->m_fanart.GetNumFanarts(); j++)
+        {
+          CStdString strItemPath = StringUtils::Format("fanart://Remote%i",j);
+          CFileItemPtr item(new CFileItem(strItemPath, false));
+          CStdString thumb = movies[i]->GetVideoInfoTag()->m_fanart.GetPreviewURL(j);
+          item->SetArt("thumb", CTextureUtils::GetWrappedThumbURL(thumb));
+          item->SetIconImage("DefaultPicture.png");
+          item->SetLabel(g_localizeStrings.Get(20441));
+          thumbs.push_back(movies[i]->GetVideoInfoTag()->m_fanart.GetImageURL(j));
+
+          items.Add(item);
+        }
+      }
+    }
+  }
+
   // add the none option
   {
     CFileItemPtr itemNone(new CFileItem("fanart://None", false));
@@ -2008,7 +2037,12 @@ bool CGUIDialogVideoInfo::OnGetFanart(const CFileItemPtr &videoItem)
       StringUtils::EqualsNoCase(result, "fanart://Current"))
     return false;
 
-  if (StringUtils::EqualsNoCase(result, "fanart://None") || !CFile::Exists(result))
+  if (StringUtils::StartsWith(result, "fanart://Remote"))
+  {
+    int iFanart = atoi(result.substr(15).c_str());
+    result = thumbs[iFanart];
+  }
+  else if (result.Equals("fanart://None") || !CFile::Exists(result))
     result.clear();
   if (!result.empty() && flip)
     result = CTextureUtils::GetWrappedImageURL(result, "", "flipped");
