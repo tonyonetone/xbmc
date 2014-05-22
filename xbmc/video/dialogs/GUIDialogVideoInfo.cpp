@@ -1759,12 +1759,8 @@ bool CGUIDialogVideoInfo::ManageVideoItemArtwork(const CFileItemPtr &item, const
       {
         for (int i=0; i < items.Size(); i++)
         {
-          map<string, string> artwork;
-          if (videodb.GetArtForItem(items[i]->GetVideoInfoTag()->m_iDbId, items[i]->GetVideoInfoTag()->m_type, artwork))
-          {
-            CVideoThumbLoader::SetArt(*items[i], artwork);
-            thumbs.push_back(items[i]->GetArt(artType));
-          }
+          videodb.GetMovieInfo("", tag, items[i]->GetVideoInfoTag()->m_iDbId);
+          tag.m_strPictureURL.GetThumbURLs(thumbs, artType);
         }
       }
     }
