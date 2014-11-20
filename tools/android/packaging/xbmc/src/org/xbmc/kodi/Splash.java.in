@@ -612,6 +612,8 @@ public class Splash extends Activity {
       if (curArch.equalsIgnoreCase("arm")) {
         // arm arch: check if the cpu supports neon
         boolean ret = ParseCpuFeature();
+        Log.d(TAG, "/proc/cpuinfo = " + mCpuinfo);
+        /*
         if (!ret) {
           mErrorMsg = "Error! Cannot parse CPU features.";
           Log.e(TAG, mErrorMsg);
@@ -624,6 +626,7 @@ public class Splash extends Activity {
             mState = InError;
           }
         }
+        */
       }
     }
     
