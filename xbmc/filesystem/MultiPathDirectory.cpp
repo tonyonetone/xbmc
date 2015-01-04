@@ -31,6 +31,8 @@
 #include "utils/TimeUtils.h"
 #include "utils/URIUtils.h"
 
+#include <algorithm>
+
 using namespace std;
 using namespace XFILE;
 

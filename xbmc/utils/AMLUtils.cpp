@@ -389,14 +389,14 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
   if(!mode)
     return false;
 
-  CStdString fromMode = mode;
+  std::string fromMode = mode;
   StringUtils::Trim(fromMode);
   // strips, for example, 720p* to 720p
   // the * indicate the 'native' mode of the display
   if (StringUtils::EndsWith(fromMode, "*"))
     fromMode.erase(fromMode.size() - 1);
 
-  if (fromMode.Equals("panel"))
+  if (fromMode == "panel")
   {
     res->iWidth = aml_axis_value(AML_DISPLAY_AXIS_PARAM_WIDTH);
     res->iHeight= aml_axis_value(AML_DISPLAY_AXIS_PARAM_HEIGHT);
@@ -405,7 +405,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 60;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("720p"))
+  else if (fromMode == "720p")
   {
     res->iWidth = 1280;
     res->iHeight= 720;
@@ -414,7 +414,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 60;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("720p50hz"))
+  else if (fromMode == "720p50hz")
   {
     res->iWidth = 1280;
     res->iHeight= 720;
@@ -423,7 +423,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 50;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("1080p"))
+  else if (fromMode == "1080p")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -432,7 +432,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 60;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("1080p24hz"))
+  else if (fromMode == "1080p24hz")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -441,7 +441,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 24;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("1080p30hz"))
+  else if (fromMode == "1080p30hz")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -450,7 +450,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 30;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("1080p50hz"))
+  else if (fromMode == "1080p50hz")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -459,7 +459,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 50;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("1080i"))
+  else if (fromMode == "1080i")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -468,7 +468,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 60;
     res->dwFlags = D3DPRESENTFLAG_INTERLACED;
   }
-  else if (fromMode.Equals("1080i50hz"))
+  else if (fromMode == "1080i50hz")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -477,7 +477,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 50;
     res->dwFlags = D3DPRESENTFLAG_INTERLACED;
   }
-  else if (fromMode.Equals("4k2ksmpte"))
+  else if (fromMode == "4k2ksmpte")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -486,7 +486,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 24;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("4k2k24hz"))
+  else if (fromMode == "4k2k24hz")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -495,7 +495,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 24;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("4k2k25hz"))
+  else if (fromMode == "4k2k25hz")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;
@@ -504,7 +504,7 @@ bool aml_mode_to_resolution(const char *mode, RESOLUTION_INFO *res)
     res->fRefreshRate = 25;
     res->dwFlags = D3DPRESENTFLAG_PROGRESSIVE;
   }
-  else if (fromMode.Equals("4k2k30hz"))
+  else if (fromMode == "4k2k30hz")
   {
     res->iWidth = 1920;
     res->iHeight= 1080;

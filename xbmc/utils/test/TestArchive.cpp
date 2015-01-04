@@ -21,7 +21,7 @@
 #include "utils/Archive.h"
 #include "utils/Variant.h"
 #include "filesystem/File.h"
-#include "utils/StdString.h"
+#include <string>
 
 #include "test/TestUtils.h"
 
@@ -195,38 +195,38 @@ TEST_F(TestArchive, CharArchive)
   EXPECT_EQ(char_ref, char_var);
 }
 
-TEST_F(TestArchive, CStdStringArchive)
+TEST_F(TestArchive, std::stringArchive)
 {
   ASSERT_TRUE(file);
-  CStdStringW CStdStringW_ref = L"test CStdStringW", CStdStringW_var = L"";
+  std::wstring std::wstring_ref = L"test std::wstring", std::wstring_var = L"";
 
   CArchive arstore(file, CArchive::store);
-  arstore << CStdStringW_ref;
+  arstore << std::wstring_ref;
   arstore.Close();
 
   ASSERT_TRUE((file->Seek(0, SEEK_SET) == 0));
   CArchive arload(file, CArchive::load);
-  arload >> CStdStringW_var;
+  arload >> std::wstring_var;
   arload.Close();
 
-  EXPECT_STREQ(CStdStringW_ref.c_str(), CStdStringW_var.c_str());
+  EXPECT_STREQ(std::wstring_ref.c_str(), std::wstring_var.c_str());
 }
 
-TEST_F(TestArchive, CStdStringWArchive)
+TEST_F(TestArchive, std::wstringArchive)
 {
   ASSERT_TRUE(file);
-  CStdString CStdString_ref = "test CStdString", CStdString_var = "";
+  std::string std::string_ref = "test std::string", std::string_var = "";
 
   CArchive arstore(file, CArchive::store);
-  arstore << CStdString_ref;
+  arstore << std::string_ref;
   arstore.Close();
 
   ASSERT_TRUE((file->Seek(0, SEEK_SET) == 0));
   CArchive arload(file, CArchive::load);
-  arload >> CStdString_var;
+  arload >> std::string_var;
   arload.Close();
 
-  EXPECT_STREQ(CStdString_ref.c_str(), CStdString_var.c_str());
+  EXPECT_STREQ(std::string_ref.c_str(), std::string_var.c_str());
 }
 
 TEST_F(TestArchive, SYSTEMTIMEArchive)
@@ -342,8 +342,8 @@ TEST_F(TestArchive, MultiTypeArchive)
   uint64_t uint64_t_ref = 6, uint64_t_var = 0;
   bool bool_ref = true, bool_var = false;
   char char_ref = 'A', char_var = '\0';
-  CStdString CStdString_ref = "test CStdString", CStdString_var = "";
-  CStdStringW CStdStringW_ref = L"test CStdStringW", CStdStringW_var = L"";
+  std::string std::string_ref = "test std::string", std::string_var = "";
+  std::wstring std::wstring_ref = L"test std::wstring", std::wstring_var = L"";
   SYSTEMTIME SYSTEMTIME_ref = { 1, 2, 3, 4, 5, 6, 7, 8 };
   SYSTEMTIME SYSTEMTIME_var = { 0, 0, 0, 0, 0, 0, 0, 0 };
   CVariant CVariant_ref((int)1), CVariant_var;
@@ -369,8 +369,8 @@ TEST_F(TestArchive, MultiTypeArchive)
   arstore << uint64_t_ref;
   arstore << bool_ref;
   arstore << char_ref;
-  arstore << CStdString_ref;
-  arstore << CStdStringW_ref;
+  arstore << std::string_ref;
+  arstore << std::wstring_ref;
   arstore << SYSTEMTIME_ref;
   arstore << CVariant_ref;
   arstore << strArray_ref;
@@ -389,8 +389,8 @@ TEST_F(TestArchive, MultiTypeArchive)
   arload >> uint64_t_var;
   arload >> bool_var;
   arload >> char_var;
-  arload >> CStdString_var;
-  arload >> CStdStringW_var;
+  arload >> std::string_var;
+  arload >> std::wstring_var;
   arload >> SYSTEMTIME_var;
   arload >> CVariant_var;
   arload >> strArray_var;
@@ -405,8 +405,8 @@ TEST_F(TestArchive, MultiTypeArchive)
   EXPECT_EQ(uint64_t_ref, uint64_t_var);
   EXPECT_EQ(bool_ref, bool_var);
   EXPECT_EQ(char_ref, char_var);
-  EXPECT_STREQ(CStdString_ref.c_str(), CStdString_var.c_str());
-  EXPECT_STREQ(CStdStringW_ref.c_str(), CStdStringW_var.c_str());
+  EXPECT_STREQ(std::string_ref.c_str(), std::string_var.c_str());
+  EXPECT_STREQ(std::wstring_ref.c_str(), std::wstring_var.c_str());
   EXPECT_TRUE(!memcmp(&SYSTEMTIME_ref, &SYSTEMTIME_var, sizeof(SYSTEMTIME)));
   EXPECT_TRUE(CVariant_var.isInteger());
   EXPECT_STREQ("test strArray_ref 0", strArray_var.at(0).c_str());

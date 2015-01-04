@@ -28,6 +28,7 @@
 #if HAS_GLES == 2
 #include "system_gl.h"
 
+#include <algorithm>
 #include <locale.h>
 #include "guilib/MatrixGLES.h"
 #include "LinuxRendererGLES.h"

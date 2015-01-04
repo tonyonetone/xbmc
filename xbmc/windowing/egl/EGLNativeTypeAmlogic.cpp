@@ -216,7 +216,7 @@ bool CEGLNativeTypeAmlogic::ShowWindow(bool show)
 
 bool CEGLNativeTypeAmlogic::SetDisplayResolution(const char *resolution)
 {
-  CStdString mode = resolution;
+  std::string mode = resolution;
   // switch display resolution
   SysfsUtils::SetString("/sys/class/display/mode", mode.c_str());
   SetupVideoScaling(mode.c_str());

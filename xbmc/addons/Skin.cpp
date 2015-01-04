@@ -38,6 +38,8 @@
 // fallback for new skin resolution code
 #include "filesystem/Directory.h"
 
+#include <algorithm>
+
 using namespace std;
 using namespace XFILE;
 

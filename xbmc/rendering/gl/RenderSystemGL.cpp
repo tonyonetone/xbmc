@@ -78,8 +78,7 @@ void CRenderSystemGL::CheckOpenGLQuirks()
   if (StringUtils::EqualsNoCase(m_RenderVendor, "nouveau"))
     m_renderQuirks |= RENDER_QUIRKS_YV12_PREFERED;
 
-  if (m_RenderVendor.Equals("Tungsten Graphics, Inc.")
-  ||  m_RenderVendor.Equals("Tungsten Graphics, Inc"))
+  if (StringUtils::StartsWithNoCase(m_RenderVendor, "Tungsten Graphics, Inc"))
   {
     unsigned major, minor, micro;
     if (sscanf(m_RenderVersion.c_str(), "%*s Mesa %u.%u.%u", &major, &minor, &micro) == 3)
@@ -284,7 +283,7 @@ bool CRenderSystemGL::ClearBuffers(color_t color)
 
 bool CRenderSystemGL::IsExtSupported(const char* extension)
 {
-  CStdString name;
+  std::string name;
   name  = " ";
   name += extension;
   name += " ";

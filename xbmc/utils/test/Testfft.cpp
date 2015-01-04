@@ -19,7 +19,7 @@
  */
 
 #include "utils/fft.h"
-#include "utils/StdString.h"
+#include <string>
 #include "utils/StringUtils.h"
 
 #include "gtest/gtest.h"
@@ -272,7 +272,7 @@ TEST(Testfft, twochannelrfft)
 {
   int i;
   float vardata[REFDATA_NUMELEMENTS];
-  CStdString refstr, varstr;
+  std::string refstr, varstr;
 
   memcpy(vardata, refdata, sizeof(refdata));
   twochannelrfft(vardata, REFDATA_NUMELEMENTS/2);
@@ -288,7 +288,7 @@ TEST(Testfft, twochanwithwindow)
 {
   int i;
   float vardata[REFDATA_NUMELEMENTS];
-  CStdString refstr, varstr;
+  std::string refstr, varstr;
 
   memcpy(vardata, refdata, sizeof(refdata));
   twochanwithwindow(vardata, REFDATA_NUMELEMENTS/2);

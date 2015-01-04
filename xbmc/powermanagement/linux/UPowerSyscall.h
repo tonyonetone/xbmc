@@ -23,7 +23,7 @@
 #ifdef HAS_DBUS
 #include "powermanagement/IPowerSyscall.h"
 #include "DBusUtil.h"
-#include "utils/StdString.h"
+#include <string>
 
 #include <list>
 
@@ -38,7 +38,7 @@ public:
   double  BatteryLevel();
 
 private:
-  CStdString m_powerSource;
+  std::string m_powerSource;
   bool m_isRechargeable;
   double m_batteryLevel;
 };

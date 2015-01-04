@@ -19,7 +19,7 @@
  *
  */
 
-#include "utils/StdString.h"
+#include <string>
 #include "utils/JobManager.h"
 #include "ThumbLoader.h"
 

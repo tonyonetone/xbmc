@@ -18,6 +18,8 @@
  *
  */
 
+#include <stdlib.h>
+#include <algorithm>
 #include <time.h>
 #include "system.h"
 #ifdef TARGET_ANDROID

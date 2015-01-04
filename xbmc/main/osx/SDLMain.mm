@@ -19,7 +19,7 @@
 //hack around problem with xbmc's typedef int BOOL
 // and obj-c's typedef unsigned char BOOL
 #define BOOL XBMC_BOOL 
-#import "utils/StdString.h"
+#import <string>
 #import "PlatformDefs.h"
 #import "ApplicationMessenger.h"
 #import "storage/osx/DarwinStorageProvider.h"

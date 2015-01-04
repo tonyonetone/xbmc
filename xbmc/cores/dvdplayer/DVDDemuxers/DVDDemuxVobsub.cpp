@@ -28,7 +28,7 @@
 #include "DVDClock.h"
 #include "DVDSubtitles/DVDSubtitleStream.h"
 
-#include <string.h>
+#include <algorithm>
 
 using namespace std;
 

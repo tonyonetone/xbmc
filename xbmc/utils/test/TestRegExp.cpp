@@ -25,7 +25,7 @@
 
 #include "utils/RegExp.h"
 #include "utils/log.h"
-#include "utils/StdString.h"
+#include <string>
 #include "filesystem/File.h"
 #include "filesystem/SpecialProtocol.h"
 #include "utils/StringUtils.h"
@@ -148,7 +148,7 @@ protected:
 TEST_F(TestRegExpLog, DumpOvector)
 {
   CRegExp regex;
-  CStdString logfile, logstring;
+  std::string logfile, logstring;
   char buf[100];
   unsigned int bytesread;
   XFILE::CFile file;

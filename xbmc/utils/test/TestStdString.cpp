@@ -18,33 +18,33 @@
  *
  */
 
-#include "utils/StdString.h"
+#include <string>
 
 #include "gtest/gtest.h"
 
-TEST(TestStdString, CStdString)
+TEST(TestStdString, std::string)
 {
-  CStdString ref, var;
+  std::string ref, var;
 
-  ref = "CStdString test";
+  ref = "std::string test";
   var = ref;
   EXPECT_STREQ(ref.c_str(), var.c_str());
 }
 
-TEST(TestStdString, CStdStringA)
+TEST(TestStdString, std::stringA)
 {
-  CStdStringA ref, var;
+  std::stringA ref, var;
 
-  ref = "CStdStringA test";
+  ref = "std::stringA test";
   var = ref;
   EXPECT_STREQ(ref.c_str(), var.c_str());
 }
 
-TEST(TestStdString, CStdStringW)
+TEST(TestStdString, std::wstring)
 {
-  CStdStringW ref, var;
+  std::wstring ref, var;
 
-  ref = L"CStdStringW test";
+  ref = L"std::wstring test";
   var = ref;
   EXPECT_STREQ(ref.c_str(), var.c_str());
 }

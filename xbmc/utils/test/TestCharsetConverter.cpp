@@ -20,7 +20,7 @@
 
 #include "settings/Settings.h"
 #include "utils/CharsetConverter.h"
-#include "utils/StdString.h"
+#include <string>
 #include "utils/Utf8Utils.h"
 #include "system.h"
 
@@ -115,11 +115,11 @@ protected:
     CSettings::Get().Unload();
   }
 
-  CStdStringA refstra1, refstra2, varstra1;
-  CStdStringW refstrw1, varstrw1;
-  CStdString16 refstr16_1, varstr16_1;
-  CStdString32 refstr32_1, varstr32_1;
-  CStdString refstr1;
+  std::stringA refstra1, refstra2, varstra1;
+  std::wstring refstrw1, varstrw1;
+  std::string16 refstr16_1, varstr16_1;
+  std::string32 refstr32_1, varstr32_1;
+  std::string refstr1;
 };
 
 TEST_F(TestCharsetConverter, utf8ToW)
@@ -177,7 +177,7 @@ TEST_F(TestCharsetConverter, utf8ToSystem)
 
 TEST_F(TestCharsetConverter, utf8To_ASCII)
 {
-  refstra1 = "test utf8To: charset ASCII, CStdStringA";
+  refstra1 = "test utf8To: charset ASCII, std::stringA";
   varstra1.clear();
   g_charsetConverter.utf8To("ASCII", refstra1, varstra1);
   EXPECT_STREQ(refstra1.c_str(), varstra1.c_str());
@@ -250,8 +250,8 @@ TEST_F(TestCharsetConverter, isValidUtf8_4)
 /* TODO: Resolve correct input/output for this function */
 // TEST_F(TestCharsetConverter, ucs2CharsetToStringCharset)
 // {
-//   void ucs2CharsetToStringCharset(const CStdStringW& strSource,
-//                                   CStdStringA& strDest, bool swap = false);
+//   void ucs2CharsetToStringCharset(const std::wstring& strSource,
+//                                   std::stringA& strDest, bool swap = false);
 // }
 
 TEST_F(TestCharsetConverter, wToUTF8)
@@ -302,12 +302,12 @@ TEST_F(TestCharsetConverter, utf8logicalToVisualBiDi)
 /* TODO: Resolve correct input/output for this function */
 // TEST_F(TestCharsetConverter, utf32ToStringCharset)
 // {
-//   void utf32ToStringCharset(const unsigned long* strSource, CStdStringA& strDest);
+//   void utf32ToStringCharset(const unsigned long* strSource, std::stringA& strDest);
 // }
 
 TEST_F(TestCharsetConverter, getCharsetLabels)
 {
-  std::vector<CStdString> reflabels;
+  std::vector<std::string> reflabels;
   reflabels.push_back("Western Europe (ISO)");
   reflabels.push_back("Central Europe (ISO)");
   reflabels.push_back("South Europe (ISO)");
@@ -345,7 +345,7 @@ TEST_F(TestCharsetConverter, getCharsetLabels)
 
 TEST_F(TestCharsetConverter, getCharsetLabelByName)
 {
-  CStdString varstr =
+  std::string varstr =
     g_charsetConverter.getCharsetLabelByName("ISO-8859-1");
   EXPECT_STREQ("Western Europe (ISO)", varstr.c_str());
   varstr.clear();
@@ -355,7 +355,7 @@ TEST_F(TestCharsetConverter, getCharsetLabelByName)
 
 TEST_F(TestCharsetConverter, getCharsetNameByLabel)
 {
-  CStdString varstr =
+  std::string varstr =
     g_charsetConverter.getCharsetNameByLabel("Western Europe (ISO)");
   EXPECT_STREQ("ISO-8859-1", varstr.c_str());
   varstr.clear();

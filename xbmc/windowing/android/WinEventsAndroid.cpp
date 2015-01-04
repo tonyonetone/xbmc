@@ -31,6 +31,8 @@
 
 #include "android/jni/View.h"
 
+#include <math.h>
+
 #define DEBUG_MESSAGEPUMP 0
 
 #define ALMOST_ZERO 0.125f
@@ -57,7 +59,7 @@ static bool different_event(XBMC_Event &curEvent, XBMC_Event &newEvent)
     return true;
 
   // different axis direction (handles -1 vs 1)
-  if (std::signbit(curEvent.jaxis.fvalue) != std::signbit(newEvent.jaxis.fvalue))
+  if (signbit(curEvent.jaxis.fvalue) != signbit(newEvent.jaxis.fvalue))
     return true;
 
   // different axis value (handles 0 vs 1 or -1)

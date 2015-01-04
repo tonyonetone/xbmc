@@ -40,6 +40,8 @@
 #include "dialogs/GUIDialogProgress.h"
 #include "URL.h"
 
+#include <algorithm>
+
 using namespace std;
 using namespace XFILE;
 using namespace ADDON;

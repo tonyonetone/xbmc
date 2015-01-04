@@ -31,7 +31,7 @@
 class CKaraokeLyricsTextKAR : public CKaraokeLyricsText
 {
   public:
-    CKaraokeLyricsTextKAR( const CStdString & midiFile );
+    CKaraokeLyricsTextKAR( const std::string & midiFile );
     ~CKaraokeLyricsTextKAR();
 
     //! Parses the lyrics or song file, and loads the lyrics into memory.
@@ -40,7 +40,7 @@ class CKaraokeLyricsTextKAR : public CKaraokeLyricsText
 
   private:
     void      parseMIDI();
-    CStdString    convertText( const char * data );
+    std::string    convertText( const char * data );
 
     unsigned char   readByte();
     unsigned short  readWord();
@@ -52,7 +52,7 @@ class CKaraokeLyricsTextKAR : public CKaraokeLyricsText
     void      setPos( unsigned int offset );
 
     // MIDI file name
-    CStdString     m_midiFile;
+    std::string     m_midiFile;
 
     // MIDI in-memory information
     XUTILS::auto_buffer m_midiData;

@@ -115,7 +115,7 @@ bool CPeripheralBusUSB::PerformDeviceScan(PeripheralScanResults &results)
   devices = udev_enumerate_get_list_entry(enumerate);
 
   bool bContinue(true);
-  CStdString strPath, strClass;
+  std::string strPath, strClass;
   udev_list_entry_foreach(dev_list_entry, devices)
   {
     strPath = udev_list_entry_get_name(dev_list_entry);

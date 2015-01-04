@@ -20,6 +20,7 @@
 
 #include "threads/SystemClock.h"
 #include "system.h"
+#include <algorithm>
 
 #ifdef HAS_EVENT_SERVER
 

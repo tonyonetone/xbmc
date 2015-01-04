@@ -26,7 +26,9 @@
 #include "utils/log.h"
 #include "settings/AdvancedSettings.h"
 #include "settings/Settings.h"
-#include <string.h>
+
+#include <string>
+#include <assert.h>
 
 CAEEncoderFFmpeg::CAEEncoderFFmpeg():
   m_BitRate       (0    ),
@@ -108,7 +110,7 @@ bool CAEEncoderFFmpeg::Initialize(AEAudioFormat &format, bool allow_planar_input
 #if 0
   /* the DCA encoder is currently useless for transcode, it creates a 196 kHz DTS-HD like mongrel which is useless for SPDIF */
   bool dts = CSettings::Get().GetBool("audiooutput.dtspassthrough");
-  if (dts && (!ac3 || g_advancedSettings.m_audioTranscodeTo.Equals("dts")))
+  if (dts && (!ac3 || g_advancedSettings.m_audioTranscodeTo == "dts")))
   {
     m_CodecName = "DTS";
     m_CodecID   = AV_CODEC_ID_DTS;

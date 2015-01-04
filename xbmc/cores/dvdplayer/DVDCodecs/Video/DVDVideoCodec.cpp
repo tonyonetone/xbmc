@@ -18,6 +18,8 @@
  *
  */
 
+#include <algorithm>
+
 #include "DVDVideoCodec.h"
 #include "windowing/WindowingFactory.h"
 #include "settings/Settings.h"

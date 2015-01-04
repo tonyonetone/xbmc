@@ -53,6 +53,8 @@
 #include "URL.h"
 #include "utils/XMLUtils.h"
 
+#include <algorithm>
+
 using namespace std;
 using namespace ADDON;
 using XFILE::CDirectory;

@@ -18,6 +18,8 @@
  *
  */
 
+#include <stdlib.h>
+
 #include "GUIDialogGamepad.h"
 #include "utils/md5.h"
 #include "utils/StringUtils.h"

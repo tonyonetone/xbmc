@@ -23,6 +23,8 @@
 #include "guilib/Resolution.h"
 #include "EGLQuirks.h"
 
+#include <vector>
+
 typedef void* XBNativeDisplayType;
 typedef void* XBNativeWindowType;
 

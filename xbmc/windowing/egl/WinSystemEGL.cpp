@@ -36,6 +36,7 @@
 #include "EGLQuirks.h"
 #include <vector>
 #include <float.h>
+#include <algorithm>
 
 #ifdef TARGET_ANDROID
 #include "android/activity/XBMCApp.h"
@@ -266,7 +267,7 @@ bool CWinSystemEGL::DestroyWindowSystem()
   return true;
 }
 
-bool CWinSystemEGL::CreateNewWindow(const CStdString& name, bool fullScreen, RESOLUTION_INFO& res, PHANDLE_EVENT_FUNC userFunction)
+bool CWinSystemEGL::CreateNewWindow(const std::string& name, bool fullScreen, RESOLUTION_INFO& res, PHANDLE_EVENT_FUNC userFunction)
 {
   RESOLUTION_INFO current_resolution;
   current_resolution.iWidth = current_resolution.iHeight = 0;

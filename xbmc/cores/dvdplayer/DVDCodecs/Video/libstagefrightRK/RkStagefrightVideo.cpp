@@ -393,7 +393,7 @@ bool CRkStageFrightVideo::Open(CDVDStreamInfo &hints)
   switch (hints.codec)
   {
     case AV_CODEC_ID_HEVC:
-      if (m_g_advancedSettings->m_stagefrightConfig.useHEVCcodec == 0)
+      if (m_g_advancedSettings->m_stagefrightConfig.useHEVCcodec == "0")
         return false;
       mimetype = "video/hevc";
       m_metadata->setData(kKeyHVCC, kTypeAVCC, hints.extradata, hints.extrasize);

@@ -35,6 +35,8 @@ extern "C" {
 #include "libhts/htsmsg_binary.h"
 }
 
+#include <assert.h>
+
 using namespace XFILE;
 using namespace HTSP;
 

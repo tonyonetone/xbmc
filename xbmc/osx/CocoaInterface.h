@@ -21,7 +21,7 @@
 #define _OSX_INTERFACE_H_
 
 #include <string>
-#include "utils/StdString.h"
+#include <string>
 #include "AutoPool.h"
 
 #ifdef __cplusplus
@@ -47,7 +47,7 @@ extern "C"
   // Devices
   //
   char* Cocoa_MountPoint2DeviceName(char *path);
-  bool Cocoa_GetVolumeNameFromMountPoint(const char *mountPoint, CStdString &volumeName);
+  bool Cocoa_GetVolumeNameFromMountPoint(const char *mountPoint, std::string &volumeName);
 
   // Mouse.
   //

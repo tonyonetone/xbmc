@@ -8502,7 +8502,6 @@ xbmc/utils/SortUtils.cpp
 xbmc/utils/SortUtils.h
 xbmc/utils/Splash.cpp
 xbmc/utils/Splash.h
-xbmc/utils/StdString.h
 xbmc/utils/Stopwatch.cpp
 xbmc/utils/Stopwatch.h
 xbmc/utils/StreamDetails.cpp
@@ -9646,3 +9645,18 @@ tools/android/packaging/xbmc/AndroidManifest.xml.in
 xbmc/utils/SysfsUtils.h
 xbmc/utils/SysfsUtils.cpp
 xbmc/utils/Makefile.in
+xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodec.h
+xbmc/cores/dvdplayer/DVDCodecs/Video/DVDVideoCodec.cpp
+xbmc/filesystem/BlurayFile.h
+xbmc/filesystem/BlurayFile.cpp
+xbmc/input/KeyboardLayout.h
+xbmc/input/KeyboardLayout.cpp
+xbmc/interfaces/json-rpc/TextureOperations.h
+xbmc/interfaces/json-rpc/TextureOperations.cpp
+xbmc/listproviders/Makefile
+xbmc/listproviders/StaticProvider.h
+xbmc/listproviders/IListProvider.h
+xbmc/listproviders/DirectoryProvider.h
+xbmc/listproviders/StaticProvider.cpp
+xbmc/listproviders/IListProvider.cpp
+xbmc/listproviders/DirectoryProvider.cpp

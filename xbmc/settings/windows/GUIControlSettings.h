@@ -19,7 +19,7 @@
  *
  */
 
-#include "utils/StdString.h"
+#include <string>
 #include "guilib/ISliderCallback.h"
 
 class CGUIControl;

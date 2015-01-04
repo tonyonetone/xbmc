@@ -28,7 +28,6 @@
 #endif
 
 #include <vector>
-#include <algorithm>
 
 template <typename T> class CPointGen
 {

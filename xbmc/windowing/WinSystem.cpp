@@ -25,6 +25,8 @@
 #include "settings/Settings.h"
 #include "utils/StringUtils.h"
 
+#include <algorithm>
+
 using namespace std;
 
 CWinSystemBase::CWinSystemBase()

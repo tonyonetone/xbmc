@@ -29,6 +29,8 @@
 #include "utils/XBMCTinyXML.h"
 #include "utils/RegExp.h"
 
+#include <assert.h>
+
 using namespace XFILE;
 using namespace XCURL;
 
@@ -49,7 +51,7 @@ bool CDAVFile::Execute(const CURL& url)
 
   CLog::Log(LOGDEBUG, "CDAVFile::Execute(%p) %s", (void*)this, m_url.c_str());
 
-  ASSERT(!(!m_state->m_easyHandle ^ !m_state->m_multiHandle));
+  assert(!(!m_state->m_easyHandle ^ !m_state->m_multiHandle));
   if( m_state->m_easyHandle == NULL )
     g_curlInterface.easy_aquire(url2.GetProtocol().c_str(),
                                 url2.GetHostName().c_str(),

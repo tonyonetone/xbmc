@@ -20,6 +20,8 @@
  *
  */
 
+#include <algorithm>
+
 #include "cores/IPlayer.h"
 #include "threads/Thread.h"
 

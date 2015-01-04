@@ -19,7 +19,7 @@
  */
 #include "system.h"
 #include <list>
-#include "utils/StdString.h"
+#include <string>
 #include "VideoReferenceClock.h"
 #include "utils/MathUtils.h"
 #include "utils/log.h"

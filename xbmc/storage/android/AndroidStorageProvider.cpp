@@ -18,6 +18,8 @@
  *
  */
 
+#include <stdlib.h>
+
 #include "AndroidStorageProvider.h"
 #include "android/activity/XBMCApp.h"
 #include "guilib/LocalizeStrings.h"

@@ -17,6 +17,9 @@
  *  <http://www.gnu.org/licenses/>.
  *
  */
+
+#include <stdlib.h>
+
 #include "LanguageHook.h"
 
 #include "dialogs/GUIDialogOK.h"

@@ -33,6 +33,8 @@
 #include <dirent.h>
 #endif
 
+#include <assert.h>
+
 using namespace std;
 
 map<std::string, std::string> CSpecialProtocol::m_pathMap;

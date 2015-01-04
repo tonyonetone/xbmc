@@ -35,6 +35,8 @@
 #include "pvr/timers/PVRTimers.h"
 #include "cores/IPlayer.h"
 
+#include <algorithm>
+
 using namespace ADDON;
 using namespace PVR;
 using namespace EPG;

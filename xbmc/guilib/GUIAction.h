@@ -20,7 +20,7 @@
  */
 
 #include <vector>
-#include "utils/StdString.h"
+#include <string>
 
 class CGUIControl;
 
@@ -56,8 +56,8 @@ public:
 private:
   struct cond_action_pair
   {
-    CStdString condition;
-    CStdString action;
+    std::string condition;
+    std::string action;
   };
 
   std::vector<cond_action_pair> m_actions;

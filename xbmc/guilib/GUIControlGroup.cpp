@@ -21,6 +21,8 @@
 #include "GUIControlGroup.h"
 #include "GUIControlProfiler.h"
 
+#include <assert.h>
+
 using namespace std;
 
 CGUIControlGroup::CGUIControlGroup()
@@ -135,7 +137,7 @@ void CGUIControlGroup::Render()
 
 bool CGUIControlGroup::OnAction(const CAction &action)
 {
-  ASSERT(false);  // unimplemented
+  assert(false);  // unimplemented
   return false;
 }
 

@@ -24,7 +24,7 @@
 #if defined(TARGET_ANDROID)
 #include "IFile.h"
 #include "URL.h"
-#include "utils/StdString.h"
+#include <string>
 #include "android/activity/XBMCApp.h"
 
 namespace XFILE

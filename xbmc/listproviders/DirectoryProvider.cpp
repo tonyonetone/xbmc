@@ -37,6 +37,7 @@
 #include "interfaces/AnnouncementManager.h"
 
 #include <memory>
+#include <algorithm>
 
 using namespace std;
 using namespace XFILE;

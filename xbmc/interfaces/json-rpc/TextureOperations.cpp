@@ -22,6 +22,8 @@
 #include "TextureDatabase.h"
 #include "TextureCache.h"
 
+#include <algorithm>
+
 using namespace JSONRPC;
 
 JSONRPC_STATUS CTextureOperations::GetTextures(const std::string &method, ITransportLayer *transport, IClient *client, const CVariant &parameterObject, CVariant &result)
