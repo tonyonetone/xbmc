@@ -23,6 +23,7 @@
 #include "TextureManager.h"
 #include "GUILargeTextureManager.h"
 #include "utils/MathUtils.h"
+#include "utils/StringUtils.h"
 
 using namespace std;
 

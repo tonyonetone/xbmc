@@ -34,6 +34,7 @@
 #include "windowing/WindowingFactory.h"
 #include "utils/Variant.h"
 #include "Key.h"
+#include "utils/StringUtils.h"
 
 #include <algorithm>
 
