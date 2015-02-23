@@ -1,4 +1,4 @@
-package com.semperpax.@APP_NAME_LC@;
+package org.xbmc.@APP_NAME_LC@;
 
 import android.content.Context;
 import android.database.ContentObserver;
