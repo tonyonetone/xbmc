@@ -17,6 +17,7 @@
  *  <http://www.gnu.org/licenses/>.
  *
  */
+#include <stdlib.h>
 
 #include "system.h"
 #include <EGL/egl.h>
@@ -25,8 +26,10 @@
 #include "guilib/gui3d.h"
 #include "android/activity/XBMCApp.h"
 #include "utils/StringUtils.h"
+#include "android/jni/SystemProperties.h"
 
 CEGLNativeTypeAndroid::CEGLNativeTypeAndroid()
+  : m_width(0), m_height(0)
 {
 }
 
@@ -58,7 +61,7 @@ bool CEGLNativeTypeAndroid::CreateNativeWindow()
 {
   // Android hands us a window, we don't have to create it
   return true;
-}  
+}
 
 bool CEGLNativeTypeAndroid::GetNativeDisplay(XBNativeDisplayType **nativeDisplay) const
 {
@@ -92,10 +95,18 @@ bool CEGLNativeTypeAndroid::GetNativeResolution(RESOLUTION_INFO *res) const
   if (!nativeWindow)
     return false;
 
-  ANativeWindow_acquire(*nativeWindow);
-  res->iWidth = ANativeWindow_getWidth(*nativeWindow);
-  res->iHeight= ANativeWindow_getHeight(*nativeWindow);
-  ANativeWindow_release(*nativeWindow);
+  if (!m_width || !m_height)
+  {
+    ANativeWindow_acquire(*nativeWindow);
+    res->iWidth = ANativeWindow_getWidth(*nativeWindow);
+    res->iHeight= ANativeWindow_getHeight(*nativeWindow);
+    ANativeWindow_release(*nativeWindow);
+  }
+  else
+  {
+    res->iWidth = m_width;
+    res->iHeight = m_height;
+  }
 
   res->fRefreshRate = 60;
   res->dwFlags= D3DPRESENTFLAG_PROGRESSIVE;
@@ -113,6 +124,27 @@ bool CEGLNativeTypeAndroid::GetNativeResolution(RESOLUTION_INFO *res) const
 
 bool CEGLNativeTypeAndroid::SetNativeResolution(const RESOLUTION_INFO &res)
 {
+  std::string displaySize = CJNISystemProperties::get("sys.display-size", "");
+  //std::string displaySize = "3840x2160";
+  CLog::Log(LOGDEBUG, "CEGLNativeTypeAndroid: display-size: %s", displaySize.c_str());
+  if (!displaySize.empty())
+  {
+    int displayWidth = 0;
+    int displayHeight = 0;
+    std::vector<std::string> aSize = StringUtils::Split(displaySize, "x");
+    if (aSize.size() == 2)
+    {
+      displayWidth = StringUtils::IsInteger(aSize[0]) ? atoi(aSize[0].c_str()) : 0;
+      displayHeight = StringUtils::IsInteger(aSize[1]) ? atoi(aSize[1].c_str()) : 0;
+    }
+    if (displayWidth && displayHeight)
+    {
+      CXBMCApp::SetBuffersGeometry(displayWidth, displayHeight, 0);
+      m_width = displayWidth;
+      m_height = displayHeight;
+      return true;
+    }
+  }
   return false;
 }
 
