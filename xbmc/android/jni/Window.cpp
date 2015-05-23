@@ -19,11 +19,37 @@
  */
 
 #include "Window.h"
+#include "WindowManager.h"
 #include "View.h"
 
 #include "jutils/jutils-details.hpp"
 
 using namespace jni;
+
+CJNIWindowManagerLayoutParams CJNIWindow::getAttributes()
+{
+  return call_method<jhobject>(m_object,
+    "getAttributes", "()Landroid/view/WindowManager$LayoutParams;");
+}
+
+void CJNIWindow::setAttributes(const CJNIWindowManagerLayoutParams& attributes)
+{
+  call_method<void>(m_object,
+                    "setAttributes", "(Landroid/view/WindowManager$LayoutParams;)V",
+                    attributes.get_raw());
+
+
+  JNIEnv* jenv = xbmc_jnienv();
+  jthrowable exception = jenv->ExceptionOccurred();
+  if (exception)
+  {
+    jenv->ExceptionClear();
+    jhclass excClass = find_class(jenv, "java/lang/Throwable");
+    jmethodID toStrMethod = get_method_id(jenv, excClass, "toString", "()Ljava/lang/String;");
+    jhstring msg = call_method<jhstring>(exception, toStrMethod);
+    __android_log_print(ANDROID_LOG_INFO, "XBMCPE", "EXCEPTION: %s", jcast<std::string>(msg).c_str());
+  }
+}
 
 CJNIView CJNIWindow::getDecorView()
 {

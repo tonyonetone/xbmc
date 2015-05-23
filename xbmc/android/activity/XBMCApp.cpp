@@ -45,6 +45,7 @@
 #include "utils/log.h"
 #include "ApplicationMessenger.h"
 #include "utils/StringUtils.h"
+#include "utils/Variant.h"
 #include "AppParamParser.h"
 #include "XbmcContext.h"
 #include <android/bitmap.h>
@@ -75,6 +76,9 @@
 #if defined(HAS_LIBAMCODEC)
 #include "utils/AMLUtils.h"
 #endif
+#include "android/jni/Window.h"
+#include "android/jni/WindowManager.h"
+
 #include "CompileInfo.h"
 
 #define GIGABYTES       1073741824
@@ -378,6 +382,43 @@ bool CXBMCApp::XBMC_DestroyDisplay()
 int CXBMCApp::SetBuffersGeometry(int width, int height, int format)
 {
   return ANativeWindow_setBuffersGeometry(m_window, width, height, format);
+}
+
+#include "threads/Event.h"
+#include <time.h>
+
+void CXBMCApp::SetRefreshRateCallback(CVariant* rateVariant)
+{
+  float rate = rateVariant->asFloat();
+  delete rateVariant;
+
+  CJNIWindow window = getWindow();
+  struct timespec tp;
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+  if (window)
+  {
+    CJNIWindowManagerLayoutParams params = window.getAttributes();
+    if (params.getpreferredRefreshRate() != rate)
+    {
+      params.setpreferredRefreshRate(rate);
+      if (params.getpreferredRefreshRate() > 0.0)
+        window.setAttributes(params);
+    }
+  }
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+}
+
+void CXBMCApp::SetRefreshRate(float rate)
+{
+  if (rate < 1.0)
+    return;
+
+  CVariant *variant = new CVariant(rate);
+
+  struct timespec tp;
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+  runNativeOnUiThread(SetRefreshRateCallback, variant);
+  clock_gettime(CLOCK_MONOTONIC, &tp);
 }
 
 int CXBMCApp::android_printf(const char *format, ...)
