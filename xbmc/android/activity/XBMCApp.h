@@ -32,6 +32,7 @@
 #include "xbmc.h"
 #include "android/jni/Activity.h"
 #include "android/jni/BroadcastReceiver.h"
+#include "android/jni/AudioManager.h"
 #include "threads/Event.h"
 
 // forward delares
@@ -53,7 +54,7 @@ struct androidPackage
   std::string packageLabel;
 };
 
-class CXBMCApp : public IActivityHandler, public CJNIApplicationMainActivity, public CJNIBroadcastReceiver
+class CXBMCApp : public IActivityHandler, public CJNIApplicationMainActivity, public CJNIBroadcastReceiver, public CJNIAudioManagerAudioFocusChangeListener
 {
 public:
   CXBMCApp(ANativeActivity *nativeActivity);
@@ -61,6 +62,7 @@ public:
   virtual void onReceive(CJNIIntent intent);
   virtual void onNewIntent(CJNIIntent intent);
   virtual void onVolumeChanged(int volume);
+  virtual void onAudioFocusChange(int focusChange);
 
   bool isValid() { return m_activity != NULL; }
 
@@ -87,6 +89,7 @@ public:
   
   static int GetBatteryLevel();
   static bool EnableWakeLock(bool on);
+  static bool EnableAudioFocus(bool on);
   static bool HasFocus();
 
   static bool StartActivity(const std::string &package, const std::string &intent = std::string(), const std::string &dataType = std::string(), const std::string &dataURI = std::string());
@@ -108,6 +111,14 @@ public:
 
   static void SetRefreshRate(float rate);
   static int GetDPI();
+
+  // Playback callbacks
+  static void OnPlayBackStarted();
+  static void OnPlayBackPaused();
+  static void OnPlayBackResumed();
+  static void OnPlayBackStopped();
+  static void OnPlayBackEnded();
+
 protected:
   // limit who can access Volume
   friend class CAESinkAUDIOTRACK;
@@ -115,6 +126,7 @@ protected:
   static int GetMaxSystemVolume(JNIEnv *env);
 
 private:
+  static CXBMCApp* m_xbmcappinstance;
   static bool HasLaunchIntent(const std::string &package);
   std::string GetFilenameFromIntent(const CJNIIntent &intent);
   void run();
