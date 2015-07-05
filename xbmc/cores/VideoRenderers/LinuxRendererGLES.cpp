@@ -951,12 +951,14 @@ void CLinuxRendererGLES::ReleaseBuffer(int idx)
     {
       // The media buffer has been queued to the SurfaceView but we didn't render it
       // We have to do to the updateTexImage or it will get stuck
+#if 0
       buf.mediacodec->UpdateTexImage();
+#endif
       SAFE_RELEASE(buf.mediacodec);
     }
   }
 #endif
-  if (m_RenderReleaseCallBackFn)
+  if (m_RenderReleaseCallBackFn && buf.render_ctx)
     (*m_RenderReleaseCallBackFn)(m_RenderReleaseCallBackCtx, buf.render_ctx);
   buf.render_ctx = NULL;
 }
@@ -2559,9 +2561,11 @@ void CLinuxRendererGLES::UploadSurfaceTexture(int index)
 #ifdef DEBUG_VERBOSE
     mindex = buf.mediacodec->GetIndex();
 #endif
+#if 0
     buf.fields[0][0].id = buf.mediacodec->GetTextureID();
     buf.mediacodec->UpdateTexImage();
     buf.mediacodec->GetTransformMatrix(m_textureMatrix);
+#endif
     SAFE_RELEASE(buf.mediacodec);
   }
 
