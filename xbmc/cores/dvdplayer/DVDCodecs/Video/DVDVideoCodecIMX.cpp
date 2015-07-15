@@ -613,6 +613,13 @@ void CDVDVideoCodecIMX::Dispose()
   }
 #endif
 
+  g_renderManager.RegisterRenderUpdateCallBack((const void*)NULL, NULL);
+  g_renderManager.RegisterRenderCaptureCallBack((const void*)NULL, NULL);
+  g_renderManager.RegisterRenderFeaturesCallBack((const void*)NULL, NULL);
+  g_renderManager.RegisterDeinterlaceMethodsCallBack((const void*)NULL, NULL);
+  g_renderManager.RegisterRenderLockCallBack((const void*)NULL, NULL);
+  g_renderManager.RegisterRenderReleaseCallBack((const void*)NULL, NULL);
+
   g_IMXContext.Clear();
 
   VpuDecRetCode  ret;
