@@ -1890,9 +1890,6 @@ bool CAMLCodec::GetPicture(DVDVideoPicture *pDvdVideoPicture)
   if (m_speed == DVD_PLAYSPEED_NORMAL)
   {
     pDvdVideoPicture->pts = GetPlayerPtsSeconds() * (double)DVD_TIME_BASE;
-    // video pts cannot be late or VideoPlayer goes nuts,
-    // so run it one frame ahead
-    pDvdVideoPicture->pts += 1 * pDvdVideoPicture->iDuration;
   }
   else
   {

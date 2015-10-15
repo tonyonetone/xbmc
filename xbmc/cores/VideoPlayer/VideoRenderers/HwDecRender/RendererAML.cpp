@@ -107,7 +107,7 @@ bool CRendererAML::LoadShadersHook()
   CLog::Log(LOGNOTICE, "GL: Using AML render method");
   m_textureTarget = GL_TEXTURE_2D;
   m_renderMethod = RENDER_FMT_AML;
-  return false;
+  return true;
 }
 
 bool CRendererAML::RenderHook(int index)
