@@ -634,10 +634,12 @@ CVideoPlayer::CVideoPlayer(IPlayerCallback& callback)
 
   m_displayLost = false;
   g_Windowing.Register(this);
+  CDVDClock::SetMasterClock(&m_clock);
 }
 
 CVideoPlayer::~CVideoPlayer()
 {
+  CDVDClock::SetMasterClock(NULL);
   g_Windowing.Unregister(this);
 
   CloseFile();

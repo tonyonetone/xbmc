@@ -2046,7 +2046,12 @@ void CAMLCodec::Process()
 
 double CAMLCodec::GetPlayerPtsSeconds()
 {
-  return CDVDClock::GetAbsoluteClock() / DVD_TIME_BASE;
+  double clock_pts = 0.0;
+  CDVDClock *playerclock = CDVDClock::GetMasterClock();
+  if (playerclock)
+    clock_pts = playerclock->GetClock() / DVD_TIME_BASE;
+
+  return clock_pts;
 }
 
 void CAMLCodec::SetVideoPtsSeconds(const double pts)
