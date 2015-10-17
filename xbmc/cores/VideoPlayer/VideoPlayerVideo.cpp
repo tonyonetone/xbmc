@@ -893,7 +893,7 @@ int CVideoPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
   int result = 0;
 
   //correct any pattern in the timestamps
-  if (picture.format != RENDER_FMT_BYPASS)
+  if (picture.format != RENDER_FMT_BYPASS && picture.format != RENDER_FMT_AML)
   {
     m_pullupCorrection.Add(pts);
     pts += m_pullupCorrection.GetCorrection();
@@ -914,7 +914,7 @@ int CVideoPlayerVideo::OutputPicture(const DVDVideoPicture* src, double pts)
     pts -= DVD_TIME_BASE * interval;
   }
 
-  if (picture.format != RENDER_FMT_BYPASS)
+  if (picture.format != RENDER_FMT_BYPASS && picture.format != RENDER_FMT_AML)
   {
     // Correct pts by user set delay and rendering delay
     pts += m_iVideoDelay - DVD_SEC_TO_TIME(m_renderManager.GetDisplayLatency());

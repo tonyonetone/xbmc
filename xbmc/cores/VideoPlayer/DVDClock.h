@@ -69,6 +69,7 @@ public:
   static double GetFrequency() { return (double)m_systemFrequency ; }
   static double WaitAbsoluteClock(double target);
 
+  static void SetMasterClock(CDVDClock* clock);
   static CDVDClock* GetMasterClock();
 
 protected:
@@ -94,4 +95,5 @@ protected:
 
   double m_maxspeedadjust;
   CCriticalSection m_speedsection;
+  static CDVDClock *m_playerclock;
 };
