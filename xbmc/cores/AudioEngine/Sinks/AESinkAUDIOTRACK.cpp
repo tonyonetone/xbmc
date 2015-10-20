@@ -212,6 +212,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
 {
   m_format      = format;
   m_volume      = -1;
+  m_ptBuffer    = NULL;
 
   int stream = CJNIAudioManager::STREAM_MUSIC;
   m_encoding = CJNIAudioFormat::ENCODING_PCM_16BIT;
@@ -284,6 +285,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
     {
       m_format.m_frames       = AC3_FRAME_SIZE;
       min_buffer_size         = (min_buffer_size * 2 / (m_format.m_frameSize*m_format.m_frames)+1) * (m_format.m_frameSize*m_format.m_frames);
+      m_ptBuffer = (uint8_t*)malloc(AC3_FRAME_SIZE * m_format.m_frameSize);
     }
     else
     {
@@ -355,6 +357,8 @@ void CAESinkAUDIOTRACK::Deinitialize()
   m_frames_written = 0;
   m_lastHeadPosition = 0;
   m_ptOffset = 0;
+  if (m_ptBuffer)
+    SAFE_DELETE(m_ptBuffer);
 
   delete m_at_jni;
   m_at_jni = NULL;
@@ -409,21 +413,45 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
 
   uint8_t *buffer = data[0]+offset*m_format.m_frameSize;
   uint8_t *out_buf = buffer;
-  unsigned int size = frames * m_format.m_frameSize;
+  int size = frames * m_format.m_frameSize;
 
   if (m_encoding == CJNIAudioFormat::ENCODING_AC3)
   {
-    CAEPackIEC61937::IEC61937Packet *packet = (CAEPackIEC61937::IEC61937Packet*)buffer;
-    if (packet->m_preamble1 != IEC61937_PREAMBLE1 || packet->m_preamble2 != IEC61937_PREAMBLE2)
+    CAEPackIEC61937::IEC61937Packet *packet;
+    if (!m_expectedBytes)
     {
-      CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets AC3: not a valid IEC61937 packet");
-      return -1;
+      int idx = 0;
+      for (; idx<size; ++idx)
+      {
+        packet = (CAEPackIEC61937::IEC61937Packet*)&buffer[idx];
+        if (packet->m_preamble1 == IEC61937_PREAMBLE1 && packet->m_preamble2 == IEC61937_PREAMBLE2)
+        {
+          CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets AC3: found packet @ %d / %d", idx, size);
+          break;
+        }
+      }
+      if (idx >= size)
+      {
+        CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets AC3: not a valid IEC61937 packet");
+        return -1;
+      }
+      m_expectedBytes = packet->m_length >> 3;
+      size = std::min(size-idx, m_expectedBytes);
+      buffer = packet->m_data;
+      CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets AC3: 1) size / expected: %d / %d", size, m_expectedBytes);
     }
-    size = packet->m_length >> 3;
+    else
+    {
+      size = std::min(size, m_expectedBytes);
+      m_expectedBytes -= size;
+      CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets AC3: 2) size / expected: %d / %d", size, m_expectedBytes);
+    }
 
 #ifndef __BIG_ENDIAN__
-    out_buf = (uint8_t*)malloc(size);
+    out_buf = m_ptBuffer;
     CAEPackIEC61937::SwapEndian((uint16_t*)out_buf, (uint16_t*)buffer, size >> 1);
+#else
+    out_buf = buffer;
 #endif
   }
 
@@ -437,14 +465,13 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     if (m_at_jni->getPlayState() != CJNIAudioTrack::PLAYSTATE_PLAYING)
       m_at_jni->play();
     else
-      written = m_at_jni->write((char*)out_buf, 0, frames * m_format.m_frameSize);
+      written = m_at_jni->write((char*)out_buf, 0, size);
     m_frames_written += written / m_format.m_frameSize;
+    if (written == size)
+      written = m_format.m_frameSize * frames;
   }
 
   //CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::AddPackets written %d", written);
-
-  if (out_buf != buffer)
-    free ((void*)out_buf);
 
   return (unsigned int)(written/m_format.m_frameSize);
 }

@@ -66,4 +66,7 @@ private:
   bool               m_passthrough;
   double             m_audiotrackbuffer_sec;
   int                m_encoding;
+
+  uint8_t*           m_ptBuffer;
+  int                m_expectedBytes;
 };
