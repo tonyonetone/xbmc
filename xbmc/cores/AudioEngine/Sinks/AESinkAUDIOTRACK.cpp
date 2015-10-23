@@ -28,6 +28,7 @@
 #include "utils/AMLUtils.h"
 #endif
 #include "utils/log.h"
+#include "utils/StringUtils.h"
 
 #include "android/jni/AudioFormat.h"
 #include "android/jni/AudioManager.h"
@@ -417,6 +418,23 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
 
   if (m_encoding == CJNIAudioFormat::ENCODING_AC3)
   {
+#if 1
+    CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::AddPackets size: %d", size);
+    if (size)
+    {
+      std::string line;
+      for (unsigned int y=0; y*8 < size && y*8 < 16; ++y)
+      {
+        line = "";
+        for (unsigned int x=0; x<8 && y*8 + x < size && y*8 + x < 16; ++x)
+        {
+          line += StringUtils::Format("%02x ", ((char *)buffer)[y*8+x]);
+        }
+        CLog::Log(LOGDEBUG, "%s", line.c_str());
+      }
+    }
+#endif
+
     CAEPackIEC61937::IEC61937Packet *packet;
     if (!m_expectedBytes)
     {
@@ -433,7 +451,8 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
       if (idx >= size)
       {
         CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets AC3: not a valid IEC61937 packet");
-        return -1;
+        m_frames_written += frames;
+        return frames;
       }
       m_expectedBytes = packet->m_length >> 3;
       size = std::min(size-idx, m_expectedBytes);
