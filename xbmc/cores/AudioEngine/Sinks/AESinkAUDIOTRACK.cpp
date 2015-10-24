@@ -228,9 +228,6 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
     }
   }
   m_format.m_sampleRate     = m_sink_sampleRate;
-  m_format.m_frameSize      = m_format.m_channelLayout.Count() *
-                                (CAEUtil::DataFormatToBits(m_format.m_dataFormat) / 8);
-  m_sink_frameSize          = m_format.m_frameSize;
 
   if (AE_IS_RAW(m_format.m_dataFormat))
   {
@@ -274,16 +271,19 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
     m_format.m_dataFormat     = AE_FMT_S16LE;
   }
 
+  int atChannelMask = AEChannelMapToAUDIOTRACKChannelMask(m_format.m_channelLayout);
+  m_format.m_channelLayout  = AUDIOTRACKChannelMaskToAEChannelMap(atChannelMask);
+  m_format.m_frameSize      = m_format.m_channelLayout.Count() *
+                                (CAEUtil::DataFormatToBits(m_format.m_dataFormat) / 8);
+  m_sink_frameSize          = m_format.m_frameSize;
+
 #if defined(HAS_LIBAMCODEC)
   if (CSettings::GetInstance().GetBool(CSettings::SETTING_VIDEOPLAYER_USEAMCODEC))
     aml_set_audio_passthrough(m_passthrough);
 #endif
 
-  int atChannelMask = AEChannelMapToAUDIOTRACKChannelMask(m_format.m_channelLayout);
-
   while (!m_at_jni)
   {
-    m_format.m_channelLayout  = AUDIOTRACKChannelMaskToAEChannelMap(atChannelMask);
     unsigned int min_buffer_size       = CJNIAudioTrack::getMinBufferSize( m_sink_sampleRate,
                                                                   atChannelMask,
                                                                   m_encoding);
@@ -441,11 +441,12 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     packet = (CAEPackIEC61937::IEC61937Packet*)buffer;
     if (packet->m_preamble1 == IEC61937_PREAMBLE1 && packet->m_preamble2 == IEC61937_PREAMBLE2)
     {
-      size = packet->m_length >> 3;
+      int psize = packet->m_length >> 3;
       buffer = packet->m_data;
 #ifndef __BIG_ENDIAN__
       out_buf = m_ptBuffer;
-      CAEPackIEC61937::SwapEndian((uint16_t*)out_buf, (uint16_t*)buffer, size >> 1);
+      CAEPackIEC61937::SwapEndian((uint16_t*)out_buf, (uint16_t*)buffer, psize >> 1);
+      memset(out_buf + psize, 0, size - psize);
 #else
       out_buf = buffer;
 #endif
@@ -454,7 +455,6 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     else
     {
       CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets AC3: not a valid IEC61937 packet");
-      size = m_sink_frameSize;
     }
   }
 
@@ -470,8 +470,6 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     else
       written = m_at_jni->write((char*)out_buf, 0, size);
     m_frames_written += written / m_sink_frameSize;
-    if (written == size)
-      written = m_format.m_frameSize * frames;
   }
 
   //CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::AddPackets written %d", written);
