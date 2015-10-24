@@ -776,7 +776,7 @@ void CGUIWindowFileManager::OnNewFolder(int iList)
   }
 }
 
-void CGUIWindowFileManager::OnInfo(int iList)
+void CGUIWindowFileManager::OnShowInfo(int iList)
 {
   CFileItemPtr selItem;
   for (int i = 0; i < m_vecItems[iList]->Size();++i)
@@ -1148,7 +1148,7 @@ void CGUIWindowFileManager::OnPopupMenu(int list, int item, bool bContextDriven 
     CancelJobs();
 
   if (btnid == 14)
-    OnInfo(list);
+    OnShowInfo(list);
 
   if (bDeselect && item >= 0 && item < m_vecItems[list]->Size())
   { // deselect item as we didn't do anything
