@@ -63,10 +63,10 @@ private:
   double             m_volume;
   int16_t           *m_alignedS16;
   unsigned int       m_sink_frameSize;
+  unsigned int       m_sink_sampleRate;
   bool               m_passthrough;
   double             m_audiotrackbuffer_sec;
   int                m_encoding;
 
   uint8_t*           m_ptBuffer;
-  int                m_expectedBytes;
 };
