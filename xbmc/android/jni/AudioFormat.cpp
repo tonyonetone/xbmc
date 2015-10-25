@@ -82,7 +82,7 @@ void CJNIAudioFormat::PopulateStaticFields()
     {
       CJNIAudioFormat::ENCODING_DTS = get_static_field<int>(c, "ENCODING_DTS");
       CJNIAudioFormat::ENCODING_DTS_HD = get_static_field<int>(c, "ENCODING_DTS_HD");
-      CJNIAudioFormat::ENCODING_DOLBY_TRUEHD = get_static_field<int>(c, "ENCODING_DOLBY_TRUEHD");
+      //CJNIAudioFormat::ENCODING_DOLBY_TRUEHD = get_static_field<int>(c, "ENCODING_DOLBY_TRUEHD");
     }
   }
 }
