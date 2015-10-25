@@ -264,6 +264,8 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
           break;
       }
     }
+    else
+      m_format.m_dataFormat     = AE_FMT_S16LE;
   }
   else
   {
@@ -294,8 +296,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
     }
     else
     {
-      m_format.m_frames       = (int)(m_format.m_sampleRate * 0.015); //default to 15ms chunks
-      min_buffer_size         = min_buffer_size*4;
+      m_format.m_frames       = (int)(min_buffer_size / m_sink_frameSize) / 2;
     }
 
     m_format.m_frameSamples   = m_format.m_frames * m_format.m_channelLayout.Count();
@@ -380,11 +381,11 @@ void CAESinkAUDIOTRACK::GetDelay(AEDelayStatus& status)
   // return a 32bit "int" that you should "interpret as unsigned."  As such,
   // for wrap saftey, we need to do all ops on it in 32bit integer math.
   uint32_t head_pos = (uint32_t)m_at_jni->getPlaybackHeadPosition();
-  CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::GetDelay m_frames_written/head_pos %u/%u", m_frames_written, head_pos);
 
   double delay;
   if (m_passthrough && !WantsIEC61937())
   {
+    CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::GetDelay m_frames_written/head_pos %u/%u", m_frames_written, head_pos);
     if (!head_pos && m_at_jni->getPlayState() == CJNIAudioTrack::PLAYSTATE_PAUSED)
         m_ptOffset = m_lastHeadPosition;
 
