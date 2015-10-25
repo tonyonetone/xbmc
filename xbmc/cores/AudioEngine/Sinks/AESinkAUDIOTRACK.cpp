@@ -214,6 +214,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   m_format      = format;
   m_volume      = -1;
   m_ptBuffer    = NULL;
+  m_silenceframes = 0;
 
   int stream = CJNIAudioManager::STREAM_MUSIC;
   m_encoding = CJNIAudioFormat::ENCODING_PCM_16BIT;
@@ -385,12 +386,12 @@ void CAESinkAUDIOTRACK::GetDelay(AEDelayStatus& status)
   double delay;
   if (m_passthrough && !WantsIEC61937())
   {
-    CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::GetDelay m_frames_written/head_pos %u/%u", m_frames_written, head_pos);
     if (!head_pos && m_at_jni->getPlayState() == CJNIAudioTrack::PLAYSTATE_PAUSED)
         m_ptOffset = m_lastHeadPosition;
 
-    head_pos += m_ptOffset;
+    head_pos += m_ptOffset + m_silenceframes;
     m_lastHeadPosition = head_pos;
+    CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::GetDelay m_frames_written/head_pos %u/%u", m_frames_written, head_pos);
   }
   delay = (double)(m_frames_written - head_pos) / m_sink_sampleRate;
 
@@ -456,6 +457,7 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     else
     {
       CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets AC3: not a valid IEC61937 packet");
+      m_silenceframes += frames;
     }
   }
 
