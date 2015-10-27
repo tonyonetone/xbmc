@@ -166,8 +166,6 @@ void CXBMCApp::onResume()
   CJNIAudioManager audioManager(getSystemService("audio"));
   m_headsetPlugged = audioManager.isWiredHeadsetOn() || audioManager.isBluetoothA2dpOn();
 
-  unregisterMediaButtonEventReceiver();
-
   // Clear the applications cache. We could have installed/deinstalled apps
   {
     CSingleLock lock(m_applicationsMutex);
@@ -182,8 +180,6 @@ void CXBMCApp::onPause()
   {
     if (g_application.m_pPlayer->IsPlayingVideo())
       CApplicationMessenger::GetInstance().SendMsg(TMSG_GUI_ACTION, WINDOW_INVALID, -1, static_cast<void*>(new CAction(ACTION_STOP)));
-    else
-      registerMediaButtonEventReceiver();
   }
 
 #if defined(HAS_LIBAMCODEC)
@@ -343,6 +339,7 @@ bool CXBMCApp::AcquireAudioFocus()
     return false;
   }
   m_hasAudioFocus = true;
+
   return true;
 }
 
@@ -517,6 +514,7 @@ int CXBMCApp::GetDPI()
 void CXBMCApp::OnPlayBackStarted()
 {
   AcquireAudioFocus();
+  registerMediaButtonEventReceiver();
 }
 
 void CXBMCApp::OnPlayBackPaused()
@@ -531,11 +529,13 @@ void CXBMCApp::OnPlayBackResumed()
 
 void CXBMCApp::OnPlayBackStopped()
 {
+  unregisterMediaButtonEventReceiver();
   ReleaseAudioFocus();
 }
 
 void CXBMCApp::OnPlayBackEnded()
 {
+  unregisterMediaButtonEventReceiver();
   ReleaseAudioFocus();
 }
 
