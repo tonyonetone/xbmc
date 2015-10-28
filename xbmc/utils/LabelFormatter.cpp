@@ -238,11 +238,7 @@ std::string CLabelFormatter::GetMaskContent(const CMaskString &mask, const CFile
     }
     break;
   case 'I': // size
-      if( (!item->m_bIsFolder || item->m_dwSize != 0) && !(
-            URIUtils::IsAndroidApp(item->GetPath()) ||
-            URIUtils::IsVideoDb(item->GetPath()) ||
-            URIUtils::IsMusicDb(item->GetPath())
-            ) )
+    if( !item->m_bIsFolder || item->m_dwSize >= 0 )
       value = StringUtils::SizeToString(item->m_dwSize);
     break;
   case 'J': // date
