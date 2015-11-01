@@ -230,7 +230,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   }
   m_format.m_sampleRate     = m_sink_sampleRate;
 
-  if (AE_IS_RAW(m_format.m_dataFormat))
+  if (AE_IS_RAW(m_format.m_dataFormat) && !CXBMCApp::IsHeadsetPlugged())
   {
     m_passthrough = true;
     if (!WantsIEC61937())
@@ -250,7 +250,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
 
         case AE_FMT_DTS:
           m_encoding = CJNIAudioFormat::ENCODING_DTS;
-          m_format.m_frames       = DTS1_FRAME_SIZE;
+          m_format.m_frames       = DTS2_FRAME_SIZE;
           break;
 
         case AE_FMT_DTSHD:
@@ -276,9 +276,6 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
 
   int atChannelMask = AEChannelMapToAUDIOTRACKChannelMask(m_format.m_channelLayout);
   m_format.m_channelLayout  = AUDIOTRACKChannelMaskToAEChannelMap(atChannelMask);
-  m_format.m_frameSize      = m_format.m_channelLayout.Count() *
-                                (CAEUtil::DataFormatToBits(m_format.m_dataFormat) / 8);
-  m_sink_frameSize          = m_format.m_frameSize;
 
 #if defined(HAS_LIBAMCODEC)
   if (CSettings::GetInstance().GetBool(CSettings::SETTING_VIDEOPLAYER_USEAMCODEC))
@@ -292,11 +289,16 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
                                                                   m_encoding);
     if (m_passthrough && !WantsIEC61937())
     {
+      m_format.m_frameSize      = 1;
+      m_sink_frameSize          = m_format.m_frameSize;
       min_buffer_size         = (min_buffer_size * 4 / (m_format.m_frameSize*m_format.m_frames)+1) * (m_format.m_frameSize*m_format.m_frames);
       m_ptBuffer = (uint8_t*)malloc(m_sink_frameSize * m_format.m_frames);
     }
     else
     {
+      m_format.m_frameSize      = m_format.m_channelLayout.Count() *
+                                    (CAEUtil::DataFormatToBits(m_format.m_dataFormat) / 8);
+      m_sink_frameSize          = m_format.m_frameSize;
       m_format.m_frames       = (int)(min_buffer_size / m_sink_frameSize) / 2;
     }
 
@@ -422,6 +424,7 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
   uint8_t *out_buf = buffer;
   int size = frames * m_format.m_frameSize;
 
+  /*
   if (m_passthrough && !WantsIEC61937())
   {
 #if 0
@@ -464,6 +467,7 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
       m_silenceframes += frames;
     }
   }
+  */
 
   // write as many frames of audio as we can fit into our internal buffer.
   int written = 0;

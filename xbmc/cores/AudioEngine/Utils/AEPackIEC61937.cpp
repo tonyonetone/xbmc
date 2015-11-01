@@ -22,6 +22,12 @@
 #include "system.h"
 #include "AEPackIEC61937.h"
 
+int CAEPackIEC61937::NoPack(uint8_t *data, unsigned int size, uint8_t *dest)
+{
+  memcpy(dest, data, size);
+  return size;
+}
+
 int CAEPackIEC61937::PackAC3(uint8_t *data, unsigned int size, uint8_t *dest)
 {
   assert(size <= OUT_FRAMESTOBYTES(AC3_FRAME_SIZE));
