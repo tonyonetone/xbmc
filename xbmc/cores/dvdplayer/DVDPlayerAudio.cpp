@@ -767,8 +767,8 @@ bool CDVDPlayerAudio::OutputPacket(DVDAudioFrame &audioframe)
     if (audioframe.passthrough)
     {
       m_dvdAudio.AddPackets(audioframe);
-      m_dvdAudio.SetPlayingPts(clock + GetDelay());
-      m_syncclock = false;
+      m_pClock->Update(clock+error, absolute, 0.0, "CDVDPlayerAudio::OutputPacket");
+      // m_syncclock = false;
     }
     else if (error > DVD_MSEC_TO_TIME(10))
     {
