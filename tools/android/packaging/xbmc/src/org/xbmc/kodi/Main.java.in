@@ -60,11 +60,7 @@ public class Main extends NativeActivity
       @Override
       public void run()
       {
-        android.widget.RelativeLayout.LayoutParams mp = new android.widget.RelativeLayout.LayoutParams(mVideoView.getLayoutParams());
-        mp.setMargins(0, 0, mVideoLayout.getWidth(), mVideoLayout.getHeight());  // Hide view
         mVideoView.clearSurface();
-        mVideoView.setLayoutParams(mp);
-        mVideoView.requestLayout();
       }
     });
   }
@@ -107,7 +103,6 @@ public class Main extends NativeActivity
     mVideoView = (XBMCVideoView)findViewById(R.id.VideoView1);
     mVideoView.getHolder().setFormat(PixelFormat.TRANSPARENT);
     mVideoLayout = (RelativeLayout) findViewById(R.id.VideoLayout);
-    clearVideoView();
 
     setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
