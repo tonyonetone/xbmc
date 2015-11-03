@@ -534,6 +534,7 @@ void CXBMCApp::OnPlayBackStarted()
 {
   AcquireAudioFocus();
   registerMediaButtonEventReceiver();
+  CAndroidKey::SetHandleMediaKeys(true);
 }
 
 void CXBMCApp::OnPlayBackPaused()
@@ -548,12 +549,14 @@ void CXBMCApp::OnPlayBackResumed()
 
 void CXBMCApp::OnPlayBackStopped()
 {
+  CAndroidKey::SetHandleMediaKeys(false);
   unregisterMediaButtonEventReceiver();
   ReleaseAudioFocus();
 }
 
 void CXBMCApp::OnPlayBackEnded()
 {
+  CAndroidKey::SetHandleMediaKeys(false);
   unregisterMediaButtonEventReceiver();
   ReleaseAudioFocus();
 }
