@@ -544,7 +544,6 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
     m_info.m_dataFormats.push_back(AE_FMT_DTS);
     if (CJNIAudioManager::GetSDKVersion() >= 21)
     {
-      m_info.m_sampleRates.push_back(192000); // force support
       m_info.m_dataFormats.push_back(AE_FMT_EAC3);
       m_info.m_dataFormats.push_back(AE_FMT_DTSHD);
       m_info.m_dataFormats.push_back(AE_FMT_TRUEHD);

@@ -41,21 +41,30 @@ CDVDAudioCodecPassthrough::~CDVDAudioCodecPassthrough(void)
 bool CDVDAudioCodecPassthrough::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
 {
   bool bSupportsAC3Out    = CAEFactory::SupportsRaw(AE_FMT_AC3, hints.samplerate);
-  bool bSupportsEAC3Out   = CAEFactory::SupportsRaw(AE_FMT_EAC3, 192000);
   bool bSupportsDTSOut    = CAEFactory::SupportsRaw(AE_FMT_DTS, hints.samplerate);
-  bool bSupportsTrueHDOut = CAEFactory::SupportsRaw(AE_FMT_TRUEHD, 192000);
-  bool bSupportsDTSHDOut  = CAEFactory::SupportsRaw(AE_FMT_DTSHD, 192000);
+  bool bSupportsEAC3Out   = false;
+  bool bSupportsTrueHDOut = false;
+  bool bSupportsDTSHDOut  = false;
 
   /* only get the dts core from the parser if we don't support dtsHD */
   m_info.SetCoreOnly(!bSupportsDTSHDOut);
-  m_bufferSize = 0;
   if (CAEFactory::WantsIEC61937())
   {
     CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthrough::Open Wanting IEC61937");
     m_info.SetWantsIEC61937(true);
+    bSupportsEAC3Out   = CAEFactory::SupportsRaw(AE_FMT_EAC3, 192000);
+    bSupportsTrueHDOut = CAEFactory::SupportsRaw(AE_FMT_TRUEHD, 192000);
+    bSupportsDTSHDOut  = CAEFactory::SupportsRaw(AE_FMT_DTSHD, 192000);
   }
   else
+  {
+    CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthrough::Open Not wanting IEC61937");
     m_info.SetWantsIEC61937(false);
+    bSupportsEAC3Out   = CAEFactory::SupportsRaw(AE_FMT_EAC3, hints.samplerate);
+    bSupportsTrueHDOut = CAEFactory::SupportsRaw(AE_FMT_TRUEHD, hints.samplerate);
+    bSupportsDTSHDOut  = CAEFactory::SupportsRaw(AE_FMT_DTSHD, hints.samplerate);
+  }
+  m_bufferSize = 0;
 
   /* 32kHz E-AC-3 passthrough requires 128kHz IEC 60958 stream
    * which HDMI does not support, and IEC 61937 does not mention
