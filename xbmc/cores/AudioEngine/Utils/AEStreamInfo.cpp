@@ -69,7 +69,6 @@ CAEStreamInfo::CAEStreamInfo() :
   m_bufferSize    (0),
   m_skipBytes     (0),
   m_coreOnly      (false),
-  m_wantsIEC61937 (true),
   m_needBytes     (0),
   m_syncFunc      (&CAEStreamInfo::DetectType),
   m_hasSync       (false),

@@ -113,10 +113,10 @@ enum AEDataFormat CDVDAudioCodecPassthroughRaw::GetDataFormat()
         return AE_FMT_DTSHD_RAW;
 
     case AV_CODEC_ID_EAC3:
-      return AE_FMT_EAC3;
+      return AE_FMT_EAC3_RAW;
 
     case AV_CODEC_ID_TRUEHD:
-      return AE_FMT_TRUEHD;
+      return AE_FMT_TRUEHD_RAW;
 
     default:
       return AE_FMT_INVALID; //Unknown stream type

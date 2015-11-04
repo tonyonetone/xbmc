@@ -48,7 +48,6 @@ public:
   static bool SupportsSilenceTimeout();
   static bool HasStereoAudioChannelCount();
   static bool HasHDAudioChannelCount();
-  static bool WantsIEC61937();
 
   /**
    * Returns true if current AudioEngine supports at lest two basic quality levels

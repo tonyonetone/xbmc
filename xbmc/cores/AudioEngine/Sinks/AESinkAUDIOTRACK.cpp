@@ -33,6 +33,7 @@
 #include "android/jni/AudioFormat.h"
 #include "android/jni/AudioManager.h"
 #include "android/jni/AudioTrack.h"
+#include "android/jni/Build.h"
 
 using namespace jni;
 
@@ -233,40 +234,36 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   if (AE_IS_RAW(m_format.m_dataFormat) && !CXBMCApp::IsHeadsetPlugged())
   {
     m_passthrough = true;
-    if (!WantsIEC61937())
+    switch (m_format.m_dataFormat)
     {
-      switch (m_format.m_dataFormat)
-      {
-        case AE_FMT_AC3:
-          m_encoding = CJNIAudioFormat::ENCODING_AC3;
-          m_format.m_frames       = AC3_FRAME_SIZE;
-          break;
+      case AE_FMT_AC3_RAW:
+        m_encoding = CJNIAudioFormat::ENCODING_AC3;
+        m_format.m_frames       = AC3_FRAME_SIZE;
+        break;
 
-        case AE_FMT_EAC3:
-          m_encoding = CJNIAudioFormat::ENCODING_E_AC3;
-          m_sink_sampleRate       = m_format.m_sampleRate / 4;
-          m_format.m_frames       = EAC3_FRAME_SIZE;
-          break;
+      case AE_FMT_EAC3_RAW:
+        m_encoding = CJNIAudioFormat::ENCODING_E_AC3;
+        m_sink_sampleRate       = m_format.m_sampleRate / 4;
+        m_format.m_frames       = EAC3_FRAME_SIZE;
+        break;
 
-        case AE_FMT_DTS:
-          m_encoding = CJNIAudioFormat::ENCODING_DTS;
-          m_format.m_frames       = DTS2_FRAME_SIZE;
-          break;
+      case AE_FMT_DTS_RAW:
+        m_encoding = CJNIAudioFormat::ENCODING_DTS;
+        m_format.m_frames       = DTS2_FRAME_SIZE;
+        break;
 
-        case AE_FMT_DTSHD:
-          m_encoding = CJNIAudioFormat::ENCODING_DTS_HD;
-          break;
+      case AE_FMT_DTSHD_RAW:
+        m_encoding = CJNIAudioFormat::ENCODING_DTS_HD;
+        break;
 
-        case AE_FMT_TRUEHD:
-          m_encoding = CJNIAudioFormat::ENCODING_DOLBY_TRUEHD;
-          break;
+      case AE_FMT_TRUEHD_RAW:
+        m_encoding = CJNIAudioFormat::ENCODING_DOLBY_TRUEHD;
+        break;
 
-        default:
-          break;
-      }
+      default:
+        m_format.m_dataFormat     = AE_FMT_S16LE;
+        break;
     }
-    else
-      m_format.m_dataFormat     = AE_FMT_S16LE;
   }
   else
   {
@@ -287,7 +284,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
     unsigned int min_buffer_size       = CJNIAudioTrack::getMinBufferSize( m_sink_sampleRate,
                                                                   atChannelMask,
                                                                   m_encoding);
-    if (m_passthrough && !WantsIEC61937())
+    if (!WantsIEC61937())
     {
       m_format.m_frameSize      = 1;
       m_sink_frameSize          = m_format.m_frameSize;
@@ -303,7 +300,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
     }
 
     m_format.m_frameSamples   = m_format.m_frames * m_format.m_channelLayout.Count();
-    m_audiotrackbuffer_sec    = (double)(min_buffer_size / m_sink_frameSize) / (double)m_format.m_sampleRate;
+    m_audiotrackbuffer_sec    = (double)(min_buffer_size / m_sink_frameSize) / (double)m_sink_sampleRate;
 
     m_at_jni                  = CreateAudioTrack(stream, m_sink_sampleRate,
                                                  atChannelMask, m_encoding,
@@ -385,7 +382,7 @@ void CAESinkAUDIOTRACK::GetDelay(AEDelayStatus& status)
   uint32_t head_pos = (uint32_t)m_at_jni->getPlaybackHeadPosition();
 
   double delay;
-  if (m_passthrough && !WantsIEC61937())
+  if (!WantsIEC61937())
   {
     if (!head_pos && m_at_jni->getPlayState() == CJNIAudioTrack::PLAYSTATE_PAUSED)
       m_ptOffset = m_lastHeadPosition;
@@ -500,10 +497,7 @@ void CAESinkAUDIOTRACK::Drain()
 
 bool CAESinkAUDIOTRACK::WantsIEC61937()
 {
-  if (CJNIAudioManager::GetSDKVersion() >= 21)
-    return false;
-
-  return true;
+  return m_passthrough && !(m_format.m_dataFormat >= AE_FMT_AC3_RAW && m_format.m_dataFormat <= AE_FMT_DTSHD_RAW);
 }
 
 void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
@@ -544,9 +538,19 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
     m_info.m_dataFormats.push_back(AE_FMT_DTS);
     if (CJNIAudioManager::GetSDKVersion() >= 21)
     {
-      m_info.m_dataFormats.push_back(AE_FMT_EAC3);
-      m_info.m_dataFormats.push_back(AE_FMT_DTSHD);
-      m_info.m_dataFormats.push_back(AE_FMT_TRUEHD);
+      m_info.m_dataFormats.push_back(AE_FMT_AC3_RAW);
+      m_info.m_dataFormats.push_back(AE_FMT_EAC3_RAW);
+      if (CJNIAudioManager::GetSDKVersion() >= 23)
+      {
+        m_info.m_dataFormats.push_back(AE_FMT_DTS_RAW);
+        m_info.m_dataFormats.push_back(AE_FMT_DTSHD_RAW);
+      }
+    }
+    if (StringUtils::StartsWithNoCase(CJNIBuild::DEVICE, "foster")) // SATV is ahead of API
+    {
+      m_info.m_dataFormats.push_back(AE_FMT_DTS_RAW);
+      m_info.m_dataFormats.push_back(AE_FMT_DTSHD_RAW);
+      m_info.m_dataFormats.push_back(AE_FMT_TRUEHD_RAW);
     }
   }
 #if 0 //defined(__ARM_NEON__)
