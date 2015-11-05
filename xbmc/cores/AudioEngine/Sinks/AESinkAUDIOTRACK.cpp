@@ -243,7 +243,6 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
 
       case AE_FMT_EAC3_RAW:
         m_encoding = CJNIAudioFormat::ENCODING_E_AC3;
-        m_sink_sampleRate       = m_format.m_sampleRate / 4;
         m_format.m_frames       = EAC3_FRAME_SIZE;
         break;
 

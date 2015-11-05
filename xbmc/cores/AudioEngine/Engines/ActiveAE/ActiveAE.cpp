@@ -1486,11 +1486,11 @@ void CActiveAE::ApplySettingsToFormat(AEAudioFormat &format, AudioSettings &sett
   // raw pass through
   if (AE_IS_RAW(format.m_dataFormat))
   {
-    if ((format.m_dataFormat == AE_FMT_AC3 && !settings.ac3passthrough) ||
-        (format.m_dataFormat == AE_FMT_EAC3 && !settings.eac3passthrough) ||
-        (format.m_dataFormat == AE_FMT_TRUEHD && !settings.truehdpassthrough) ||
-        (format.m_dataFormat == AE_FMT_DTS && !settings.dtspassthrough) ||
-        (format.m_dataFormat == AE_FMT_DTSHD && !settings.dtshdpassthrough))
+    if (((format.m_dataFormat == AE_FMT_AC3 || format.m_dataFormat == AE_FMT_AC3_RAW) && !settings.ac3passthrough) ||
+        ((format.m_dataFormat == AE_FMT_EAC3 || format.m_dataFormat == AE_FMT_EAC3_RAW) && !settings.eac3passthrough) ||
+        ((format.m_dataFormat == AE_FMT_TRUEHD || format.m_dataFormat == AE_FMT_TRUEHD_RAW) && !settings.truehdpassthrough) ||
+        ((format.m_dataFormat == AE_FMT_DTS || format.m_dataFormat == AE_FMT_DTS_RAW) && !settings.dtspassthrough) ||
+        ((format.m_dataFormat == AE_FMT_DTSHD || format.m_dataFormat == AE_FMT_DTSHD_RAW) && !settings.dtshdpassthrough))
     {
       CLog::Log(LOGERROR, "CActiveAE::ApplySettingsToFormat - input audio format is wrong");
     }
