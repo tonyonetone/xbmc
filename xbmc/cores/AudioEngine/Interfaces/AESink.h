@@ -87,3 +87,4 @@ public:
   */
   virtual void  SetVolume(float volume) {};
 };
+

@@ -32,9 +32,6 @@
 #define EAC3_FRAME_SIZE   6144
 #define TRUEHD_FRAME_SIZE 15360
 
-#define IEC61937_PREAMBLE1  0xF872
-#define IEC61937_PREAMBLE2  0x4E1F
-
 #define OUT_SAMPLESIZE 16
 #define OUT_CHANNELS 2
 #define OUT_FRAMESTOBYTES(a) ((a) * OUT_CHANNELS * (OUT_SAMPLESIZE>>3))
@@ -44,7 +41,6 @@ class CAEPackIEC61937
 public:
   typedef int (*PackFunc)(uint8_t *data, unsigned int size, uint8_t *dest);
 
-  static int NoPack      (uint8_t *data, unsigned int size, uint8_t *dest);
   static int PackAC3     (uint8_t *data, unsigned int size, uint8_t *dest);
   static int PackEAC3    (uint8_t *data, unsigned int size, uint8_t *dest);
   static int PackDTS_512 (uint8_t *data, unsigned int size, uint8_t *dest, bool littleEndian);
@@ -52,13 +48,7 @@ public:
   static int PackDTS_2048(uint8_t *data, unsigned int size, uint8_t *dest, bool littleEndian);
   static int PackTrueHD  (uint8_t *data, unsigned int size, uint8_t *dest);
   static int PackDTSHD   (uint8_t *data, unsigned int size, uint8_t *dest, unsigned int period);
-
-  static inline void SwapEndian(uint16_t *dst, uint16_t *src, unsigned int size)
-  {
-    for (unsigned int i = 0; i < size; ++i, ++dst, ++src)
-      *dst = ((*src & 0xFF00) >> 8) | ((*src & 0x00FF) << 8);
-  }
-
+private:
 
   static int PackDTS(uint8_t *data, unsigned int size, uint8_t *dest, bool littleEndian,
                      unsigned int frameSize, uint16_t type);

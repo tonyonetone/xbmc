@@ -68,6 +68,5 @@ private:
   double             m_audiotrackbuffer_sec;
   int                m_encoding;
 
-  uint8_t*           m_ptBuffer;
   unsigned int       m_silenceframes;
 };

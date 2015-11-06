@@ -22,10 +22,13 @@
 #include "system.h"
 #include "AEPackIEC61937.h"
 
-int CAEPackIEC61937::NoPack(uint8_t *data, unsigned int size, uint8_t *dest)
+#define IEC61937_PREAMBLE1  0xF872
+#define IEC61937_PREAMBLE2  0x4E1F
+
+inline void SwapEndian(uint16_t *dst, uint16_t *src, unsigned int size)
 {
-  memcpy(dest, data, size);
-  return size;
+  for (unsigned int i = 0; i < size; ++i, ++dst, ++src)
+    *dst = ((*src & 0xFF00) >> 8) | ((*src & 0x00FF) << 8);
 }
 
 int CAEPackIEC61937::PackAC3(uint8_t *data, unsigned int size, uint8_t *dest)

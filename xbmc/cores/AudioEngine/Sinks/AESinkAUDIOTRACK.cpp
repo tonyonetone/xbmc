@@ -214,8 +214,9 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
 {
   m_format      = format;
   m_volume      = -1;
-  m_ptBuffer    = NULL;
   m_silenceframes = 0;
+
+  CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::Initialize requested: sampleRate %u; format: %d", format.m_sampleRate, CAEUtil::DataFormatToStr(format.m_dataFormat));
 
   int stream = CJNIAudioManager::STREAM_MUSIC;
   m_encoding = CJNIAudioFormat::ENCODING_PCM_16BIT;
@@ -223,9 +224,9 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   m_sink_sampleRate = CJNIAudioTrack::getNativeOutputSampleRate(CJNIAudioManager::STREAM_MUSIC);
   for (size_t i = 0; i < m_info.m_sampleRates.size(); i++)
   {
-    if (m_format.m_sampleRate == m_info.m_sampleRates[i])
+    if (m_info.m_sampleRates[i] == m_format.m_sampleRate)
     {
-      m_sink_sampleRate = m_format.m_sampleRate;
+      m_sink_sampleRate = m_info.m_sampleRates[i];
       break;
     }
   }
@@ -289,7 +290,6 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
       m_format.m_frameSize      = 1;
       m_sink_frameSize          = m_format.m_frameSize;
       min_buffer_size         = (min_buffer_size * 4 / (m_format.m_frameSize*m_format.m_frames)+1) * (m_format.m_frameSize*m_format.m_frames);
-      m_ptBuffer = (uint8_t*)malloc(m_sink_frameSize * m_format.m_frames);
     }
     else
     {
@@ -306,7 +306,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
                                                  atChannelMask, m_encoding,
                                                  min_buffer_size);
 
-    CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::Initialize m_sampleRate %u; min_buffer_size %u; m_frames %u; m_frameSize %u", m_format.m_sampleRate, min_buffer_size, m_format.m_frames, m_format.m_frameSize);
+    CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::Initialize returned: m_sampleRate %u; format:%d; min_buffer_size %u; m_frames %u; m_frameSize %u", m_format.m_sampleRate, CAEUtil::DataFormatToStr(m_format.m_dataFormat), min_buffer_size, m_format.m_frames, m_format.m_frameSize);
 
     if (!m_at_jni)
     {
@@ -361,8 +361,6 @@ void CAESinkAUDIOTRACK::Deinitialize()
   m_frames_written = 0;
   m_lastHeadPosition = 0;
   m_ptOffset = 0;
-  if (m_ptBuffer)
-    SAFE_DELETE(m_ptBuffer);
 
   delete m_at_jni;
   m_at_jni = NULL;
