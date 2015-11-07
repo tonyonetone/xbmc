@@ -37,7 +37,8 @@ static enum AEChannel OutputMaps[2][9] = {
 CDVDAudioCodecPassthroughRaw::CDVDAudioCodecPassthroughRaw(void) :
   m_buffer    (NULL),
   m_bufferSize(0),
-  m_bufferUsed(0)
+  m_bufferUsed(0),
+  m_sampleRate(0)
 {
 }
 
@@ -80,10 +81,42 @@ void CDVDAudioCodecPassthroughRaw::GetData(DVDAudioFrame &frame)
   frame.channel_count         = GetChannels();
   frame.planes                = 1;
   frame.encoded_channel_count = GetEncodedChannels();
-  frame.sample_rate           = GetSampleRate();
   frame.encoded_sample_rate   = GetEncodedSampleRate();
   frame.passthrough           = NeedPassthrough();
   frame.pts                   = DVD_NOPTS_VALUE;
+
+  int unscaledbitrate = (frame.nb_frames*frame.framesize) * frame.bits_per_sample * frame.encoded_sample_rate;
+  switch(m_hints.codec)
+  {
+    case AV_CODEC_ID_AC3:
+    case AV_CODEC_ID_EAC3:
+    {
+      int bitrate = (unscaledbitrate + AC3_DIVISOR / 2) / AC3_DIVISOR;
+      m_sampleRate = bitrate * 1000 / frame.bits_per_sample;
+      break;
+    }
+
+    case AV_CODEC_ID_DTS:
+      if (m_hints.channels > 6)
+      {
+        int bitrate = (unscaledbitrate + DTS_DIVISOR / 2) / DTS_DIVISOR;
+        m_sampleRate = bitrate * 1000 / frame.bits_per_sample;
+      }
+      else
+      {
+        int bitrate = (unscaledbitrate + DTS_DIVISOR / 2) / DTS_DIVISOR;
+        m_sampleRate = bitrate * 1000 / frame.bits_per_sample;
+      }
+      break;
+
+    case AV_CODEC_ID_TRUEHD:
+      break;
+
+    default:
+      m_sampleRate = GetSampleRate();
+      break;
+  }
+  frame.sample_rate           = GetSampleRate();
 
   // compute duration.
   if (frame.sample_rate)
@@ -94,8 +127,10 @@ void CDVDAudioCodecPassthroughRaw::GetData(DVDAudioFrame &frame)
 
 int CDVDAudioCodecPassthroughRaw::GetSampleRate()
 {
-  CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthroughRaw::GetSampleRate sample rate: %d; bitrate: %d; bitspersample: %d; blockalign: %d", m_hints.samplerate, m_hints.bitrate, m_hints.bitspersample, m_hints.blockalign);
-  return m_hints.bitrate / 8;
+  if (m_sampleRate)
+    return m_sampleRate;
+  else
+    return GetEncodedSampleRate();
 }
 
 int CDVDAudioCodecPassthroughRaw::GetEncodedSampleRate()
@@ -154,6 +189,7 @@ void CDVDAudioCodecPassthroughRaw::Dispose()
   }
 
   m_bufferSize = 0;
+  m_sampleRate = 0;
 }
 
 int CDVDAudioCodecPassthroughRaw::Decode(uint8_t* pData, int iSize)
