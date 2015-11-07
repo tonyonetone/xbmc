@@ -31,6 +31,8 @@ static enum AEChannel OutputMaps[2][9] = {
   {AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_NULL}
 };
 
+#define AC3_DIVISOR (1536 * 1000)
+#define DTS_DIVISOR (512 * 1000)
 
 CDVDAudioCodecPassthroughRaw::CDVDAudioCodecPassthroughRaw(void) :
   m_buffer    (NULL),
@@ -76,12 +78,13 @@ void CDVDAudioCodecPassthroughRaw::GetData(DVDAudioFrame &frame)
   frame.nb_frames             = GetData(frame.data)/frame.framesize;
   frame.channel_layout        = GetChannelMap();
   frame.channel_count         = GetChannels();
-  frame.planes                = AE_IS_PLANAR(frame.data_format) ? frame.channel_count : 1;
+  frame.planes                = 1;
   frame.encoded_channel_count = GetEncodedChannels();
   frame.sample_rate           = GetSampleRate();
   frame.encoded_sample_rate   = GetEncodedSampleRate();
   frame.passthrough           = NeedPassthrough();
   frame.pts                   = DVD_NOPTS_VALUE;
+
   // compute duration.
   if (frame.sample_rate)
     frame.duration = ((double)frame.nb_frames * DVD_TIME_BASE) / frame.sample_rate;
@@ -91,7 +94,8 @@ void CDVDAudioCodecPassthroughRaw::GetData(DVDAudioFrame &frame)
 
 int CDVDAudioCodecPassthroughRaw::GetSampleRate()
 {
-  return m_hints.samplerate;
+  CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthroughRaw::GetSampleRate sample rate: %d; bitrate: %d; bitspersample: %d; blockalign: %d", m_hints.samplerate, m_hints.bitrate, m_hints.bitspersample, m_hints.blockalign);
+  return m_hints.bitrate / 8;
 }
 
 int CDVDAudioCodecPassthroughRaw::GetEncodedSampleRate()
@@ -107,10 +111,10 @@ enum AEDataFormat CDVDAudioCodecPassthroughRaw::GetDataFormat()
       return AE_FMT_AC3_RAW;
 
     case AV_CODEC_ID_DTS:
-      if (m_hints.channels == 2)
-        return AE_FMT_DTS_RAW;
-      else
+      if (m_hints.channels > 6)
         return AE_FMT_DTSHD_RAW;
+      else
+        return AE_FMT_DTS_RAW;
 
     case AV_CODEC_ID_EAC3:
       return AE_FMT_EAC3_RAW;
@@ -154,6 +158,7 @@ void CDVDAudioCodecPassthroughRaw::Dispose()
 
 int CDVDAudioCodecPassthroughRaw::Decode(uint8_t* pData, int iSize)
 {
+  CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthroughRaw::Decode %d", iSize);
   if (iSize <= 0) return 0;
 
   if (iSize > m_bufferSize)

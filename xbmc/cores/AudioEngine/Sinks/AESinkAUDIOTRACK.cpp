@@ -230,7 +230,6 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
       break;
     }
   }
-  m_format.m_sampleRate     = m_sink_sampleRate;
 
   if (AE_IS_RAW(m_format.m_dataFormat) && !CXBMCApp::IsHeadsetPlugged())
   {
@@ -238,31 +237,37 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
     switch (m_format.m_dataFormat)
     {
       case AE_FMT_AC3_RAW:
-        m_encoding = CJNIAudioFormat::ENCODING_AC3;
-        m_format.m_frames       = AC3_FRAME_SIZE;
+        m_encoding              = CJNIAudioFormat::ENCODING_AC3;
+        m_format.m_frames       = AC3_FRAME_SIZE * m_format.m_sampleRate / m_format.m_encodedRate;
+        m_sink_sampleRate       = m_format.m_encodedRate;
         break;
 
       case AE_FMT_EAC3_RAW:
-        m_encoding = CJNIAudioFormat::ENCODING_E_AC3;
-        m_format.m_frames       = EAC3_FRAME_SIZE;
+        m_encoding              = CJNIAudioFormat::ENCODING_E_AC3;
+        m_format.m_frames       = AC3_FRAME_SIZE * m_format.m_sampleRate / m_format.m_encodedRate;
+        m_sink_sampleRate       = m_format.m_encodedRate;
         break;
 
       case AE_FMT_DTS_RAW:
-        m_encoding = CJNIAudioFormat::ENCODING_DTS;
-        m_format.m_frames       = DTS1_FRAME_SIZE;
+        m_encoding              = CJNIAudioFormat::ENCODING_DTS;
+        m_format.m_frames       = DTS1_FRAME_SIZE * m_format.m_sampleRate / m_format.m_encodedRate;
+        m_sink_sampleRate       = m_format.m_encodedRate;
         break;
 
       case AE_FMT_DTSHD_RAW:
-        m_encoding = CJNIAudioFormat::ENCODING_DTS_HD;
-        m_format.m_frames       = DTS1_FRAME_SIZE;
+        m_encoding              = CJNIAudioFormat::ENCODING_DTS_HD;
+        m_format.m_frames       = DTS1_FRAME_SIZE * m_format.m_sampleRate / m_format.m_encodedRate;
+        m_sink_sampleRate       = m_format.m_encodedRate;
         break;
 
       case AE_FMT_TRUEHD_RAW:
-        m_encoding = CJNIAudioFormat::ENCODING_DOLBY_TRUEHD;
+        m_encoding              = CJNIAudioFormat::ENCODING_DOLBY_TRUEHD;
+        m_sink_sampleRate       = m_format.m_encodedRate;
         break;
 
       default:
-        m_format.m_dataFormat     = AE_FMT_S16LE;
+        m_format.m_dataFormat   = AE_FMT_S16LE;
+        m_sink_sampleRate       = m_format.m_encodedRate;
         break;
     }
   }
@@ -270,6 +275,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   {
     m_passthrough = false;
     m_format.m_dataFormat     = AE_FMT_S16LE;
+    m_format.m_sampleRate     = m_sink_sampleRate;
   }
 
   int atChannelMask = AEChannelMapToAUDIOTRACKChannelMask(m_format.m_channelLayout);
@@ -389,7 +395,7 @@ void CAESinkAUDIOTRACK::GetDelay(AEDelayStatus& status)
     m_lastHeadPosition = head_pos;
 
     delay = ((double)(m_frames_written - m_silenceframes) / m_format.m_sampleRate) - ((double)head_pos / m_sink_sampleRate);
-    CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::GetDelay m_frames_written/head_pos %u/%u %f", m_frames_written, head_pos, delay);
+    CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::GetDelay m_frames_written/head_pos %u(%u)/%u %f", m_frames_written - m_silenceframes, m_frames_written, head_pos, delay);
   }
   else
     delay = (double)(m_frames_written - head_pos) / m_sink_sampleRate;
