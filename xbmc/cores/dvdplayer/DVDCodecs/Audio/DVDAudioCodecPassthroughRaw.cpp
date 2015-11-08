@@ -33,6 +33,7 @@ static enum AEChannel OutputMaps[2][9] = {
 
 #define AC3_DIVISOR (1536 * 1000)
 #define DTS_DIVISOR (512 * 1000)
+#define CONSTANT_BUFFER_SIZE 5120
 
 CDVDAudioCodecPassthroughRaw::CDVDAudioCodecPassthroughRaw(void) :
   m_buffer    (NULL),
@@ -85,11 +86,12 @@ void CDVDAudioCodecPassthroughRaw::GetData(DVDAudioFrame &frame)
   frame.passthrough           = NeedPassthrough();
   frame.pts                   = DVD_NOPTS_VALUE;
 
-  int unscaledbitrate = (frame.nb_frames*frame.framesize) * frame.bits_per_sample * frame.encoded_sample_rate;
+  int64_t unscaledbitrate = (frame.nb_frames*frame.framesize) * frame.bits_per_sample * frame.encoded_sample_rate;
   switch(m_hints.codec)
   {
     case AV_CODEC_ID_AC3:
     case AV_CODEC_ID_EAC3:
+    case AV_CODEC_ID_TRUEHD:
     {
       int bitrate = (unscaledbitrate + AC3_DIVISOR / 2) / AC3_DIVISOR;
       m_sampleRate = bitrate * 1000 / frame.bits_per_sample;
@@ -107,9 +109,6 @@ void CDVDAudioCodecPassthroughRaw::GetData(DVDAudioFrame &frame)
         int bitrate = (unscaledbitrate + DTS_DIVISOR / 2) / DTS_DIVISOR;
         m_sampleRate = bitrate * 1000 / frame.bits_per_sample;
       }
-      break;
-
-    case AV_CODEC_ID_TRUEHD:
       break;
 
     default:
@@ -164,7 +163,25 @@ enum AEDataFormat CDVDAudioCodecPassthroughRaw::GetDataFormat()
 
 int CDVDAudioCodecPassthroughRaw::GetChannels()
 {
-  return m_hints.channels;
+  switch(m_hints.codec)
+  {
+    case AV_CODEC_ID_AC3:
+    case AV_CODEC_ID_EAC3:
+      return 2;
+
+    case AV_CODEC_ID_DTS:
+      if (m_hints.channels > 6)
+        return 8;
+      else
+        return 2;
+
+
+    case AV_CODEC_ID_TRUEHD:
+      return 8;
+
+    default:
+      return 0; //Unknown stream type
+  }
 }
 
 int CDVDAudioCodecPassthroughRaw::GetEncodedChannels()
@@ -197,16 +214,31 @@ int CDVDAudioCodecPassthroughRaw::Decode(uint8_t* pData, int iSize)
   CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthroughRaw::Decode %d", iSize);
   if (iSize <= 0) return 0;
 
-  if (iSize > m_bufferSize)
+  // HD audio has variable bitrate; Do pseudo-encapsulation to make it constant
+  if ((m_hints.codec == AV_CODEC_ID_DTS && m_hints.channels > 6) || m_hints.codec == AV_CODEC_ID_TRUEHD)
   {
-    m_buffer = (uint8_t*)realloc(m_buffer, iSize);
-    m_bufferSize = iSize;
+    if (!m_buffer)
+    {
+      m_bufferSize = CONSTANT_BUFFER_SIZE;
+      m_buffer = (uint8_t*)malloc(m_bufferSize);
+    }
+    ((int*)m_buffer)[0] = iSize;
+    memcpy(m_buffer+sizeof(int), pData, iSize);
+
+    m_bufferUsed = m_bufferSize;
   }
+  else
+  {
+    if (iSize > m_bufferSize)
+    {
+      m_bufferSize = iSize;
+      m_buffer = (uint8_t*)realloc(m_buffer, m_bufferSize);
+    }
 
-  memcpy(m_buffer, pData, iSize);
-  m_bufferUsed = iSize;
-
-  return m_bufferUsed;
+    memcpy(m_buffer, pData, iSize);
+    m_bufferUsed = iSize;
+  }
+  return iSize;
 }
 
 int CDVDAudioCodecPassthroughRaw::GetData(uint8_t** dst)

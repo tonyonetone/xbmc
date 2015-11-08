@@ -51,8 +51,8 @@ public:
 private:
   CDVDStreamInfo     m_hints;
   uint8_t*           m_buffer;
-  unsigned int       m_bufferSize;
-  unsigned int       m_bufferUsed;
+  int                m_bufferSize;
+  int                m_bufferUsed;
   int                m_sampleRate;
 };
 

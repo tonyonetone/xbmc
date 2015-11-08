@@ -141,8 +141,6 @@ static CAEChannelInfo AUDIOTRACKChannelMaskToAEChannelMap(int atMask)
 
 static int AEChannelMapToAUDIOTRACKChannelMask(CAEChannelInfo info)
 {
-  if (info[0] == AE_CH_RAW)
-    return CJNIAudioFormat::CHANNEL_OUT_STEREO;
 #ifdef LIMIT_TO_STEREO_AND_5POINT1_AND_7POINT1
   if (info.Count() > 6 && Has71Support())
     return CJNIAudioFormat::CHANNEL_OUT_5POINT1
@@ -262,7 +260,8 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
 
       case AE_FMT_TRUEHD_RAW:
         m_encoding              = CJNIAudioFormat::ENCODING_DOLBY_TRUEHD;
-        m_sink_sampleRate       = m_format.m_encodedRate;
+        m_format.m_frames       = AC3_FRAME_SIZE * m_format.m_sampleRate / m_format.m_encodedRate;
+        m_sink_sampleRate       = 48000;
         break;
 
       default:
@@ -427,8 +426,13 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
 
   if (m_passthrough && !WantsIEC61937())
   {
+    if (m_format.m_dataFormat == AE_FMT_DTSHD_RAW || m_format.m_dataFormat == AE_FMT_TRUEHD_RAW)  // Decapsulate
+    {
+      size = ((int*)(buffer))[0];
+      out_buf = buffer + sizeof(int);
+    }
     // Test and ignore silence packets
-    if (buffer[0] == 0 && !memcmp(buffer, buffer+1, size-1))
+    else if (out_buf[0] == 0 && !memcmp(out_buf, out_buf+1, size-1))
       m_silenceframes += frames;
   }
 
@@ -442,6 +446,8 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     if (m_at_jni->getPlayState() != CJNIAudioTrack::PLAYSTATE_PLAYING)
       m_at_jni->play();
     written = m_at_jni->write((char*)out_buf, 0, size);
+    if (written == size)
+      written = frames * m_sink_frameSize;     // Be sure to report to AE everything has been written
     m_frames_written += written / m_sink_frameSize;
   }
 
@@ -516,7 +522,7 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
     {
       m_info.m_dataFormats.push_back(AE_FMT_DTS_RAW);
       m_info.m_dataFormats.push_back(AE_FMT_DTSHD_RAW);
-      m_info.m_dataFormats.push_back(AE_FMT_TRUEHD_RAW);
+      //m_info.m_dataFormats.push_back(AE_FMT_TRUEHD_RAW);
     }
   }
 #if 0 //defined(__ARM_NEON__)
