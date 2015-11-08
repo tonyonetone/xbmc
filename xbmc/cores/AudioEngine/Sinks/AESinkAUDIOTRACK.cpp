@@ -508,7 +508,11 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
     }
     m_info.m_dataFormats.push_back(AE_FMT_AC3);
     m_info.m_dataFormats.push_back(AE_FMT_DTS);
-    if (CJNIAudioManager::GetSDKVersion() >= 21)
+    if (CJNIAudioManager::GetSDKVersion() >= 21
+#if defined(HAS_LIBAMCODEC)
+        && !aml_present()
+#endif
+        )
     {
       m_info.m_dataFormats.push_back(AE_FMT_AC3_RAW);
       m_info.m_dataFormats.push_back(AE_FMT_EAC3_RAW);
@@ -517,12 +521,12 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
         m_info.m_dataFormats.push_back(AE_FMT_DTS_RAW);
         m_info.m_dataFormats.push_back(AE_FMT_DTSHD_RAW);
       }
-    }
-    if (StringUtils::StartsWithNoCase(CJNIBuild::DEVICE, "foster")) // SATV is ahead of API
-    {
-      m_info.m_dataFormats.push_back(AE_FMT_DTS_RAW);
-      m_info.m_dataFormats.push_back(AE_FMT_DTSHD_RAW);
-      //m_info.m_dataFormats.push_back(AE_FMT_TRUEHD_RAW);
+      if (StringUtils::StartsWithNoCase(CJNIBuild::DEVICE, "foster")) // SATV is ahead of API
+      {
+        m_info.m_dataFormats.push_back(AE_FMT_DTS_RAW);
+        m_info.m_dataFormats.push_back(AE_FMT_DTSHD_RAW);
+        //m_info.m_dataFormats.push_back(AE_FMT_TRUEHD_RAW);
+      }
     }
   }
 #if 0 //defined(__ARM_NEON__)
