@@ -35,6 +35,8 @@
 #include "android/jni/AudioTrack.h"
 #include "android/jni/Build.h"
 
+//#define DEBUG_VERBOSE 1
+
 using namespace jni;
 
 #if 0 //defined(__ARM_NEON__)
@@ -394,7 +396,9 @@ void CAESinkAUDIOTRACK::GetDelay(AEDelayStatus& status)
     m_lastHeadPosition = head_pos;
 
     delay = ((double)(m_frames_written - m_silenceframes) / m_format.m_sampleRate) - ((double)head_pos / m_sink_sampleRate);
+#ifdef DEBUG_VERBOSE
     CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::GetDelay m_frames_written/head_pos %u(%u)/%u %f", m_frames_written - m_silenceframes, m_frames_written, head_pos, delay);
+#endif
   }
   else
     delay = (double)(m_frames_written - head_pos) / m_sink_sampleRate;
@@ -451,7 +455,9 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     m_frames_written += written / m_sink_frameSize;
   }
 
-  //CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::AddPackets written %d", written);
+#ifdef DEBUG_VERBOSE
+  CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::AddPackets written %d", written);
+#endif
 
   return (unsigned int)(written/m_format.m_frameSize);
 }

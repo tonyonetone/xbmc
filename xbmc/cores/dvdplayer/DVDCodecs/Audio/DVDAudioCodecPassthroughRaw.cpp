@@ -26,6 +26,8 @@
 
 #include "cores/AudioEngine/AEFactory.h"
 
+//#define DEBUG_VERBOSE 1
+
 static enum AEChannel OutputMaps[2][9] = {
   {AE_CH_RAW, AE_CH_RAW, AE_CH_NULL},
   {AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_RAW, AE_CH_NULL}
@@ -211,7 +213,9 @@ void CDVDAudioCodecPassthroughRaw::Dispose()
 
 int CDVDAudioCodecPassthroughRaw::Decode(uint8_t* pData, int iSize)
 {
+#ifdef DEBUG_VERBOSE
   CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthroughRaw::Decode %d", iSize);
+#endif
   if (iSize <= 0) return 0;
 
   // HD audio has variable bitrate; Do pseudo-encapsulation to make it constant
