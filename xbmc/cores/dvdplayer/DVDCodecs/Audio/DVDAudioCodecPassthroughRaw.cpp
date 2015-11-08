@@ -191,10 +191,10 @@ int CDVDAudioCodecPassthroughRaw::GetEncodedChannels()
 
 CAEChannelInfo CDVDAudioCodecPassthroughRaw::GetChannelMap()
 {
-  if (m_hints.channels == 2)
-    return CAEChannelInfo(OutputMaps[0]);
-  else
+  if (m_hints.channels > 6)
     return CAEChannelInfo(OutputMaps[1]);
+  else
+    return CAEChannelInfo(OutputMaps[0]);
 }
 
 void CDVDAudioCodecPassthroughRaw::Dispose()
