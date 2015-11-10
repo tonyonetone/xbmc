@@ -217,6 +217,8 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, const C
       case AV_CODEC_ID_MPEG4:
       case AV_CODEC_ID_MSMPEG4V2:
       case AV_CODEC_ID_MSMPEG4V3:
+      case AV_CODEC_ID_MPEG1VIDEO:
+      case AV_CODEC_ID_MPEG2VIDEO:
         // Avoid h/w decoder for SD; Those files might use features
         // not supported and can easily be soft-decoded
         if (hint.width <= 800)
@@ -271,6 +273,8 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, const C
       case AV_CODEC_ID_MPEG4:
       case AV_CODEC_ID_MSMPEG4V2:
       case AV_CODEC_ID_MSMPEG4V3:
+      case AV_CODEC_ID_MPEG1VIDEO:
+      case AV_CODEC_ID_MPEG2VIDEO:
         // Avoid h/w decoder for SD; Those files might use features
         // not supported and can easily be soft-decoded
         if (hint.width <= 800)
@@ -287,6 +291,8 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, const C
       case AV_CODEC_ID_MPEG4:
       case AV_CODEC_ID_MSMPEG4V2:
       case AV_CODEC_ID_MSMPEG4V3:
+      case AV_CODEC_ID_MPEG1VIDEO:
+      case AV_CODEC_ID_MPEG2VIDEO:
         // Avoid h/w decoder for SD; Those files might use features
         // not supported and can easily be soft-decoded
         if (hint.width <= 800)
@@ -329,6 +335,8 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, const C
         case AV_CODEC_ID_MPEG4:
         case AV_CODEC_ID_MSMPEG4V2:
         case AV_CODEC_ID_MSMPEG4V3:
+        case AV_CODEC_ID_MPEG1VIDEO:
+        case AV_CODEC_ID_MPEG2VIDEO:
           // Avoid h/w decoder for SD; Those files might use features
           // not supported and can easily be soft-decoded
           if (hint.width <= 800)

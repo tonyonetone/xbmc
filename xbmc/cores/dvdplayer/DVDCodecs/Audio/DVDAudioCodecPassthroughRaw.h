@@ -54,5 +54,6 @@ private:
   int                m_bufferSize;
   int                m_bufferUsed;
   int                m_sampleRate;
+  enum AEDataFormat  m_codec;
 };
 

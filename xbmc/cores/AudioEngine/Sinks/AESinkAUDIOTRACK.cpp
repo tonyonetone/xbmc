@@ -35,7 +35,7 @@
 #include "android/jni/AudioTrack.h"
 #include "android/jni/Build.h"
 
-//#define DEBUG_VERBOSE 1
+#define DEBUG_VERBOSE 1
 
 using namespace jni;
 
@@ -74,6 +74,8 @@ static void pa_sconv_s16le_from_f32ne_neon(unsigned n, const float32_t *a, int16
  * this should be disabled or adapted accordingly.
  */
 #define LIMIT_TO_STEREO_AND_5POINT1_AND_7POINT1 1
+
+#define TRUEHD_UNIT 40
 
 static const AEChannel KnownChannels[] = { AE_CH_FL, AE_CH_FR, AE_CH_FC, AE_CH_LFE, AE_CH_SL, AE_CH_SR, AE_CH_BL, AE_CH_BR, AE_CH_BC, AE_CH_BLOC, AE_CH_BROC, AE_CH_NULL };
 
@@ -262,8 +264,8 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
 
       case AE_FMT_TRUEHD_RAW:
         m_encoding              = CJNIAudioFormat::ENCODING_DOLBY_TRUEHD;
-        m_format.m_frames       = AC3_FRAME_SIZE * m_format.m_sampleRate / m_format.m_encodedRate;
-        m_sink_sampleRate       = 48000;
+        m_format.m_frames       = TRUEHD_UNIT * m_format.m_sampleRate / m_format.m_encodedRate;
+        m_sink_sampleRate       = m_format.m_encodedRate;
         break;
 
       default:
@@ -434,10 +436,18 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     {
       size = ((int*)(buffer))[0];
       out_buf = buffer + sizeof(int);
+      if (!size)
+      {
+        size = 1;
+        m_silenceframes += frames;
+      }
     }
     // Test and ignore silence packets
     else if (out_buf[0] == 0 && !memcmp(out_buf, out_buf+1, size-1))
+    {
+      size = 1;
       m_silenceframes += frames;
+    }
   }
 
   // write as many frames of audio as we can fit into our internal buffer.
@@ -449,7 +459,8 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     // writing into its buffer.
     if (m_at_jni->getPlayState() != CJNIAudioTrack::PLAYSTATE_PLAYING)
       m_at_jni->play();
-    written = m_at_jni->write((char*)out_buf, 0, size);
+    else
+      written = m_at_jni->write((char*)out_buf, 0, size);
     if (written == size)
       written = frames * m_sink_frameSize;     // Be sure to report to AE everything has been written
     m_frames_written += written / m_sink_frameSize;
@@ -531,7 +542,7 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
       {
         m_info.m_dataFormats.push_back(AE_FMT_DTS_RAW);
         m_info.m_dataFormats.push_back(AE_FMT_DTSHD_RAW);
-        //m_info.m_dataFormats.push_back(AE_FMT_TRUEHD_RAW);
+        m_info.m_dataFormats.push_back(AE_FMT_TRUEHD_RAW);
       }
     }
   }
