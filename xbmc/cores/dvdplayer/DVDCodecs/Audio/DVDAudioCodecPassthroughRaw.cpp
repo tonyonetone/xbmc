@@ -26,7 +26,7 @@
 
 #include "cores/AudioEngine/AEFactory.h"
 
-#define DEBUG_VERBOSE 1
+//#define DEBUG_VERBOSE 1
 
 static enum AEChannel OutputMaps[2][9] = {
   {AE_CH_RAW, AE_CH_RAW, AE_CH_NULL},

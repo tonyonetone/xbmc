@@ -35,7 +35,7 @@
 #include "android/jni/AudioTrack.h"
 #include "android/jni/Build.h"
 
-#define DEBUG_VERBOSE 1
+//#define DEBUG_VERBOSE 1
 
 using namespace jni;
 
