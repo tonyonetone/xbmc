@@ -75,7 +75,7 @@ static void pa_sconv_s16le_from_f32ne_neon(unsigned n, const float32_t *a, int16
  */
 #define LIMIT_TO_STEREO_AND_5POINT1_AND_7POINT1 1
 
-#define TRUEHD_UNIT 40
+#define TRUEHD_UNIT 960
 
 static const AEChannel KnownChannels[] = { AE_CH_FL, AE_CH_FR, AE_CH_FC, AE_CH_LFE, AE_CH_SL, AE_CH_SR, AE_CH_BL, AE_CH_BR, AE_CH_BC, AE_CH_BLOC, AE_CH_BROC, AE_CH_NULL };
 
@@ -459,10 +459,15 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     // writing into its buffer.
     if (m_at_jni->getPlayState() != CJNIAudioTrack::PLAYSTATE_PLAYING)
       m_at_jni->play();
-    else
-      written = m_at_jni->write((char*)out_buf, 0, size);
+    written = m_at_jni->write((char*)out_buf, 0, size);
     if (written == size)
       written = frames * m_sink_frameSize;     // Be sure to report to AE everything has been written
+    else
+    {
+      CLog::Log(LOGWARNING, "CAESinkAUDIOTRACK::AddPackets incomplete write:  %d vs. %d", written, size);
+      if (m_passthrough && !WantsIEC61937())
+        return 0;  // Resend full packet
+    }
     m_frames_written += written / m_sink_frameSize;
   }
 

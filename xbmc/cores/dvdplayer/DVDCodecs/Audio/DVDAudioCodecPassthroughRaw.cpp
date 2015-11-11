@@ -35,15 +35,18 @@ static enum AEChannel OutputMaps[2][9] = {
 
 #define AC3_DIVISOR (1536 * 1000)
 #define DTS_DIVISOR (512 * 1000)
-#define TRUEHD_DIVISOR (40 * 1000)
-#define CONSTANT_BUFFER_SIZE 16384
+#define TRUEHD_DIVISOR (960 * 1000)
+#define CONSTANT_BUFFER_SIZE_DTSHD 16384
+#define CONSTANT_BUFFER_SIZE_TRUEHD 61440
 
 CDVDAudioCodecPassthroughRaw::CDVDAudioCodecPassthroughRaw(void) :
   m_buffer    (NULL),
   m_bufferSize(0),
   m_bufferUsed(0),
   m_sampleRate(0),
-  m_codec(AE_FMT_INVALID)
+  m_codec(AE_FMT_INVALID),
+  m_trueHDoffset(0),
+  m_trueHDpos(0)
 {
 }
 
@@ -90,19 +93,19 @@ void CDVDAudioCodecPassthroughRaw::GetData(DVDAudioFrame &frame)
   frame.encoded_sample_rate   = GetEncodedSampleRate();
   frame.nb_frames             = GetData(frame.data)/frame.framesize;
 
-  int64_t unscaledbitrate = (int64_t)(frame.nb_frames*frame.framesize) * frame.bits_per_sample * frame.encoded_sample_rate;
+  float unscaledbitrate = (float)(frame.nb_frames*frame.framesize) * frame.bits_per_sample * frame.encoded_sample_rate;
   switch(m_codec)
   {
     case AE_FMT_AC3_RAW:
     case AE_FMT_EAC3_RAW:
     {
-      int64_t bitrate = (unscaledbitrate + AC3_DIVISOR / 2) / AC3_DIVISOR;
+      float bitrate = unscaledbitrate / AC3_DIVISOR;
       m_sampleRate = bitrate * 1000 / frame.bits_per_sample;
       break;
     }
     case AE_FMT_TRUEHD_RAW:
     {
-      int64_t bitrate = (unscaledbitrate + TRUEHD_DIVISOR / 2) / TRUEHD_DIVISOR;
+      float bitrate = unscaledbitrate / TRUEHD_DIVISOR;
       m_sampleRate = bitrate * 1000 / frame.bits_per_sample;
       break;
     }
@@ -110,7 +113,7 @@ void CDVDAudioCodecPassthroughRaw::GetData(DVDAudioFrame &frame)
     case AE_FMT_DTS_RAW:
     case AE_FMT_DTSHD_RAW:
     {
-      int64_t bitrate = (unscaledbitrate + DTS_DIVISOR / 2) / DTS_DIVISOR;
+      float bitrate = unscaledbitrate / DTS_DIVISOR;
       m_sampleRate = bitrate * 1000 / frame.bits_per_sample;
       break;
     }
@@ -241,27 +244,50 @@ int CDVDAudioCodecPassthroughRaw::Decode(uint8_t* pData, int iSize)
   // HD audio has variable bitrate; Do pseudo-encapsulation to make it constant
   int constant_size = 0;
   if (m_codec == AE_FMT_DTSHD_RAW)
-    constant_size = CONSTANT_BUFFER_SIZE;
+    constant_size = CONSTANT_BUFFER_SIZE_DTSHD;
   else if (m_codec == AE_FMT_TRUEHD_RAW)
-    constant_size = CONSTANT_BUFFER_SIZE;
+    constant_size = CONSTANT_BUFFER_SIZE_TRUEHD;
 
   if (constant_size)
   {
-    if (iSize > constant_size)
-    {
-      CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthroughRaw::Decode Error: Buffer too small %d", iSize);
-      return 0;
-    }
-
     if (!m_buffer)
     {
       m_bufferSize = constant_size;
       m_buffer = (uint8_t*)malloc(m_bufferSize);
     }
-    ((int*)m_buffer)[0] = iSize;
-    memcpy(m_buffer+sizeof(int), pData, iSize);
+    if (m_codec == AE_FMT_TRUEHD_RAW)
+    {
+      if (m_trueHDoffset + iSize > constant_size)
+      {
+        CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthroughRaw::Decode Error: TrueHD Buffer too small %d(%d)", m_trueHDoffset + iSize, m_trueHDpos);
+        return 0;
+      }
 
-    m_bufferUsed = m_bufferSize;
+      memcpy(m_buffer+sizeof(int)+m_trueHDoffset, pData, iSize);
+      m_trueHDoffset += iSize;
+      m_trueHDpos++;
+      if (m_trueHDpos == 24)
+      {
+        ((int*)m_buffer)[0] = m_trueHDoffset;
+        m_bufferUsed = m_bufferSize;
+        m_trueHDoffset = m_trueHDpos = 0;
+      }
+      else
+        m_bufferUsed = 0;
+    }
+    else
+    {
+      if (iSize > constant_size)
+      {
+        CLog::Log(LOGDEBUG, "CDVDAudioCodecPassthroughRaw::Decode Error: Buffer too small %d", iSize);
+        return 0;
+      }
+
+      ((int*)m_buffer)[0] = iSize;
+      memcpy(m_buffer+sizeof(int), pData, iSize);
+      m_bufferUsed = m_bufferSize;
+    }
+
   }
   else
   {

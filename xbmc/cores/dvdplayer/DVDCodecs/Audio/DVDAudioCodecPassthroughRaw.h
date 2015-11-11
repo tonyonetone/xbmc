@@ -55,5 +55,7 @@ private:
   int                m_bufferUsed;
   int                m_sampleRate;
   enum AEDataFormat  m_codec;
+  unsigned int       m_trueHDoffset;
+  unsigned int       m_trueHDpos;
 };
 
