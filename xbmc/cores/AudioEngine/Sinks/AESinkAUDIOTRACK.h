@@ -22,6 +22,7 @@
 #include "cores/AudioEngine/Interfaces/AESink.h"
 #include "cores/AudioEngine/Utils/AEDeviceInfo.h"
 #include "threads/CriticalSection.h"
+#include <set>
 
 class AERingBuffer;
 namespace jni
@@ -64,6 +65,7 @@ private:
   int16_t           *m_alignedS16;
   unsigned int       m_sink_frameSize;
   unsigned int       m_sink_sampleRate;
+  std::set<unsigned int>       m_sink_sampleRates;
   bool               m_passthrough;
   double             m_audiotrackbuffer_sec;
   int                m_encoding;
