@@ -39,33 +39,6 @@
 
 using namespace jni;
 
-#if 0 //defined(__ARM_NEON__)
-#include <arm_neon.h>
-#include "utils/CPUInfo.h"
-
-// LGPLv2 from PulseAudio
-// float values from AE are pre-clamped so we do not need to clamp again here
-static void pa_sconv_s16le_from_f32ne_neon(unsigned n, const float32_t *a, int16_t *b)
-{
-  unsigned int i;
-
-  const float32x4_t half4     = vdupq_n_f32(0.5f);
-  const float32x4_t scale4    = vdupq_n_f32(32767.0f);
-  const uint32x4_t  mask4     = vdupq_n_u32(0x80000000);
-
-  for (i = 0; i < (n & ~3); i += 4)
-  {
-    const float32x4_t v4 = vmulq_f32(vld1q_f32(&a[i]), scale4);
-    const float32x4_t w4 = vreinterpretq_f32_u32(
-      vorrq_u32(vandq_u32(vreinterpretq_u32_f32(v4), mask4), vreinterpretq_u32_f32(half4)));
-    vst1_s16(&b[i], vmovn_s32(vcvtq_s32_f32(vaddq_f32(v4, w4))));
-  }
-  // leftovers
-  for ( ; i < n; i++)
-    b[i] = (int16_t) lrintf(a[i] * 0x7FFF);
-}
-#endif
-
 /*
  * ADT-1 on L preview as of 2014-10 downmixes all non-5.1/7.1 content
  * to stereo, so use 7.1 or 5.1 for all multichannel content for now to
@@ -277,7 +250,10 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   else
   {
     m_passthrough = false;
-    m_format.m_dataFormat     = AE_FMT_S16LE;
+    if (CJNIAudioManager::GetSDKVersion() >= 21)
+      m_format.m_dataFormat     = AE_FMT_FLOAT;
+    else
+      m_format.m_dataFormat     = AE_FMT_S16LE;
     m_format.m_sampleRate     = m_sink_sampleRate;
   }
 
@@ -513,6 +489,9 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   m_info.m_channels = KnownChannels;
 #endif
   m_info.m_dataFormats.push_back(AE_FMT_S16LE);
+  if (CJNIAudioManager::GetSDKVersion() >= 21)
+    m_info.m_dataFormats.push_back(AE_FMT_FLOAT);
+  
   m_info.m_sampleRates.push_back(CJNIAudioTrack::getNativeOutputSampleRate(CJNIAudioManager::STREAM_MUSIC));
 
   if (!CXBMCApp::IsHeadsetPlugged())
