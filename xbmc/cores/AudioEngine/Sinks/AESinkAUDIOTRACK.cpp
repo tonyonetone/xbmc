@@ -194,11 +194,10 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::Initialize requested: sampleRate %u; format: %d", format.m_sampleRate, CAEUtil::DataFormatToStr(format.m_dataFormat));
 
   int stream = CJNIAudioManager::STREAM_MUSIC;
-  m_encoding = CJNIAudioFormat::ENCODING_PCM_16BIT;
 
   // Get equal or lower supported sample rate
-  std::set<int>::iterator s = m_info.m_sampleRates.upper_bound(m_format.m_sampleRate)--;
-  if (s != m_info.m_sampleRates.begin())
+  std::set<int>::iterator s = m_sink_sampleRates.upper_bound(m_format.m_sampleRate)--;
+  if (s != m_sink_sampleRates.begin())
     m_sink_sampleRate = *s;
   else
     m_sink_sampleRate = CJNIAudioTrack::getNativeOutputSampleRate(CJNIAudioManager::STREAM_MUSIC);
@@ -239,6 +238,7 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
         break;
 
       default:
+        m_encoding = CJNIAudioFormat::ENCODING_PCM_16BIT;
         m_format.m_dataFormat   = AE_FMT_S16LE;
         m_sink_sampleRate       = m_format.m_encodedRate;
         break;
@@ -248,9 +248,15 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   {
     m_passthrough = false;
     if (CJNIAudioManager::GetSDKVersion() >= 21)
+     {
+      m_encoding = CJNIAudioFormat::ENCODING_PCM_FLOAT;
       m_format.m_dataFormat     = AE_FMT_FLOAT;
+    }
     else
+    {
+      m_encoding = CJNIAudioFormat::ENCODING_PCM_16BIT;
       m_format.m_dataFormat     = AE_FMT_S16LE;
+    }
     m_format.m_sampleRate     = m_sink_sampleRate;
   }
 
@@ -489,7 +495,8 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
   if (CJNIAudioManager::GetSDKVersion() >= 21)
     m_info.m_dataFormats.push_back(AE_FMT_FLOAT);
   
-  m_info.m_sampleRates.insert(CJNIAudioTrack::getNativeOutputSampleRate(CJNIAudioManager::STREAM_MUSIC));
+  m_sink_sampleRates.clear();
+  m_sink_sampleRates.insert(CJNIAudioTrack::getNativeOutputSampleRate(CJNIAudioManager::STREAM_MUSIC));
 
   if (!CXBMCApp::IsHeadsetPlugged())
   {
@@ -500,10 +507,11 @@ void CAESinkAUDIOTRACK::EnumerateDevicesEx(AEDeviceInfoList &list, bool force)
     {
       if (IsSupported(test_sample[i], CJNIAudioFormat::CHANNEL_OUT_STEREO, CJNIAudioFormat::ENCODING_PCM_16BIT))
       {
-        m_info.m_sampleRates.insert(test_sample[i]);
+        m_sink_sampleRates.insert(test_sample[i]);
         CLog::Log(LOGDEBUG, "AESinkAUDIOTRACK - %d supported", test_sample[i]);
       }
     }
+    std::copy(m_sink_sampleRates.begin(), m_sink_sampleRates.end(), std::back_inserter(m_info.m_sampleRates));
     m_info.m_dataFormats.push_back(AE_FMT_AC3);
     m_info.m_dataFormats.push_back(AE_FMT_DTS);
     if (CJNIAudioManager::GetSDKVersion() >= 21
