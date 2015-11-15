@@ -194,17 +194,15 @@ public class XBMCJsonRPC
     {
       try
       {
-        Intent detailsIntent = new Intent(ctx, Main.class);
+        Intent detailsIntent = new Intent(ctx, Splash.class);
         //detailsIntent.putExtra(MovieDetailsActivity.MOVIE, movie);
         //detailsIntent.putExtra(MovieDetailsActivity.NOTIFICATION_ID, id);
   
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(ctx);
-        stackBuilder.addParentStack(Main.class);
+        stackBuilder.addParentStack(Splash.class);
         stackBuilder.addNextIntent(detailsIntent);
         // Ensure a unique PendingIntents, otherwise all recommendations end up
-        // with
-        // the same
-        // PendingIntent
+        // with the same PendingIntent
         detailsIntent.setAction(movie.getString("imdbnumber"));
   
         return stackBuilder

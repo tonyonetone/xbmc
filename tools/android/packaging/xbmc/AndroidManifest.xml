@@ -97,7 +97,7 @@
         <provider android:name=".XBMCContentProvider"
             android:authorities="org.xbmc.kodi.image"
             android:exported="true" />
-        
+
     </application>
 
 </manifest><!-- END_INCLUDE(manifest) -->
