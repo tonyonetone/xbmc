@@ -101,6 +101,7 @@ CJNIWakeLock *CXBMCApp::m_wakeLock = NULL;
 ANativeWindow* CXBMCApp::m_window = NULL;
 int CXBMCApp::m_batteryLevel = 0;
 bool CXBMCApp::m_hasFocus = false;
+bool CXBMCApp::m_isResumed = false;
 bool CXBMCApp::m_hasAudioFocus = false;
 bool CXBMCApp::m_headsetPlugged = false;
 CCriticalSection CXBMCApp::m_applicationsMutex;
@@ -180,11 +181,14 @@ void CXBMCApp::onResume()
     CSingleLock lock(m_applicationsMutex);
     m_applications.clear();
   }
+  
+  m_isResumed = true;
 }
 
 void CXBMCApp::onPause()
 {
   android_printf("%s: ", __PRETTY_FUNCTION__);
+  
   if (g_application.m_pPlayer->IsPlaying())
   {
     if (g_application.m_pPlayer->IsPlayingVideo())
@@ -203,6 +207,7 @@ void CXBMCApp::onPause()
 #endif
 
   EnableWakeLock(false);
+  m_isResumed = false;
 }
 
 void CXBMCApp::onStop()
@@ -380,11 +385,6 @@ bool CXBMCApp::ReleaseAudioFocus()
   return true;
 }
 
-bool CXBMCApp::HasFocus()
-{
-  return m_hasFocus;
-}
-
 bool CXBMCApp::IsHeadsetPlugged()
 {
   return m_headsetPlugged;
@@ -509,7 +509,7 @@ int CXBMCApp::android_printf(const char *format, ...)
 
 void CXBMCApp::BringToFront()
 {
-  if (!m_hasFocus)
+  if (!m_isResumed)
   {
     CLog::Log(LOGERROR, "CXBMCApp::BringToFront");
     StartActivity(getPackageName());
