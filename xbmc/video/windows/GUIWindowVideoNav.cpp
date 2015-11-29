@@ -131,9 +131,24 @@ bool CGUIWindowVideoNav::OnMessage(CGUIMessage& message)
       if (!CGUIWindowVideoBase::OnMessage(message))
         return false;
 
-      // This needs to be done again, because the initialization of CGUIWindow overwrites it with default values
-      // Mostly affects cases where GUIWindowVideoNav is constructed and we're already in a show, e.g. entering from the homescreen
-      SelectFirstUnwatched();
+      if (message.GetStringParam(0) != "")
+      {
+        for (int i = 0; i < m_vecItems->Size(); i++)
+        {
+          CFileItemPtr pItem = m_vecItems->Get(i);
+          if (pItem->GetPath() == message.GetStringParam(0))
+          {
+            m_viewControl.SetSelectedItem(i);
+            break;
+          }
+        }
+      }
+      else
+      {
+        // This needs to be done again, because the initialization of CGUIWindow overwrites it with default values
+        // Mostly affects cases where GUIWindowVideoNav is constructed and we're already in a show, e.g. entering from the homescreen
+        SelectFirstUnwatched();
+      }
 
       return true;
     }
