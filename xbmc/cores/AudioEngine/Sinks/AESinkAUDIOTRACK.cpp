@@ -189,7 +189,6 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
   m_volume      = -1;
   m_smoothedDelayCount = 0;
   m_smoothedDelayVec.clear();
-  m_frameDuration = 0;
 
   CLog::Log(LOGDEBUG, "CAESinkAUDIOTRACK::Initialize requested: sampleRate %u; format: %s; channels: %d", format.m_sampleRate, CAEUtil::DataFormatToStr(format.m_dataFormat), format.m_channelLayout.Count());
 
@@ -213,13 +212,11 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
       case CAEStreamInfo::STREAM_TYPE_AC3:
         m_encoding              = CJNIAudioFormat::ENCODING_AC3;
         m_format.m_channelLayout = AE_CH_LAYOUT_2_0;
-        m_frameDuration = 1536.0 / m_format.m_sampleRate;
         break;
 
       case CAEStreamInfo::STREAM_TYPE_EAC3:
         m_encoding              = CJNIAudioFormat::ENCODING_E_AC3;
         m_format.m_channelLayout = AE_CH_LAYOUT_2_0;
-        m_frameDuration = 1536.0 / m_format.m_sampleRate;
         break;
 
       case CAEStreamInfo::STREAM_TYPE_DTSHD_CORE:
@@ -228,19 +225,16 @@ bool CAESinkAUDIOTRACK::Initialize(AEAudioFormat &format, std::string &device)
       case CAEStreamInfo::STREAM_TYPE_DTS_2048:
         m_encoding              = CJNIAudioFormat::ENCODING_DTS;
         m_format.m_channelLayout = AE_CH_LAYOUT_2_0;
-        m_frameDuration = 512.0 / m_format.m_sampleRate;
         break;
 
       case CAEStreamInfo::STREAM_TYPE_DTSHD:
         m_encoding              = CJNIAudioFormat::ENCODING_DTS_HD;
         m_format.m_channelLayout = AE_CH_LAYOUT_7_1;
-        m_frameDuration = 512.0 / m_format.m_sampleRate;
         break;
 
       case CAEStreamInfo::STREAM_TYPE_TRUEHD:
         m_encoding              = CJNIAudioFormat::ENCODING_DOLBY_TRUEHD;
         m_format.m_channelLayout = AE_CH_LAYOUT_7_1;
-        m_frameDuration = 960.0 / m_format.m_sampleRate;
         break;
 
       default:
@@ -428,10 +422,10 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
       CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets write returned error:  %d", written);
       return INT_MAX;
     }
-    if (m_passthrough && m_frameDuration)
+    if (m_passthrough && !m_info.m_wantsIECPassthrough)
     {
       if (written != m_format.m_frames)
-        m_duration_written += m_frameDuration;
+        m_duration_written += m_format.m_streamInfo.GetDuration() / 1000;
     }
     else
       m_duration_written += ((double)written / m_sink_frameSize) / m_format.m_sampleRate;

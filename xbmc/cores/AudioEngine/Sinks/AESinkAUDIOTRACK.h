@@ -73,5 +73,4 @@ private:
   bool               m_passthrough;
   double             m_audiotrackbuffer_sec;
   int                m_encoding;
-  double             m_frameDuration;
 };
