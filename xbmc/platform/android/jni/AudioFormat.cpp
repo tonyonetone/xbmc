@@ -49,6 +49,11 @@ int CJNIAudioFormat::CHANNEL_OUT_BACK_RIGHT            = 0x00000080;
 
 int CJNIAudioFormat::CHANNEL_INVALID                   = 0x00000000;
 
+// AML
+int CJNIAudioFormat::ENCODING_DTSHD       = -1;
+int CJNIAudioFormat::ENCODING_DTSHD_MA    = -1;
+int CJNIAudioFormat::ENCODING_TRUEHD      = -1;
+
 void CJNIAudioFormat::PopulateStaticFields()
 {
   int sdk = CJNIBase::GetSDKVersion();
@@ -87,6 +92,25 @@ void CJNIAudioFormat::PopulateStaticFields()
         }
       }
     }
+
+    // AML specific
+    jfieldID id = get_static_field_id<jclass>(c, "ENCODING_TRUEHD", "I");
+    if (id != NULL)
+      CJNIAudioFormat::ENCODING_TRUEHD = get_static_field<int>(c, "ENCODING_TRUEHD");
+    else
+      xbmc_jnienv()->ExceptionClear();
+
+    id = get_static_field_id<jclass>(c, "ENCODING_DTSHD", "I");
+    if (id != NULL)
+      CJNIAudioFormat::ENCODING_DTSHD = get_static_field<int>(c, "ENCODING_DTSHD");
+    else
+      xbmc_jnienv()->ExceptionClear();
+
+    id = get_static_field_id<jclass>(c, "ENCODING_DTSHD_MA", "I");
+    if (id != NULL)
+      CJNIAudioFormat::ENCODING_DTSHD_MA = get_static_field<int>(c, "ENCODING_DTSHD_MA");
+    else
+      xbmc_jnienv()->ExceptionClear();
   }
 }
 
