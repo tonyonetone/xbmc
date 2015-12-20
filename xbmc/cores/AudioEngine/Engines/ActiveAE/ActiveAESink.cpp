@@ -894,8 +894,8 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
   unsigned int maxFrames;
   int retry = 0;
   unsigned int written = 0;
-  uint8_t mergebuffer[MAX_IEC61937_PACKET];
-  uint8_t* p_mergebuffer = mergebuffer;
+  std::unique_ptr<uint8_t[]> mergebuffer;
+  uint8_t* p_mergebuffer = NULL;
 
   if (m_requestedFormat.m_dataFormat == AE_FMT_RAW && frames > 0  && samples->pool)
   {
@@ -944,11 +944,13 @@ unsigned int CActiveAESink::OutputSamples(CSampleBuffer* samples)
         int offset;
         int len;
         unsigned int size = 0;
+        mergebuffer.reset(new uint8_t[MAX_IEC61937_PACKET]);
+        p_mergebuffer = mergebuffer.get();
         for (int i=0; i<24; i++)
         {
           offset = i*2560;
           len = (*(buffer[0] + offset+2560-2) << 8) + *(buffer[0] + offset+2560-1);
-          memcpy(&mergebuffer[size], buffer[0] + offset, len);
+          memcpy(&(mergebuffer.get())[size], buffer[0] + offset, len);
           size += len;
         }
         buffer = &p_mergebuffer;

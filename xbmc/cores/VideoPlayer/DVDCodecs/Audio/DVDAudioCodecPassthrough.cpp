@@ -27,6 +27,8 @@
 
 #include "cores/AudioEngine/AEFactory.h"
 
+#define TRUEHD_BUF_SIZE 61440
+
 CDVDAudioCodecPassthrough::CDVDAudioCodecPassthrough(void) :
   m_buffer(NULL),
   m_bufferSize(0),
@@ -64,6 +66,7 @@ bool CDVDAudioCodecPassthrough::Open(CDVDStreamInfo &hints, CDVDCodecOptions &op
     case AV_CODEC_ID_TRUEHD:
       format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_TRUEHD;
       format.m_streamInfo.m_sampleRate = hints.samplerate;
+      m_trueHDBuffer.reset(new uint8_t[TRUEHD_BUF_SIZE]);
       break;
 
     default:
@@ -110,9 +113,9 @@ int CDVDAudioCodecPassthrough::Decode(uint8_t* pData, int iSize)
   if (m_format.m_streamInfo.m_type == CAEStreamInfo::STREAM_TYPE_TRUEHD && m_dataSize)
   {
     if (!m_trueHDoffset)
-      memset(m_trueHDBuffer, 0, sizeof(m_trueHDBuffer));
+      memset(m_trueHDBuffer.get(), 0, TRUEHD_BUF_SIZE);
 
-    memcpy(&m_trueHDBuffer[m_trueHDoffset], m_buffer, m_dataSize);
+    memcpy(&(m_trueHDBuffer.get())[m_trueHDoffset], m_buffer, m_dataSize);
     uint8_t highByte = (m_dataSize >> 8) & 0xFF;
     uint8_t lowByte = m_dataSize & 0xFF;
     m_trueHDBuffer[m_trueHDoffset+2560-2] = highByte;
@@ -163,7 +166,7 @@ void CDVDAudioCodecPassthrough::GetData(DVDAudioFrame &frame)
 int CDVDAudioCodecPassthrough::GetData(uint8_t** dst)
 {
   if (m_format.m_streamInfo.m_type == CAEStreamInfo::STREAM_TYPE_TRUEHD)
-    *dst = m_trueHDBuffer;
+    *dst = m_trueHDBuffer.get();
   else
     *dst = m_buffer;
   return m_dataSize;
@@ -171,6 +174,7 @@ int CDVDAudioCodecPassthrough::GetData(uint8_t** dst)
 
 void CDVDAudioCodecPassthrough::Reset()
 {
+  m_trueHDoffset = 0;
 }
 
 int CDVDAudioCodecPassthrough::GetBufferSize()
