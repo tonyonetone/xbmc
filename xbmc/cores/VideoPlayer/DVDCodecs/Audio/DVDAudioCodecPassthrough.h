@@ -50,5 +50,9 @@ private:
   unsigned int m_bufferSize;
   unsigned int m_dataSize;
   AEAudioFormat m_format;
+
+  // TrueHD specifics
+  uint8_t m_trueHDBuffer[61440];
+  unsigned int       m_trueHDoffset;
 };
 
