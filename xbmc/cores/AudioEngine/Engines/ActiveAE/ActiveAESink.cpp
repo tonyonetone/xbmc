@@ -137,11 +137,11 @@ bool CActiveAESink::SupportsFormat(const std::string &device, AEAudioFormat &for
             switch (format.m_streamInfo.m_type)
             {
               case CAEStreamInfo::STREAM_TYPE_EAC3:
-                samplerate = 192000;
+                samplerate = format.m_streamInfo.m_sampleRate ? 4 * format.m_streamInfo.m_sampleRate : 192000;
                 break;
 
               case CAEStreamInfo::STREAM_TYPE_TRUEHD:
-                if (format.m_streamInfo.m_sampleRate == 48000 || format.m_streamInfo.m_sampleRate == 96000 || format.m_streamInfo.m_sampleRate == 192000)
+                if (!format.m_streamInfo.m_sampleRate || format.m_streamInfo.m_sampleRate == 48000 || format.m_streamInfo.m_sampleRate == 96000 || format.m_streamInfo.m_sampleRate == 192000)
                   samplerate = 192000;
                 else
                   samplerate = 176400;
