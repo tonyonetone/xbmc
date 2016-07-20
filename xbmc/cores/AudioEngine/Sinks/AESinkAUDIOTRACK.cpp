@@ -551,7 +551,10 @@ void CAESinkAUDIOTRACK::GetDelay(AEDelayStatus& status)
 
   const double d = GetMovingAverageDelay(delay);
 
-  status.SetDelay(d);
+  if (m_passthrough && !m_info.m_wantsIECPassthrough)
+    status.SetDelay(d);
+  else
+    status.SetDelay(delay);
 }
 
 double CAESinkAUDIOTRACK::GetLatency()
