@@ -213,6 +213,9 @@ void CDVDMediaCodecInfo::ReleaseOutputBuffer(bool render)
 {
   CSingleLock lock(m_section);
 
+    CLog::Log(LOGDEBUG, "CDVDMediaCodecInfo::ReleaseOutputBuffer "
+      "index(%d), render(%d), valid(%s), released(%s)", m_index, render, m_valid ? "true" : "false", m_isReleased ? "true" : "false");
+
   if (!m_valid || m_isReleased)
     return;
 
@@ -229,7 +232,7 @@ void CDVDMediaCodecInfo::ReleaseOutputBuffer(bool render)
   if (xbmc_jnienv()->ExceptionCheck())
   {
     CLog::Log(LOGERROR, "CDVDMediaCodecInfo::ReleaseOutputBuffer "
-      "ExceptionCheck render(%d)", render);
+      "ExceptionCheck index(%d), render(%d)", m_index, render);
     xbmc_jnienv()->ExceptionDescribe();
     xbmc_jnienv()->ExceptionClear();
   }
@@ -309,7 +312,7 @@ void CDVDMediaCodecInfo::RenderUpdate(const CRect &SrcRect, const CRect &DestRec
   {
     CXBMCApp::get()->setVideoViewSurfaceRect(DestRect.x1, DestRect.y1, DestRect.x2, DestRect.y2);
     cur_rect = DestRect;
-    
+
     // setVideoViewSurfaceRect is async, so skip rendering this frame
     ReleaseOutputBuffer(false);
   }
@@ -593,7 +596,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
 
   m_opened = true;
   memset(&m_demux_pkt, 0, sizeof(m_demux_pkt));
-  
+
   m_processInfo.SetVideoDecoderName(m_formatname, true );
   m_processInfo.SetVideoPixelFormat(m_render_surface ? "Surface" : (m_render_sw ? "YUV" : "EGL"));
   m_processInfo.SetVideoDimensions(m_hints.width, m_hints.height);
@@ -645,8 +648,6 @@ void CDVDVideoCodecAndroidMediaCodec::Dispose()
 
 int CDVDVideoCodecAndroidMediaCodec::Decode(uint8_t *pData, int iSize, double dts, double pts)
 {
-  int rtn = (m_codecControlFlags & DVD_CODEC_CTRL_DRAIN) ? 0 : VC_BUFFER;
-
   if (!m_opened)
     return VC_ERROR;
 
@@ -655,8 +656,11 @@ int CDVDVideoCodecAndroidMediaCodec::Decode(uint8_t *pData, int iSize, double dt
 
   // must check for an output picture 1st,
   // otherwise, mediacodec can stall on some devices.
+  int rtn = VC_BUFFER;
   if (GetOutputPicture() > 0)
     rtn |= VC_PICTURE;
+  else if (m_codecControlFlags & DVD_CODEC_CTRL_DRAIN)
+    rtn &= ~VC_BUFFER;
 
   if (!pData)
   {
@@ -833,7 +837,11 @@ bool CDVDVideoCodecAndroidMediaCodec::GetPicture(DVDVideoPicture* pDvdVideoPictu
 bool CDVDVideoCodecAndroidMediaCodec::ClearPicture(DVDVideoPicture* pDvdVideoPicture)
 {
   if (pDvdVideoPicture->format == RENDER_FMT_MEDIACODEC || pDvdVideoPicture->format == RENDER_FMT_MEDIACODECSURFACE)
+  {
+    CLog::Log(LOGDEBUG, "CDVDVideoCodecAndroidMediaCodec::ClearPicture "
+      "index(%d)", pDvdVideoPicture->mediacodec->GetIndex());
     SAFE_RELEASE(pDvdVideoPicture->mediacodec);
+  }
   memset(pDvdVideoPicture, 0x00, sizeof(DVDVideoPicture));
 
   return true;
@@ -841,6 +849,12 @@ bool CDVDVideoCodecAndroidMediaCodec::ClearPicture(DVDVideoPicture* pDvdVideoPic
 
 void CDVDVideoCodecAndroidMediaCodec::SetDropState(bool bDrop)
 {
+  if (bDrop == m_drop)
+    return;
+
+  if (g_advancedSettings.CanLogComponent(LOGVIDEO))
+    CLog::Log(LOGDEBUG, "%s::%s %s->%s", "CDVDVideoCodecAndroidMediaCodec", __func__, m_drop ? "true" : "false", bDrop ? "true" : "false");
+
   m_drop = bDrop;
   if (m_drop)
     m_videobuffer.iFlags |=  DVP_FLAG_DROPPED;
@@ -852,7 +866,7 @@ void CDVDVideoCodecAndroidMediaCodec::SetCodecControl(int flags)
 {
   if (m_codecControlFlags != flags)
     if (g_advancedSettings.CanLogComponent(LOGVIDEO))
-      CLog::Log(LOGDEBUG, "%s::%s %x->%x", CLASSNAME, __func__, m_codecControlFlags, flags);
+      CLog::Log(LOGDEBUG, "%s::%s %x->%x", "CDVDVideoCodecAndroidMediaCodec", __func__, m_codecControlFlags, flags);
   m_codecControlFlags = flags;
 }
 
@@ -1084,10 +1098,8 @@ int CDVDVideoCodecAndroidMediaCodec::GetOutputPicture(void)
     if (pts != AV_NOPTS_VALUE)
       m_videobuffer.pts = pts;
 
-/*
     CLog::Log(LOGDEBUG, "CDVDVideoCodecAndroidMediaCodec::GetOutputPicture "
       "index(%d), pts(%f)", index, m_videobuffer.pts);
-*/
     // always, check/clear jni exceptions.
     if (xbmc_jnienv()->ExceptionCheck())
       xbmc_jnienv()->ExceptionClear();
@@ -1104,15 +1116,16 @@ int CDVDVideoCodecAndroidMediaCodec::GetOutputPicture(void)
     }
     ConfigureOutputFormat(&mediaformat);
   }
-  else if (index == CJNIMediaCodec::INFO_TRY_AGAIN_LATER)
+  else if (index == CJNIMediaCodec::INFO_TRY_AGAIN_LATER || index == CJNIMediaCodec::INFO_OUTPUT_BUFFERS_CHANGED)
   {
-    // normal dequeueOutputBuffer timeout, ignore it.
+    // ignore
     rtn = -1;
   }
   else
   {
     // we should never get here
     CLog::Log(LOGERROR, "CDVDVideoCodecAndroidMediaCodec::GetOutputPicture unknown index(%d)", index);
+    rtn = -1;
   }
 
   return rtn;
