@@ -29,6 +29,8 @@
 #include "ActiveAE.h"
 #include "ActiveAEStream.h"
 
+#include "settings/AdvancedSettings.h"
+
 using namespace ActiveAE;
 
 /* typecast AE to CActiveAE */
@@ -216,8 +218,9 @@ double CActiveAEStream::CalcResampleRatio(double error)
     clockspeed = m_pClock->GetClockSpeed();
 
   double ret = 1.0 / clockspeed + proportional + m_resampleIntegral;
-  //CLog::Log(LOGNOTICE,"----- error: %f, rr: %f, prop: %f, int: %f",
-  //                    error, ret, proportional, m_resampleIntegral);
+  if (g_advancedSettings.CanLogComponent(LOGAUDIO))
+    CLog::Log(LOGNOTICE,"----- error: %f, rr: %f, prop: %f, int: %f",
+                      error, ret, proportional, m_resampleIntegral);
   return ret;
 }
 
