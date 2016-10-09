@@ -129,6 +129,7 @@ protected:
   bool            m_opened;
   bool            m_drop;
   int             m_codecControlFlags;
+  bool            m_sent_eos;
 
   CJNISurface    *m_surface;
   unsigned int    m_textureId;

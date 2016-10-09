@@ -355,6 +355,7 @@ bool CDVDVideoCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
 
   m_render_surface = CSettings::GetInstance().GetBool(CSettings::SETTING_VIDEOPLAYER_USEMEDIACODECSURFACE);
   m_drop = false;
+  m_sent_eos = false;
   m_codecControlFlags = 0;
   m_hints = hints;
 
@@ -651,18 +652,24 @@ int CDVDVideoCodecAndroidMediaCodec::Decode(uint8_t *pData, int iSize, double dt
   if (m_hints.ptsinvalid)
     pts = DVD_NOPTS_VALUE;
 
+  bool drain = (m_codecControlFlags & DVD_CODEC_CTRL_DRAIN) ? true : false;
+  bool send_eos = drain && !m_sent_eos;
+  if (!drain && m_sent_eos)
+  {
+    m_codec->flush();
+    m_sent_eos = false;
+  }
+
   // Handle input, add demuxer packet to input queue, we must accept it or
   // it will be discarded as VideoPlayerVideo has no concept of "try again".
   // we must return VC_BUFFER or VC_PICTURE, default to VC_BUFFER.
-  int rtn = VC_BUFFER;
+  int rtn = drain ? 0 : VC_BUFFER;
 
   // must check for an output picture 1st,
   // otherwise, mediacodec can stall on some devices.
   if (GetOutputPicture() > 0)
   {
     rtn |= VC_PICTURE;
-    if (m_codecControlFlags & DVD_CODEC_CTRL_DRAIN)
-      rtn &= ~VC_BUFFER;
   }
 
   if (!pData)
@@ -677,7 +684,7 @@ int CDVDVideoCodecAndroidMediaCodec::Decode(uint8_t *pData, int iSize, double dt
     }
   }
 
-  if (pData)
+  if (pData || send_eos)
   {
     // try to fetch an input buffer
     int64_t timeout_us = 5000;
@@ -692,7 +699,7 @@ int CDVDVideoCodecAndroidMediaCodec::Decode(uint8_t *pData, int iSize, double dt
     else if (index >= 0)
     {
       // we have an input buffer, fill it.
-      if (m_bitstream)
+      if (pData && m_bitstream)
       {
         m_bitstream->Convert(pData, iSize);
         iSize = m_bitstream->GetConvertSize();
@@ -707,7 +714,7 @@ int CDVDVideoCodecAndroidMediaCodec::Decode(uint8_t *pData, int iSize, double dt
       }
       // fetch a pointer to the ByteBuffer backing store
       uint8_t *dst_ptr = (uint8_t*)xbmc_jnienv()->GetDirectBufferAddress(buffer.get_raw());
-      if (dst_ptr)
+      if (pData && dst_ptr)
       {
         // Codec specifics
         switch(m_hints.codec)
@@ -751,6 +758,11 @@ int CDVDVideoCodecAndroidMediaCodec::Decode(uint8_t *pData, int iSize, double dt
         presentationTimeUs, pts_dtoi(presentationTimeUs), iSize, GetDataSize(), loop_cnt);
 */
       int flags = 0;
+      if (drain)
+      {
+        flags |= CJNIMediaCodec::BUFFER_FLAG_END_OF_STREAM;
+        m_sent_eos = true;
+      }
       int offset = 0;
       m_codec->queueInputBuffer(index, offset, iSize, presentationTimeUs, flags);
       // clear any jni exceptions, jni gets upset if we do not.
