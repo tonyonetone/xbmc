@@ -26,4 +26,7 @@ class CJNIMediaCrypto : public CJNIBase
 public:
   CJNIMediaCrypto(const jni::jhobject &object) : CJNIBase(object) {};
   ~CJNIMediaCrypto() {};
+
+  void setMediaDrmSession(const std::vector<char> & sessionId);
+  bool requiresSecureDecoderComponent(const std::string& mime);
 };
