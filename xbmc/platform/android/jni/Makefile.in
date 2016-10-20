@@ -63,6 +63,7 @@ SRCS      += KeyEvent.cpp
 SRCS      += InputManager.cpp
 SRCS      += Os.cpp
 SRCS      += MediaCrypto.cpp
+SRCS      += UUID.cpp
 
 LIB        = jni.a
 
