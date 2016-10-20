@@ -1,4 +1,3 @@
-#pragma once
 /*
  *      Copyright (C) 2016 Team Kodi
  *      http://xbmc.org
@@ -20,10 +19,29 @@
  */
 
 #include "MediaCrypto.h"
+#include "UUID.h"
 
 #include "jutils/jutils-details.hpp"
 
 using namespace jni;
+
+CJNIMediaCrypto::CJNIMediaCrypto(const CJNIUUID& uuid, const std::vector<char>& initData)
+  : CJNIBase("android/media/MediaCrypto")
+{
+  jsize size;
+  JNIEnv *env = xbmc_jnienv();
+
+  size = initData.size();
+  jbyteArray idata = env->NewByteArray(size);
+  jbyte *bytedata = (jbyte*)initData.data();
+  env->SetByteArrayRegion(idata, 0, size, bytedata);
+
+  m_object = new_object(GetClassName(), "<init>", "(Ljava/util/UUID;[B)V",
+                        uuid.get_raw(), idata);
+  m_object.setGlobal();
+
+  env->DeleteLocalRef(idata);
+}
 
 void CJNIMediaCrypto::setMediaDrmSession(const std::vector<char>& sessionId)
 {
