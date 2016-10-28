@@ -133,7 +133,7 @@ public:
 
    // Return true if host replies to ping
    bool PingHost(unsigned long host, unsigned short port, unsigned int timeout_ms = 2000, bool readability_check = false);
-   virtual bool PingHost(unsigned long host, unsigned int timeout_ms = 2000) = 0;
+   virtual bool PingHost(unsigned long remote_ip, unsigned int timeout_ms = 2000);
 
    // Get/set the nameserver(s)
    virtual std::vector<std::string> GetNameServers(void) = 0;
@@ -154,7 +154,9 @@ public:
    void WaitForNet();
 };
 
-#ifdef HAS_LINUX_NETWORK
+#if defined(TARGET_ANDROID)
+#include "android/NetworkAndroid.h"
+#elif defined(HAS_LINUX_NETWORK)
 #include "linux/NetworkLinux.h"
 #else
 #include "windows/NetworkWin32.h"
