@@ -1220,6 +1220,11 @@ void CDVDVideoCodecAndroidMediaCodec::ConfigureOutputFormat(CJNIMediaFormat* med
   if (mediaformat->containsKey("crop-bottom"))
     crop_bottom = mediaformat->getInteger("crop-bottom");
 
+  if (!crop_right)
+    crop_right = width-1;
+  if (!crop_bottom)
+    crop_bottom = height-1;
+
   // clear any jni exceptions
   if (xbmc_jnienv()->ExceptionCheck())
     xbmc_jnienv()->ExceptionClear();
@@ -1378,14 +1383,11 @@ void CDVDVideoCodecAndroidMediaCodec::ConfigureOutputFormat(CJNIMediaFormat* med
     }
   }
 
-  if (width)
-    m_videobuffer.iWidth  = width;
-  if (height)
-    m_videobuffer.iHeight = height;
+  m_videobuffer.iWidth  = crop_right  + 1 - crop_left;
+  m_videobuffer.iHeight = crop_bottom + 1 - crop_top;
+  m_videobuffer.iDisplayWidth  = width;
+  m_videobuffer.iDisplayHeight = height;
 
-  // picture display width/height include the cropping.
-  m_videobuffer.iDisplayWidth  = crop_right  + 1 - crop_left;
-  m_videobuffer.iDisplayHeight = crop_bottom + 1 - crop_top;
   if (m_hints.aspect > 1.0 && !m_hints.forced_aspect)
   {
     m_videobuffer.iDisplayWidth  = ((int)lrint(m_videobuffer.iHeight * m_hints.aspect)) & ~3;
