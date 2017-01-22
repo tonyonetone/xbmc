@@ -604,10 +604,14 @@ bool CMMALVideo::AddData(const DemuxPacket &packet)
 
   MMAL_BUFFER_HEADER_T *buffer;
   MMAL_STATUS_T status;
-  assert(pData != nullptr && iSize > 0); // no longer valid
+  assert(packet.pData != nullptr && packet.iSize > 0); // no longer valid
 
   if (m_pool)
     m_pool->Prime();
+
+  const unsigned char *pData(packet.pData);
+  int iSize(packet.iSize);
+
   while (iSize > 0)
   {
     // 500ms timeout

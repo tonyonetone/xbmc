@@ -79,7 +79,7 @@ public:
    * returns -1 on error
    *
    */
-  virtual int AddData(uint8_t* pData, int iSize, double dts, double pts) = 0;
+  virtual int AddData(const DemuxPacket &packet) = 0;
 
   /*
    * returns nr of bytes in decode buffer

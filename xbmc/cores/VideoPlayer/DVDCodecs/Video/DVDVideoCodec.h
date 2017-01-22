@@ -23,6 +23,7 @@
 #include "system.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderFormats.h"
 #include "cores/VideoPlayer/Process/ProcessInfo.h"
+#include "cores/VideoPlayer/DVDDemuxers/DVDDemuxPacket.h"
 #include "DVDResource.h"
 
 extern "C" {
