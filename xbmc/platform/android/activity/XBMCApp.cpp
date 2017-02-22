@@ -53,8 +53,7 @@
 #include "AppParamParser.h"
 #include "platform/XbmcContext.h"
 #include <android/bitmap.h>
-#include "cores/AudioEngine/Interfaces/AE.h"
-#include "ServiceBroker.h"
+#include "cores/AudioEngine/AEFactory.h"
 #include "cores/VideoPlayer/VideoRenderers/RenderManager.h"
 #include "platform/android/activity/IInputDeviceCallbacks.h"
 #include "platform/android/activity/IInputDeviceEventHandler.h"
@@ -803,7 +802,7 @@ void CXBMCApp::onReceive(CJNIIntent intent)
     if (newstate != m_headsetPlugged)
     {
       m_headsetPlugged = newstate;
-      CServiceBroker::GetActiveAE().DeviceChange();
+      CAEFactory::DeviceChange();
     }
   }
 
