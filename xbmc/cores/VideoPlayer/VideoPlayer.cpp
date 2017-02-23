@@ -2799,7 +2799,6 @@ void CVideoPlayer::HandleMessages()
         CDVDMsgPlayerSeek::CMode mode;
         mode.time = iTime;
         mode.backward = m_playSpeed < 0;
-        mode.flush = true;
         mode.accurate = true;
         mode.trickplay = true;
         mode.sync = true;
