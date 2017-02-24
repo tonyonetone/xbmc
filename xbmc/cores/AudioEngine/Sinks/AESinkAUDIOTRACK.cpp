@@ -178,9 +178,10 @@ static int AEChannelMapToAUDIOTRACKChannelMask(CAEChannelInfo info)
   return atMask;
 }
 
-static jni::CJNIAudioTrack *CreateAudioTrack(int stream, int sampleRate, int channelMask, int encoding, int bufferSize)
+jni::CJNIAudioTrack *CAESinkAUDIOTRACK::CreateAudioTrack(int stream, int sampleRate, int channelMask, int encoding, int bufferSize)
 {
   jni::CJNIAudioTrack *jniAt = NULL;
+  m_jniAudioFormat = encoding;
 
   try
   {
@@ -199,6 +200,54 @@ static jni::CJNIAudioTrack *CreateAudioTrack(int stream, int sampleRate, int cha
   return jniAt;
 }
 
+int CAESinkAUDIOTRACK::AudioTrackWrite(char* audioData, int offsetInBytes, int sizeInBytes)
+{
+  int     written = 0;
+  if (CJNIBase::GetSDKVersion() >= 21 && m_jniAudioFormat == CJNIAudioFormat::ENCODING_PCM_FLOAT)
+  {
+    std::vector<float> buf;
+    buf.reserve(sizeInBytes / sizeof(float));
+    memcpy(buf.data(), audioData + offsetInBytes, sizeInBytes / sizeof(float));
+    written = m_at_jni->write(buf, 0, sizeInBytes / sizeof(float), CJNIAudioTrack::WRITE_NON_BLOCKING);
+    written *= sizeof(float);
+  }
+  else if (m_jniAudioFormat == CJNIAudioFormat::ENCODING_IEC61937)
+  {
+    std::vector<int16_t> buf;
+    buf.reserve(sizeInBytes / sizeof(int16_t));
+    memcpy(buf.data(), audioData + offsetInBytes, sizeInBytes / sizeof(int16_t));
+    if (CJNIBase::GetSDKVersion() >= 23)
+      written = m_at_jni->write(buf, 0, sizeInBytes / sizeof(int16_t), CJNIAudioTrack::WRITE_NON_BLOCKING);
+    else
+      written = m_at_jni->write(buf, 0, sizeInBytes / sizeof(int16_t));
+    written *= sizeof(uint16_t);
+  }
+  else
+  {
+    std::vector<char> buf;
+    buf.reserve(sizeInBytes);
+    memcpy(buf.data(), audioData + offsetInBytes, sizeInBytes);
+    if (CJNIBase::GetSDKVersion() >= 23)
+      written = m_at_jni->write(buf, 0, sizeInBytes, CJNIAudioTrack::WRITE_NON_BLOCKING);
+    else
+      written = m_at_jni->write(buf, 0, sizeInBytes);
+  }
+  
+  return written;
+}
+
+int CAESinkAUDIOTRACK::AudioTrackWrite(char* audioData, int sizeInBytes, int64_t timestamp)
+{
+  int     written = 0;
+  std::vector<char> buf;
+  buf.reserve(sizeInBytes);
+  memcpy(buf.data(), audioData, sizeInBytes);
+
+  CJNIByteBuffer bytebuf = CJNIByteBuffer::wrap(buf);
+  written = m_at_jni->write(bytebuf.get_raw(), sizeInBytes, CJNIAudioTrack::WRITE_BLOCKING, timestamp);
+
+  return written;
+}
 
 CAEDeviceInfo CAESinkAUDIOTRACK::m_info;
 std::set<unsigned int> CAESinkAUDIOTRACK::m_sink_sampleRates;
@@ -637,7 +686,7 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     int size_left = size;
     while (written < size)
     {
-      loop_written = m_at_jni->write((char*)out_buf, 0, size_left);
+      loop_written = AudioTrackWrite((char*)out_buf, 0, size_left);
       written += loop_written;
       size_left -= loop_written;
 
