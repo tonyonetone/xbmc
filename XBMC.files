@@ -9100,6 +9100,8 @@ xbmc/win32/WMIInterface.h
 xbmc/win32/XBMC.ico
 xbmc/win32/XBMC_PC.cpp
 xbmc/win32/XBMC_PC.rc
+xbmc/windowing/CMakeLists.txt
+xbmc/windowing/android/CMakeLists.txt
 xbmc/windowing/android/WinEventsAndroid.cpp
 xbmc/windowing/android/WinEventsAndroid.h
 xbmc/windowing/egl/EGLNativeType.h
@@ -9114,6 +9116,7 @@ xbmc/windowing/egl/EGLWrapper.cpp
 xbmc/windowing/egl/EGLWrapper.h
 xbmc/windowing/egl/WinSystemEGL.cpp
 xbmc/windowing/egl/WinSystemEGL.h
+xbmc/windowing/osx/CMakeLists.txt
 xbmc/windowing/osx/WinEventsIOS.h
 xbmc/windowing/osx/WinEventsIOS.mm
 xbmc/windowing/osx/WinEventsOSX.h
