@@ -9876,3 +9876,17 @@ xbmc/platform/android/activity/JNIXBMCSurfaceTextureOnFrameAvailableListener.cpp
 xbmc/platform/android/activity/JNIXBMCSurfaceTextureOnFrameAvailableListener.h
 xbmc/platform/android/activity/JNIXBMCVideoView.cpp
 xbmc/platform/android/activity/JNIXBMCVideoView.h
+CMakeLists.txt
+cmake/scripts/common/AddonHelpers.cmake
+cmake/scripts/common/AddOptions.cmake
+cmake/scripts/common/ArchSetup.cmake
+cmake/scripts/common/CheckCommits.cmake
+cmake/scripts/common/CheckTargetPlatform.cmake
+cmake/scripts/common/CMakeHelpers.cmake
+cmake/scripts/common/GenerateVersionedFiles.cmake
+cmake/scripts/common/GeneratorSetup.cmake
+cmake/scripts/common/HandleDepends.cmake
+cmake/scripts/common/Macros.cmake
+cmake/scripts/common/PrepareEnv.cmake
+cmake/scripts/common/ProjectMacros.cmake
+cmake/scripts/common/Uninstall.cmake

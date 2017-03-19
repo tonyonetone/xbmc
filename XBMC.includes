@@ -479,3 +479,5 @@ tools/depends/target/xbmc
 addons/skin.estuary/1080i
 tools/depends
 xbmc/platform/android/activity
+.
+cmake/scripts/common
