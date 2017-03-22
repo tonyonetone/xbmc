@@ -172,6 +172,7 @@ bool CGUIWindowVideoNav::OnMessage(CGUIMessage& message)
                 return tag;
               long idDb = atol(strFileName.c_str());
 
+              CLog::Log(LOGDEBUG, "showinfo 1 %d", idDb);
               VIDEODB_CONTENT_TYPE type;
               if (content == "movies" || content == "recentlyaddedmovies")
                 type = VIDEODB_CONTENT_MOVIES;
@@ -184,11 +185,13 @@ bool CGUIWindowVideoNav::OnMessage(CGUIMessage& message)
               else
                 return tag;
 
+              CLog::Log(LOGDEBUG, "showinfo 2 %d", type);
               CVideoDatabase videoDatabase;
               if (!videoDatabase.Open())
                 return tag;
 
               tag = videoDatabase.GetDetailsByTypeAndId(type, idDb);
+              CLog::Log(LOGDEBUG, "showinfo 3 %s", tag.m_strFileNameAndPath.c_str());
 
               return tag;
             };
