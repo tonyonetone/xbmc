@@ -482,3 +482,4 @@ xbmc/platform/android/activity
 .
 cmake/scripts/common
 cmake/scripts/android
+xbmc/listproviders

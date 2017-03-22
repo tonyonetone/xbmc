@@ -672,7 +672,6 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
 
   // write as many frames of audio as we can fit into our internal buffer.
   int written = 0;
-  int loop_written = 0;
   if (frames)
   {
     if (m_extTimer.MillisLeft() > 0)
@@ -683,71 +682,28 @@ unsigned int CAESinkAUDIOTRACK::AddPackets(uint8_t **data, unsigned int frames, 
     if (m_at_jni->getPlayState() != CJNIAudioTrack::PLAYSTATE_PLAYING)
       m_at_jni->play();
 
-    bool retried = false;
-    int size_left = size;
-    while (written < size)
+    written = AudioTrackWrite((char*)out_buf, 0, size);
+
+    if (written < 0)
     {
-      loop_written = AudioTrackWrite((char*)out_buf, 0, size_left);
-      written += loop_written;
-      size_left -= loop_written;
-
-      if (loop_written < 0)
-      {
-        CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets write returned error:  %d", loop_written);
-        return INT_MAX;
-      }
-
-      // if we could not add any data - sleep a bit and retry
-      if (loop_written == 0)
-      {
-        if (!retried)
-        {
-          retried = true;
-          double sleep_time = 0;
-          if (m_passthrough && !m_info.m_wantsIECPassthrough)
-          {
-            sleep_time = m_format.m_streamInfo.GetDuration();
-            usleep(sleep_time * 1000);
-          }
-          else
-          {
-            sleep_time = (double) m_format.m_frames / m_sink_frameSize / 2.0 / (double) m_format.m_sampleRate * 1000;
-            usleep(sleep_time * 1000);
-          }
-          bool playing = m_at_jni->getPlayState() == CJNIAudioTrack::PLAYSTATE_PLAYING;
-          CLog::Log(LOGDEBUG, "Retried to write onto the sink - slept: %lf playing: %s", sleep_time, playing ? "yes" : "no");
-          continue;
-        }
-        else
-        {
-          CLog::Log(LOGDEBUG, "Repeatedly tried to write onto the sink - giving up");
-          break;
-        }
-      }
-      retried = false; // at least one time there was more than zero data written
-      if (m_passthrough && !m_info.m_wantsIECPassthrough)
-      {
-        if (written == size)
-          m_duration_written += m_format.m_streamInfo.GetDuration() / 1000;
-        else
-        {
-          CLog::Log(LOGDEBUG, "Error writing full package to sink, left: %d", size_left);
-          // Let AE wait some ms to come back
-          unsigned int written_frames = (unsigned int) (written/m_format.m_frameSize);
-          return written_frames;
-        }
-      }
-      else
-        m_duration_written += ((double) loop_written / m_format.m_frameSize) / m_format.m_sampleRate;
-
-      // just try again to care for fragmentation
-      if (written < size)
-        out_buf = out_buf + loop_written;
-
-      loop_written = 0;
+      CLog::Log(LOGERROR, "CAESinkAUDIOTRACK::AddPackets write returned error:  %d", written);
+      return INT_MAX;
     }
   }
+
   unsigned int written_frames = (unsigned int) (written/m_format.m_frameSize);
+  if (m_passthrough && !m_info.m_wantsIECPassthrough)
+  {
+    if (written == size)
+      m_duration_written += m_format.m_streamInfo.GetDuration() / 1000;
+    else
+    {
+      return written_frames;
+    }
+  }
+  else
+    m_duration_written += ((double) written / m_format.m_frameSize) / m_format.m_sampleRate;
+
   double time_to_add_ms = 1000.0 * (CurrentHostCounter() - startTime) / CurrentHostFrequency();
   if (m_passthrough && !m_info.m_wantsIECPassthrough)
   {

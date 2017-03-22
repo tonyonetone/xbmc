@@ -9895,3 +9895,12 @@ cmake/scripts/android/Install.cmake
 cmake/scripts/android/Macros.cmake
 cmake/scripts/android/PathSetup.cmake
 tools/android/packaging/xbmc/colors.xml.in
+xbmc/listproviders/CMakeLists.txt
+xbmc/listproviders/DirectoryProvider.cpp
+xbmc/listproviders/DirectoryProvider.h
+xbmc/listproviders/IListProvider.cpp
+xbmc/listproviders/IListProvider.h
+xbmc/listproviders/MultiProvider.cpp
+xbmc/listproviders/MultiProvider.h
+xbmc/listproviders/StaticProvider.cpp
+xbmc/listproviders/StaticProvider.h

@@ -135,24 +135,65 @@ bool CGUIWindowVideoNav::OnMessage(CGUIMessage& message)
 
       if (message.GetStringParam(0) != "")
       {
+        CURL url(message.GetStringParam(0));
+
         int i = 0;
         for (; i < m_vecItems->Size(); i++)
         {
           CFileItemPtr pItem = m_vecItems->Get(i);
-          if (pItem->GetPath() == message.GetStringParam(0))
+          if (URIUtils::PathEquals(pItem->GetPath(), message.GetStringParam(0), true, true))
           {
             m_viewControl.SetSelectedItem(i);
-            ADDON::ScraperPtr scrapper;
-            OnItemInfo(*pItem, scrapper);
+            i = -1;
+            if (url.GetOption("showinfo") == "true")
+            {
+              ADDON::ScraperPtr scrapper;
+              OnItemInfo(*pItem, scrapper);
+            }
             break;
           }
         }
-        if (i == m_vecItems->Size())
+        if (i >= m_vecItems->Size() && url.GetOption("showinfo") == "true")
         {
-          CFileItem* item = new CFileItem(message.GetStringParam(0), false);
+          std::string path = message.GetStringParam(0);
+          CFileItem* item = new CFileItem(path, URIUtils::HasSlashAtEnd(path));
           if (item->IsVideoDb())
           {
-            *(item->GetVideoInfoTag()) = XFILE::CVideoDatabaseFile::GetVideoTag(CURL(item->GetPath()));
+            auto retrieveTag = [](const std::string& content, const std::string& url)
+            {
+              CVideoInfoTag tag;
+
+              std::string strFileName = URIUtils::GetFileName(url);
+              if (strFileName.empty())
+                return tag;
+
+              URIUtils::RemoveExtension(strFileName);
+              if (!StringUtils::IsNaturalNumber(strFileName))
+                return tag;
+              long idDb = atol(strFileName.c_str());
+
+              VIDEODB_CONTENT_TYPE type;
+              if (content == "movies" || content == "recentlyaddedmovies")
+                type = VIDEODB_CONTENT_MOVIES;
+              else if (content == "tvshows")
+                type = VIDEODB_CONTENT_TVSHOWS;
+              else if (content == "episodes" || content == "recentlyaddedepisodes")
+                type = VIDEODB_CONTENT_EPISODES;
+              else if (content == "musicvideos" || content == "recentlyaddedmusicvideos")
+                type = VIDEODB_CONTENT_MUSICVIDEOS;
+              else
+                return tag;
+
+              CVideoDatabase videoDatabase;
+              if (!videoDatabase.Open())
+                return tag;
+
+              tag = videoDatabase.GetDetailsByTypeAndId(type, idDb);
+
+              return tag;
+            };
+
+            *(item->GetVideoInfoTag()) = retrieveTag(m_vecItems->GetContent(), item->GetPath());
             item->SetPath(item->GetVideoInfoTag()->m_strFileNameAndPath);
           }
           ADDON::ScraperPtr scrapper;
