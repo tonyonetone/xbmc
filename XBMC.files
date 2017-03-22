@@ -9890,3 +9890,8 @@ cmake/scripts/common/Macros.cmake
 cmake/scripts/common/PrepareEnv.cmake
 cmake/scripts/common/ProjectMacros.cmake
 cmake/scripts/common/Uninstall.cmake
+cmake/scripts/android/ArchSetup.cmake
+cmake/scripts/android/Install.cmake
+cmake/scripts/android/Macros.cmake
+cmake/scripts/android/PathSetup.cmake
+tools/android/packaging/xbmc/colors.xml.in

@@ -481,3 +481,4 @@ tools/depends
 xbmc/platform/android/activity
 .
 cmake/scripts/common
+cmake/scripts/android
