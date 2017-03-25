@@ -146,6 +146,17 @@ namespace MESSAGING
 {
 class IMessageTarget;
 
+class CDelayedMessage : public CThread
+{
+  public:
+    CDelayedMessage(ThreadMessage& msg, unsigned int delay);
+    virtual void Process() override;
+
+  private:
+    unsigned int   m_delay;
+    ThreadMessage  m_msg;
+};
+
 struct ThreadMessageCallback
 {
   void (*callback)(void *userptr);

@@ -33,17 +33,6 @@ namespace KODI
 namespace MESSAGING
 {
 
-class CDelayedMessage : public CThread
-{
-  public:
-    CDelayedMessage(ThreadMessage& msg, unsigned int delay);
-    virtual void Process() override;
-
-  private:
-    unsigned int   m_delay;
-    ThreadMessage  m_msg;
-};
-
 CDelayedMessage::CDelayedMessage(ThreadMessage& msg, unsigned int delay) : CThread("DelayedMessage")
 {
   m_msg = msg;
