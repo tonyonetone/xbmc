@@ -21,11 +21,13 @@
 #include "AppParamParser.h"
 #include "PlayListPlayer.h"
 #include "Application.h"
+#include "messaging/ApplicationMessenger.h"
 #include "settings/AdvancedSettings.h"
 #include "utils/log.h"
 #include "utils/SystemInfo.h"
 #include "utils/StringUtils.h"
 #include "input/InputManager.h"
+#include "URL.h"
 #ifdef TARGET_WINDOWS
 #include "WIN32Util.h"
 #endif
@@ -71,6 +73,32 @@ void CAppParamParser::Parse(const char* argv[], int nArgs)
           int sleeptime = atoi(argv[i + 1]);
           if (sleeptime > 0 && sleeptime < 360)
             Sleep(sleeptime*1000);
+        }
+        i++;
+      }
+      if (stricmp(argv[i], "-s") == 0)
+      {
+        if (i + 1 < nArgs)
+        {
+          CURL targeturl(std::string(argv[i + 1]));
+          if (targeturl.IsProtocol("videodb"))
+          {
+            std::vector<std::string> params;
+            params.push_back(targeturl.Get());
+            params.push_back("return");
+            ThreadMessage msg(TMSG_GUI_ACTIVATE_WINDOW, WINDOW_VIDEO_NAV, 0, nullptr, "", params);
+            CDelayedMessage* delmsg = new CDelayedMessage(msg, 5000);
+            delmsg->Create(true);
+          }
+          else if (targeturl.IsProtocol("musicdb"))
+          {
+            std::vector<std::string> params;
+            params.push_back(targeturl.Get());
+            params.push_back("return");
+            ThreadMessage msg(TMSG_GUI_ACTIVATE_WINDOW, WINDOW_MUSIC_NAV, 0, nullptr, "", params);
+            CDelayedMessage* delmsg = new CDelayedMessage(msg, 5000);
+            delmsg->Create(true);
+          }
         }
         i++;
       }
