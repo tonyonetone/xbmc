@@ -4177,9 +4177,9 @@ bool CApplication::OnMessage(CGUIMessage& message)
 
         if (!m_incompatibleAddons.empty())
         {
-          auto addonList = StringUtils::Join(m_incompatibleAddons, ", ");
-          auto msg = StringUtils::Format(g_localizeStrings.Get(24149).c_str(), addonList.c_str());
-          CGUIDialogOK::ShowAndGetInput(CVariant{24148}, CVariant{std::move(msg)});
+//          auto addonList = StringUtils::Join(m_incompatibleAddons, ", ");
+//          auto msg = StringUtils::Format(g_localizeStrings.Get(24149).c_str(), addonList.c_str());
+//          CGUIDialogOK::ShowAndGetInput(CVariant{24148}, CVariant{std::move(msg)});
           m_incompatibleAddons.clear();
         }
 
