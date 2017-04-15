@@ -495,6 +495,17 @@ bool preliminarySort(const SortItem &left, const SortItem &right, bool handleFol
   labelLeft = itLeftSort->second.asWideString();
   labelRight = itRightSort->second.asWideString();
 
+#ifdef TARGET_ANDROID
+  // Android does not support locale; Translate to ASCII
+  std::string dest;
+
+  CCharsetConverter::wToASCII(labelLeft, dest);
+  labelLeft = std::wstring(dest.begin(), dest.end());
+
+  CCharsetConverter::wToASCII(labelRight, dest);
+  labelRight = std::wstring(dest.begin(), dest.end());
+#endif
+
   return false;
 }
 
