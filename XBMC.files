@@ -6131,6 +6131,9 @@ xbmc/addons/Skin.cpp
 xbmc/addons/Skin.h
 xbmc/addons/Visualisation.cpp
 xbmc/addons/Visualisation.h
+xbmc/input/Action.cpp
+xbmc/input/Action.h
+xbmc/input/ActionIDs.h
 xbmc/platform/android/activity/CMakeLists.txt
 xbmc/platform/android/activity/android_main.cpp
 xbmc/platform/android/activity/AndroidExtra.h
