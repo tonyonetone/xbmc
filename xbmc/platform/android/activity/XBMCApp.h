@@ -126,7 +126,9 @@ public:
   virtual void onAudioFocusChange(int focusChange);
   virtual void doFrame(int64_t frameTimeNanos);
   virtual void onVisibleBehindCanceled();
-  
+  virtual void onMultiWindowModeChanged(bool isInMultiWindowMode);
+  virtual void onPictureInPictureModeChanged(bool isInPictureInPictureMode);
+
   // implementation of CJNIInputManagerInputDeviceListener
   void onInputDeviceAdded(int deviceId) override;
   void onInputDeviceChanged(int deviceId) override;
