@@ -99,7 +99,7 @@ void CSMB::Init()
     // http://us1.samba.org/samba/docs/man/manpages-3/smb.conf.5.html
     std::string smb_path(CSpecialProtocol::TranslatePath("special://home/.smb"));
     std::string smb_conf = smb_path + "/smb.conf";
-    setenv("SMB_CONF_PATH", smb_conf.c_str(), 0);
+    //setenv("SMB_CONF_PATH", smb_conf.c_str(), 0);
     CLog::Log(LOGDEBUG, "smb path: %s", getenv("SMB_CONF_PATH"));
 
     int ret = mkdir(smb_path.c_str(), 0755);
@@ -155,8 +155,16 @@ void CSMB::Init()
     // 16 bytes -> set_param_opt
     smbc_init(xb_smbc_auth, 0);
 
+    // HACK!! Force libsmbclient to use our own smb.conf by overriding HOME
+    char* truehome = getenv("HOME");
+    setenv("HOME", CSpecialProtocol::TranslatePath("special://home").c_str(), 1);
+
     // setup our context
     m_context = smbc_new_context();
+
+    // HACK!! Restore HOME
+    setenv("HOME", truehome, 1);
+
 #ifdef DEPRECATED_SMBC_INTERFACE
     smbc_setDebug(m_context, g_advancedSettings.CanLogComponent(LOGSAMBA) ? 10 : 0);
     smbc_setFunctionAuthData(m_context, xb_smbc_auth);
@@ -206,6 +214,8 @@ void CSMB::Init()
       smbc_free_context(m_context, 1);
       m_context = NULL;
     }
+
+
   }
   m_IdleTimeout = 180;
 }
