@@ -500,10 +500,20 @@ bool preliminarySort(const SortItem &left, const SortItem &right, bool handleFol
   std::string dest;
 
   CCharsetConverter::wToASCII(labelLeft, dest);
-  labelLeft = std::wstring(dest.begin(), dest.end());
+  labelLeft.clear();
+  for (char c : dest)
+  {
+    if (::isalnum(c) || c == ' ')
+      labelLeft.push_back(c);
+  }
 
   CCharsetConverter::wToASCII(labelRight, dest);
-  labelRight = std::wstring(dest.begin(), dest.end());
+  labelRight.clear();
+  for (char c : dest)
+  {
+    if (::isalnum(c) || c == ' ')
+      labelRight.push_back(c);
+  }
 #endif
 
   return false;
