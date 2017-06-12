@@ -275,6 +275,7 @@ enum StdConversionType /* Keep it in sync with CCharsetConverter::CInnerConverte
   SystemToUtf8,
   Ucs2CharsetToUtf8,
   WtoAscii,
+  Utf8toAscii,
   NumberOfStdConversionTypes /* Dummy sentinel entry */
 };
 
@@ -320,6 +321,7 @@ CConverterType CCharsetConverter::CInnerConverter::m_stdConversion[NumberOfStdCo
   /* SystemToUtf8 */        CConverterType(SystemCharset,   UTF8_SOURCE),
   /* Ucs2CharsetToUtf8 */   CConverterType("UCS-2LE",       "UTF-8", CCharsetConverter::m_Utf8CharMaxSize),
   /* WtoAscii */            CConverterType(WCHAR_CHARSET,   AsciiCharset),
+  /* Utf8toAscii */         CConverterType(UTF8_SOURCE,     AsciiCharset),
 };
 
 CCriticalSection CCharsetConverter::CInnerConverter::m_critSectionFriBiDi;
@@ -730,6 +732,11 @@ bool CCharsetConverter::utf8ToW(const std::string& utf8StringSrc, std::wstring& 
   }
   
   return CInnerConverter::stdConvert(Utf8toW, utf8StringSrc, wStringDst, failOnBadChar);
+}
+
+bool CCharsetConverter::utf8ToASCII(const std::string& utf8StringSrc, std::string& asciiStringDst, bool failOnBadChar)
+{
+  return CInnerConverter::stdConvert(Utf8toAscii, utf8StringSrc, asciiStringDst, failOnBadChar);
 }
 
 bool CCharsetConverter::subtitleCharsetToUtf8(const std::string& stringSrc, std::string& utf8StringDst)

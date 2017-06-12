@@ -128,6 +128,7 @@ public:
   static bool utf8ToW(const std::string& utf8StringSrc, std::wstring& wStringDst,
                 bool bVisualBiDiFlip = true, bool forceLTRReadingOrder = false,
                 bool failOnBadChar = false);
+  static bool utf8ToASCII(const std::string& utf8StringSrc, std::string& asciiStringDst, bool failOnBadChar = false);
 
   static bool utf16LEtoW(const std::u16string& utf16String, std::wstring& wString);
 
